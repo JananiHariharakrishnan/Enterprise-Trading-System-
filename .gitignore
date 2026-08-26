@@ -1,0 +1,97 @@
+# ==========================
+# Environment Variables
+# ==========================
+
+.env
+.env.*
+!.env.example
+
+
+# ==========================
+# Python Cache Files
+# ==========================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+
+# ==========================
+# Jupyter Notebook Cache
+# ==========================
+
+.ipynb_checkpoints/
+
+
+# ==========================
+# IDE Files
+# ==========================
+
+.vscode/
+.idea/
+
+*.swp
+*.swo
+
+
+# ==========================
+# Logs
+# ==========================
+
+*.log
+logs/
+
+
+# ==========================
+# Database Files
+# ==========================
+
+*.sqlite
+*.sqlite3
+*.db
+
+
+# ==========================
+# Build / Distribution
+# ==========================
+
+build/
+dist/
+*.egg-info/
+
+
+# ==========================
+# OS Generated Files
+# ==========================
+
+.DS_Store
+Thumbs.db
+
+
+# ==========================
+# Machine Learning / Data
+# ==========================
+
+*.pkl
+*.pickle
+*.h5
+*.pt
+*.pth
+
+# Ignore large datasets
+data/raw/
+data/processed/
+
+
+# ==========================
+# Node (if frontend exists)
+# ==========================
+
+node_modules/
+npm-debug.log*
