@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 
 import duckdb
 import pandas as pd
@@ -6,6 +7,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from .analysis import compare_securities
+
+
+logger = logging.getLogger(__name__)
 
 
 COMPANY_CONFIG = {
@@ -20,6 +24,10 @@ COMPANY_CONFIG = {
     "TATASTEEL.BO": {
         "name": "Tata Steel",
         "color": "#0F766E",
+    },
+    "ICICIBANK.NS": {
+        "name": "ICICI Bank",
+        "color": "#F59E0B",
     },
 }
 
@@ -64,6 +72,7 @@ def create_dashboard_from_database(
             """
             SELECT symbol, date, close
             FROM market_candles
+            WHERE synthetic = FALSE
             ORDER BY symbol, date
             """
         ).df()
@@ -766,11 +775,18 @@ def create_market_dashboard(
     )
 
 
-def main() -> None:
+def main() -> int:
     """Generate the dashboard from the default DuckDB database."""
-    create_dashboard_from_database()
+    try:
+        create_dashboard_from_database()
+    except (OSError, duckdb.Error, ValueError) as exc:
+        logger.error("DASHBOARD_FAILED reason=%s", exc)
+        print(f"Dashboard generation failed: {exc}")
+        return 1
+
     print("Dashboard written to artefacts/market_dashboard.html")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
