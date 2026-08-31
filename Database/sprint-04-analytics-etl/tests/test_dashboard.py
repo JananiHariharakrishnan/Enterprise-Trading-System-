@@ -1,7 +1,7 @@
 import pandas as pd
 
-from analytics_etl.charts import create_dashboard_from_database
-from analytics_etl.load import load
+from analytics_etl.analysis.charts import create_dashboard_from_database
+from analytics_etl.pipeline.load import load
 
 
 def test_dashboard_reads_metrics_from_duckdb(tmp_path):
