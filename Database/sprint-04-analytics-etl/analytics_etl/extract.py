@@ -122,6 +122,7 @@ def extract(
 
         if cache_file.exists():
             logger.info("CACHE_HIT symbol=%s", symbol)
+            print("CACHE_HIT symbol=%s", symbol)
             with cache_file.open("r", encoding="utf-8") as file:
                 results[symbol] = json.load(file)
             continue
@@ -130,6 +131,7 @@ def extract(
             api_key = _get_api_key()
 
         logger.info("FETCH symbol=%s start=%s end=%s", symbol, start_date, end_date)
+        print("FETCH symbol=%s start=%s end=%s", symbol, start_date, end_date)
         try:
             raw_response = _request(symbol, start_date, end_date, api_key)
         except RateLimitError:
