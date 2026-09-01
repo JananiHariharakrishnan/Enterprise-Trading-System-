@@ -1,4 +1,7 @@
 package com.tradingsystem.domain.enums;
 
-public class AccountStatus {
+public enum AccountStatus {
+    ACTIVE,
+    SUSPENDED,
+    CLOSED
 }

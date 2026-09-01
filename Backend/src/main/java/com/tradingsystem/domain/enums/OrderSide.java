@@ -1,4 +1,6 @@
 package com.tradingsystem.domain.enums;
 
-public class OrderSide {
+public enum OrderSide {
+    BUY,
+    SELL
 }
