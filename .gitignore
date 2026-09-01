@@ -15,7 +15,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+
 # Python virtual environments
+
 venv/
 env/
 .venv/
@@ -67,6 +69,14 @@ dist/
 
 
 # ==========================
+# Maven Build Files
+# ==========================
+
+target/
+*.class
+
+
+# ==========================
 # OS Generated Files
 # ==========================
 
@@ -95,3 +105,13 @@ data/processed/
 
 node_modules/
 npm-debug.log*
+
+
+# ==========================
+# Documentation / Markdown
+# ==========================
+
+# Ignore command notes or local documentation
+Commands.md
+*.md
+

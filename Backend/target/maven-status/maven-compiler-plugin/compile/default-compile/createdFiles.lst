@@ -1,0 +1,7 @@
+com\tradingsystem\domain\entity\Position.class
+com\tradingsystem\domain\entity\Order.class
+com\tradingsystem\domain\enums\AccountStatus.class
+com\tradingsystem\domain\entity\Account.class
+com\tradingsystem\domain\enums\OrderSide.class
+com\tradingsystem\domain\entity\Instrument.class
+com\tradingsystem\domain\enums\OrderStatus.class
