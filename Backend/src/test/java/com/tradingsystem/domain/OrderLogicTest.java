@@ -6,54 +6,42 @@ import com.tradingsystem.domain.entity.Order;
 import com.tradingsystem.domain.entity.Position;
 import com.tradingsystem.domain.enums.AccountStatus;
 import com.tradingsystem.domain.enums.OrderSide;
+import com.tradingsystem.domain.exception.*;
+
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.util.HashSet;
-import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class OrderLogicTest {
 
     @Test
-    void buyOrderSucceedsWhenAllBusinessRulesPass() {
-        Account account = activeAccount(10000);
+    void rule1_throwsAccountNotFound_whenAccountDoesNotExist() {
+
         Instrument instrument = tradableInstrument("ACME");
         Order order = order(OrderSide.BUY, 100, "25.00", "key-12345");
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>()
+        AccountNotFoundException ex = assertThrows(
+                AccountNotFoundException.class,
+                () -> logic.placeOrder(
+                        null,
+                        instrument,
+                        order
+                )
         );
 
-        assertTrue(result.isSuccess());
+        assertEquals("ACC-404", ex.getCode());
     }
 
-    @Test
-    void missingAccountIsRejectedWithAcc404() {
-        Instrument instrument = tradableInstrument("ACME");
-        Order order = order(OrderSide.BUY, 100, "25.00", "key-12345");
-
-        OrderLogic logic = new OrderLogic();
-
-        OrderResult result = logic.validate(
-                null,
-                instrument,
-                order,
-                new HashSet<>()
-        );
-
-        assertFalse(result.isSuccess());
-        assertEquals("ACC-404", result.getErrorCode());
-    }
 
     @Test
-    void suspendedAccountIsRejectedWithAcc403() {
+    void rule2_throwsAccountNotActive_whenAccountIsSuspended() {
+
         Account account = activeAccount(10000);
         account.setStatus(AccountStatus.SUSPENDED);
 
@@ -62,19 +50,21 @@ class OrderLogicTest {
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>()
+        AccountNotActiveException ex = assertThrows(
+                AccountNotActiveException.class,
+                () -> logic.placeOrder(
+                        account,
+                        instrument,
+                        order
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("ACC-403", result.getErrorCode());
+        assertEquals("ACC-403", ex.getCode());
     }
 
     @Test
-    void closedAccountIsRejectedWithAcc403() {
+    void rule2_throwsAccountNotActive_whenAccountIsClosed() {
+
         Account account = activeAccount(10000);
         account.setStatus(AccountStatus.CLOSED);
 
@@ -83,38 +73,43 @@ class OrderLogicTest {
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>()
+        AccountNotActiveException ex = assertThrows(
+                AccountNotActiveException.class,
+                () -> logic.placeOrder(
+                        account,
+                        instrument,
+                        order
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("ACC-403", result.getErrorCode());
+        assertEquals("ACC-403", ex.getCode());
     }
 
     @Test
-    void unknownInstrumentIsRejectedWithIns404() {
+    void rule3_throwsInstrumentNotFound_whenInstrumentDoesNotExist() {
+
         Account account = activeAccount(10000);
         Order order = order(OrderSide.BUY, 100, "25.00", "key-12345");
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                null,
-                order,
-                new HashSet<>()
+        InstrumentNotFoundException ex = assertThrows(
+                InstrumentNotFoundException.class,
+                () -> logic.placeOrder(
+                        account,
+                        null,
+                        order
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("INS-404", result.getErrorCode());
+        assertEquals("INS-404", ex.getCode());
     }
 
     @Test
-    void nonTradableInstrumentIsRejectedWithIns404() {
+    void rule3_throwsInstrumentNotFound_whenInstrumentIsNotTradable() {
+
         Account account = activeAccount(10000);
+
         Instrument instrument = tradableInstrument("ACME");
         instrument.setTradable(false);
 
@@ -122,132 +117,157 @@ class OrderLogicTest {
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>()
+        InstrumentNotFoundException ex = assertThrows(
+                InstrumentNotFoundException.class,
+                () -> logic.placeOrder(
+                        account,
+                        instrument,
+                        order
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("INS-404", result.getErrorCode());
+        assertEquals("INS-404", ex.getCode());
     }
 
     @Test
-    void zeroQuantityIsRejectedWithVal422() {
+    void rule4_throwsInvalidOrderException_whenQuantityIsZero() {
+
         Account account = activeAccount(10000);
         Instrument instrument = tradableInstrument("ACME");
         Order order = order(OrderSide.BUY, 0, "25.00", "key-12345");
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>()
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> logic.placeOrder(
+                        account,
+                        instrument,
+                        order
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("VAL-422", result.getErrorCode());
+        assertEquals("VAL-422", ex.getCode());
     }
 
     @Test
-    void negativeQuantityIsRejectedWithVal422() {
+    void rule4_throwsInvalidOrderException_whenQuantityIsNegative() {
+
         Account account = activeAccount(10000);
         Instrument instrument = tradableInstrument("ACME");
         Order order = order(OrderSide.BUY, -1, "25.00", "key-12345");
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>()
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> logic.placeOrder(
+                        account,
+                        instrument,
+                        order
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("VAL-422", result.getErrorCode());
+        assertEquals("VAL-422", ex.getCode());
     }
 
     @Test
-    void zeroPriceIsRejectedWithVal422() {
+    void rule5_throwsInvalidOrderException_whenPriceIsZero() {
+
         Account account = activeAccount(10000);
         Instrument instrument = tradableInstrument("ACME");
         Order order = order(OrderSide.BUY, 100, "0.00", "key-12345");
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>()
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> logic.placeOrder(
+                        account,
+                        instrument,
+                        order
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("VAL-422", result.getErrorCode());
+        assertEquals("VAL-422", ex.getCode());
     }
 
     @Test
-    void negativePriceIsRejectedWithVal422() {
+    void rule5_throwsInvalidOrderException_whenPriceIsNegative() {
+
         Account account = activeAccount(10000);
         Instrument instrument = tradableInstrument("ACME");
         Order order = order(OrderSide.BUY, 100, "-1.00", "key-12345");
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>()
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> logic.placeOrder(
+                        account,
+                        instrument,
+                        order
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("VAL-422", result.getErrorCode());
+        assertEquals("VAL-422", ex.getCode());
     }
 
     @Test
-    void buyIsRejectedWhenCashIsInsufficient() {
+    void rule6_throwsInsufficientFunds_whenBuyBalanceIsTooLow() {
+
         Account account = activeAccount(1000);
         Instrument instrument = tradableInstrument("ACME");
-        Order order = order(OrderSide.BUY, 100, "25.00", "key-12345");
+
+        // 100 * 25 = 2500
+        Order order = order(
+                OrderSide.BUY,
+                100,
+                "25.00",
+                "key-12345"
+        );
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>()
+        InsufficientFundsException ex = assertThrows(
+                InsufficientFundsException.class,
+                () -> logic.placeOrder(
+                        account,
+                        instrument,
+                        order
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("ORD-400", result.getErrorCode());
+        assertEquals("ORD-400", ex.getCode());
     }
 
     @Test
-    void buyIsAcceptedWhenCashExactlyEqualsOrderValue() {
+    void rule6_buySucceedsWhenCashExactlyEqualsOrderValue() {
+
         Account account = activeAccount(2500);
         Instrument instrument = tradableInstrument("ACME");
-        Order order = order(OrderSide.BUY, 100, "25.00", "key-12345");
+
+        Order order = order(
+                OrderSide.BUY,
+                100,
+                "25.00",
+                "key-12345"
+        );
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>()
+        assertDoesNotThrow(() ->
+                logic.placeOrder(
+                        account,
+                        instrument,
+                        order
+                )
         );
-
-        assertTrue(result.isSuccess());
     }
 
     @Test
-    void sellIsRejectedWhenHoldingsAreInsufficient() {
+    void rule7_throwsInsufficientHoldings_whenSellQuantityIsTooHigh() {
+
         Account account = activeAccount(1000);
         Instrument instrument = tradableInstrument("ACME");
 
@@ -256,24 +276,31 @@ class OrderLogicTest {
         position.setSymbol("ACME");
         position.setQuantity(50);
 
-        Order order = order(OrderSide.SELL, 100, "25.00", "key-12345");
+        Order order = order(
+                OrderSide.SELL,
+                100,
+                "25.00",
+                "key-12345"
+        );
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>(),
-                position
+        InsufficientHoldingsException ex = assertThrows(
+                InsufficientHoldingsException.class,
+                () -> logic.placeOrder(
+                        account,
+                        instrument,
+                        order,
+                        position
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("ORD-409", result.getErrorCode());
+        assertEquals("ORD-409", ex.getCode());
     }
 
     @Test
-    void sellIsAcceptedWhenHoldingsExactlyEqualOrderQuantity() {
+    void rule7_sellSucceedsWhenHoldingsExactlyEqualQuantity() {
+
         Account account = activeAccount(1000);
         Instrument instrument = tradableInstrument("ACME");
 
@@ -282,98 +309,142 @@ class OrderLogicTest {
         position.setSymbol("ACME");
         position.setQuantity(100);
 
-        Order order = order(OrderSide.SELL, 100, "25.00", "key-12345");
+        Order order = order(
+                OrderSide.SELL,
+                100,
+                "25.00",
+                "key-12345"
+        );
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>(),
-                position
+        assertDoesNotThrow(() ->
+                logic.placeOrder(
+                        account,
+                        instrument,
+                        order,
+                        position
+                )
         );
-
-        assertTrue(result.isSuccess());
     }
+
 
     @Test
-    void duplicateIdempotencyKeyIsRejected() {
+    void rule8_throwsDuplicateOrderException_whenIdempotencyKeyAlreadyExists() {
+
         Account account = activeAccount(10000);
         Instrument instrument = tradableInstrument("ACME");
-        Order order = order(OrderSide.BUY, 100, "25.00", "key-12345");
 
-        Set<String> usedKeys = new HashSet<>();
-        usedKeys.add("key-12345");
+        Order order = order(
+                OrderSide.BUY,
+                100,
+                "25.00",
+                "key-12345"
+        );
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                usedKeys
+        DuplicateOrderException ex = assertThrows(
+                DuplicateOrderException.class,
+                () -> logic.placeOrder(
+                        account,
+                        instrument,
+                        order,
+                        true
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("ORD-409", result.getErrorCode());
+        assertEquals("ORD-409", ex.getCode());
     }
+
+    // ---------------------------------------------------------
+    // Rule Ordering
+    // ---------------------------------------------------------
 
     @Test
     void firstRuleFailureWins() {
-        // Rule 1 must win even though every later rule also fails.
-        Order order = order(OrderSide.BUY, 0, "0.00", "duplicate-key");
 
-        Set<String> usedKeys = new HashSet<>();
-        usedKeys.add("duplicate-key");
+        // Account is missing.
+        // Instrument is missing.
+        // Quantity is invalid.
+        // Price is invalid.
+        //
+        // Rule 1 must win.
+
+        Order order = order(
+                OrderSide.BUY,
+                0,
+                "0.00",
+                "duplicate-key"
+        );
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                null,
-                null,
-                order,
-                usedKeys
+        AccountNotFoundException ex = assertThrows(
+                AccountNotFoundException.class,
+                () -> logic.placeOrder(
+                        null,
+                        null,
+                        order,
+                        true
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("ACC-404", result.getErrorCode());
+        assertEquals("ACC-404", ex.getCode());
     }
 
     @Test
     void inactiveAccountWinsOverInsufficientFunds() {
-        // Explicit acceptance criterion:
-        // suspended account + no cash -> ACC-403, not ORD-400.
+
         Account account = activeAccount(0);
         account.setStatus(AccountStatus.SUSPENDED);
 
         Instrument instrument = tradableInstrument("ACME");
-        Order order = order(OrderSide.BUY, 100, "25.00", "key-12345");
+
+        Order order = order(
+                OrderSide.BUY,
+                100,
+                "25.00",
+                "key-12345"
+        );
 
         OrderLogic logic = new OrderLogic();
 
-        OrderResult result = logic.validate(
-                account,
-                instrument,
-                order,
-                new HashSet<>()
+        AccountNotActiveException ex = assertThrows(
+                AccountNotActiveException.class,
+                () -> logic.placeOrder(
+                        account,
+                        instrument,
+                        order
+                )
         );
 
-        assertFalse(result.isSuccess());
-        assertEquals("ACC-403", result.getErrorCode());
+        assertEquals("ACC-403", ex.getCode());
     }
 
+    // ---------------------------------------------------------
+    // Helper Methods
+    // ---------------------------------------------------------
+
     private Account activeAccount(double cash) {
+
         Account account = new Account();
+
         account.setStatus(AccountStatus.ACTIVE);
-        account.setCashBalance(BigDecimal.valueOf(cash));
+        account.setCashBalance(
+                BigDecimal.valueOf(cash)
+        );
+
         return account;
     }
 
     private Instrument tradableInstrument(String symbol) {
+
         Instrument instrument = new Instrument();
+
         instrument.setSymbol(symbol);
         instrument.setTradable(true);
+
         return instrument;
     }
 
@@ -383,13 +454,16 @@ class OrderLogicTest {
             String price,
             String idempotencyKey
     ) {
+
         Order order = new Order();
+
         order.setAccountId(1L);
         order.setSymbol("ACME");
         order.setSide(side);
         order.setQuantity(quantity);
         order.setPrice(new BigDecimal(price));
         order.setIdempotencyKey(idempotencyKey);
+
         return order;
     }
 }
