@@ -6,7 +6,7 @@ import com.tradingsystem.domain.entity.Order;
 import com.tradingsystem.domain.entity.Position;
 import com.tradingsystem.domain.enums.AccountStatus;
 import com.tradingsystem.domain.enums.OrderSide;
-import com.tradingsystem.domain.exception.*;
+import com.tradingsystem.domain.exceptions.*;
 
 import org.junit.jupiter.api.Test;
 
