@@ -155,6 +155,7 @@ def extract(
 
         print(f"API FETCH: {symbol}")
         logger.info("FETCH symbol=%s start=%s end=%s", symbol, start_date, end_date)
+        print("FETCH symbol=%s start=%s end=%s", symbol, start_date, end_date)
         try:
             raw_response = _request(symbol, start_date, end_date, api_key)
         except RateLimitError:
