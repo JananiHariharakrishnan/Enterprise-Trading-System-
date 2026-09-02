@@ -1,0 +1,183 @@
+classDiagram
+
+%% ======================
+%% ENTITY CLASSES
+%% ======================
+
+    class User {
+        +Long accountId
+        +String firstName
+        +String lastName
+        +String email
+        +String phoneNumber
+        +String passwordHash
+    }
+
+
+    class Account {
+        +Long accountId
+        +String accountReference
+        +BigDecimal cashBalance
+        +BigDecimal buyingPower
+        +AccountStatus status
+        +Long version
+    }
+
+
+    class BalanceHistory {
+        +Long id
+        +Long accountId
+        +BalanceTransactionType type
+        +BigDecimal amount
+        +UUID relatedOrderId
+    }
+
+
+    class Instrument {
+        +String symbol
+        +String name
+        +AssetClass assetClass
+        +String currency
+        +Boolean tradable
+    }
+
+
+    class Order {
+        +UUID id
+        +Long accountId
+        +String symbol
+        +OrderSide side
+        +OrderType orderType
+        +Int quantity
+        +BigDecimal price
+        +OrderStatus status
+        +String idempotencyKey
+        +LocalDateTime createdOn
+    }
+
+
+    class Execution {
+        +Long id
+        +Long orderId
+        +Int quantity
+        +BigDecimal price
+        +LocalDateTime executedAt
+    }
+
+
+    class Position {
+        +Long accountId
+        +String symbol
+        +Int quantity
+        +BigDecimal averageCost
+    }
+
+
+    class WatchlistEntry {
+        +Long accountId
+        +String symbol
+        +LocalDateTime addedOn
+    }
+
+
+%% ======================
+%% ENUM CLASSES
+%% ======================
+
+    class AccountStatus {
+        <<enumeration>>
+        ACTIVE
+        SUSPENDED
+        CLOSED
+    }
+
+
+    class AssetClass {
+        <<enumeration>>
+        EQUITY
+        ETF
+        FX
+        CRYPTO
+        BOND
+    }
+
+
+    class BalanceTransactionType {
+        <<enumeration>>
+        TRADE
+        DEPOSIT
+        WITHDRAWAL
+        FEE
+    }
+
+
+    class OrderSide {
+        <<enumeration>>
+        BUY
+        SELL
+    }
+
+
+    class OrderType {
+        <<enumeration>>
+        MARKET
+        LIMIT
+    }
+
+
+    class OrderStatus {
+        <<enumeration>>
+        NEW
+        FILLED
+        REJECTED
+        CANCELLED
+    }
+
+
+%% ======================
+%% RELATIONSHIPS
+%% ======================
+
+
+    User "1" --> "1" Account : owns
+
+
+    Account "1" --> "*" BalanceHistory : has
+
+
+    Account "1" --> "*" Order : places
+
+
+    Account "1" --> "*" Position : owns
+
+
+    Account "1" --> "*" WatchlistEntry : maintains
+
+
+    Instrument "1" --> "*" Order : traded_in
+
+
+    Instrument "1" --> "*" Position : held_as
+
+
+    Instrument "1" --> "*" WatchlistEntry : watched
+
+
+    Order "1" --> "*" Execution : generates
+
+
+%% ======================
+%% ENUM MAPPINGS
+%% ======================
+
+    Account --> AccountStatus
+
+    Instrument --> AssetClass
+
+    BalanceHistory --> BalanceTransactionType
+
+    Order --> OrderSide
+
+    Order --> OrderType
+
+    Order --> OrderStatus
