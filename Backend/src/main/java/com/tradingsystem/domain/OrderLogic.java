@@ -6,105 +6,124 @@ import com.tradingsystem.domain.entity.Order;
 import com.tradingsystem.domain.entity.Position;
 import com.tradingsystem.domain.enums.AccountStatus;
 import com.tradingsystem.domain.enums.OrderSide;
+import com.tradingsystem.domain.exceptions.*;
 
 import java.math.BigDecimal;
-import java.util.Set;
 
 public class OrderLogic {
 
-    public OrderResult validate(
+    public void placeOrder(
+            Account account,
+            Instrument instrument,
+            Order order) {
+
+        placeOrder(account, instrument, order, false);
+    }
+    // Rules 1-6 and 8
+    public void placeOrder(
             Account account,
             Instrument instrument,
             Order order,
-            Set<String> usedKeys) {
+            boolean duplicateKey) {
 
         // Rule 1: Account must exist
         if (account == null) {
-            return OrderResult.failure("ACC-404");
+            throw new AccountNotFoundException();
         }
 
         // Rule 2: Account must be active
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            return OrderResult.failure("ACC-403");
+            throw new AccountNotActiveException();
         }
 
         // Rule 3: Instrument must exist
-        if (instrument == null) {
-            return OrderResult.failure("INS-404");
+        if (instrument == null || !instrument.isTradable()) {
+            throw new InstrumentNotFoundException();
         }
 
-        // Rule 4: Instrument must be tradable
-        if (!instrument.isTradable()) {
-            return OrderResult.failure("INS-404");
+        // Rule 4: Quantity must be positive
+        if (order == null || order.getQuantity() <= 0) {
+            throw new InvalidOrderException();
         }
 
-        // Rule 5: Order must exist
-        if (order == null) {
-            return OrderResult.failure("VAL-422");
-        }
-
-        // Rule 6: Quantity must be positive
-        if (order.getQuantity() <= 0) {
-            return OrderResult.failure("VAL-422");
-        }
-
-        // Rule 7: Price must be positive
+        // Rule 5: Price must be positive
         if (order.getPrice() == null ||
                 order.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-            return OrderResult.failure("VAL-422");
+            throw new InvalidOrderException();
         }
 
-        // Rule 8: Idempotency key must not already be used
-        if (usedKeys != null &&
-                usedKeys.contains(order.getIdempotencyKey())) {
-            return OrderResult.failure("ORD-409");
+        // Rule 8: Idempotency key must be unique
+        if (duplicateKey) {
+            throw new DuplicateOrderException();
         }
 
-        // Rule 9: BUY order requires sufficient cash
+        // Rule 6: BUY must have sufficient funds
         if (order.getSide() == OrderSide.BUY) {
 
             BigDecimal orderValue =
-                    order.getPrice().multiply(
-                            BigDecimal.valueOf(order.getQuantity())
-                    );
+                    order.getPrice()
+                            .multiply(
+                                    BigDecimal.valueOf(order.getQuantity())
+                            );
 
             if (account.getCashBalance().compareTo(orderValue) < 0) {
-                return OrderResult.failure("ORD-400");
+                throw new InsufficientFundsException();
             }
         }
-
-        return OrderResult.success();
     }
 
 
-    public OrderResult validate(
+    // Rules 1-7 and 8
+    public void placeOrder(
             Account account,
             Instrument instrument,
             Order order,
-            Set<String> usedKeys,
             Position position) {
 
-        // Apply the common validation rules first
-        OrderResult result = validate(
+        // First perform common rules
+        placeOrder(
                 account,
                 instrument,
                 order,
-                usedKeys
+                false
         );
 
-        if (!result.isSuccess()) {
-            return result;
-        }
-
-        // SELL orders require sufficient holdings
+        // Rule 7: SELL must have sufficient holdings
         if (order.getSide() == OrderSide.SELL) {
 
             if (position == null ||
                     position.getQuantity() < order.getQuantity()) {
-                return OrderResult.failure("ORD-409");
+
+                throw new InsufficientHoldingsException();
             }
         }
+    }
 
-        return OrderResult.success();
+
+    // Version used for duplicate-key tests
+    public void placeOrder(
+            Account account,
+            Instrument instrument,
+            Order order,
+            Position position,
+            boolean duplicateKey) {
+
+        // Rules 1-6 + 8
+        placeOrder(
+                account,
+                instrument,
+                order,
+                duplicateKey
+        );
+
+        // Rule 7
+        if (order.getSide() == OrderSide.SELL) {
+
+            if (position == null ||
+                    position.getQuantity() < order.getQuantity()) {
+
+                throw new InsufficientHoldingsException();
+            }
+        }
     }
 }

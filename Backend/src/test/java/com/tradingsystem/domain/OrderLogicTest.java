@@ -19,6 +19,31 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class OrderLogicTest {
 
     @Test
+    void placeOrder_succeeds_whenValidBuyOrderIsProvided() {
+
+        Account account = activeAccount(10000);
+        Instrument instrument = tradableInstrument("ACME");
+
+        Order order = order(
+                OrderSide.BUY,
+                100,
+                "25.00",
+                "valid-key-12345"
+        );
+
+        OrderLogic logic = new OrderLogic();
+
+        assertDoesNotThrow(() ->
+                logic.placeOrder(
+                        account,
+                        instrument,
+                        order
+                )
+        );
+    }
+
+
+    @Test
     void rule1_throwsAccountNotFound_whenAccountDoesNotExist() {
 
         Instrument instrument = tradableInstrument("ACME");
@@ -357,19 +382,10 @@ class OrderLogicTest {
         assertEquals("ORD-409", ex.getCode());
     }
 
-    // ---------------------------------------------------------
-    // Rule Ordering
-    // ---------------------------------------------------------
 
     @Test
     void firstRuleFailureWins() {
 
-        // Account is missing.
-        // Instrument is missing.
-        // Quantity is invalid.
-        // Price is invalid.
-        //
-        // Rule 1 must win.
 
         Order order = order(
                 OrderSide.BUY,
@@ -422,9 +438,7 @@ class OrderLogicTest {
         assertEquals("ACC-403", ex.getCode());
     }
 
-    // ---------------------------------------------------------
     // Helper Methods
-    // ---------------------------------------------------------
 
     private Account activeAccount(double cash) {
 
