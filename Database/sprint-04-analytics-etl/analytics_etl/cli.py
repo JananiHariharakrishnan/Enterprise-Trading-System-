@@ -1,6 +1,6 @@
 import logging
 
-from analytics_etl.pipeline import run
+from analytics_etl.pipeline_initiator import run
 
 
 logger = logging.getLogger(__name__)
