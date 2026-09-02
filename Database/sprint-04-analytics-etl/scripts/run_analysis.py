@@ -2,11 +2,11 @@ from pathlib import Path
 
 import duckdb
 
-from analytics_etl.analysis import (
+from analytics_etl.analysis.analysis import (
     compare_securities,
     summarize_data,
 )
-from analytics_etl.charts import create_market_dashboard
+from analytics_etl.analysis.charts import create_market_dashboard
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
