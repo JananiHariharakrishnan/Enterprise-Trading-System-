@@ -66,18 +66,23 @@ public class Account {
     private User holder;
 
     public boolean isActive() {
-        throw new UnsupportedOperationException("TODO: implement isActive");
+        return status == AccountStatus.ACTIVE;
     }
-
     public void credit(BigDecimal amount) {
-        throw new UnsupportedOperationException("TODO: implement credit");
+        this.cashBalance=cashBalance.add(amount);
     }
 
     public void debit(BigDecimal amount) {
-        throw new UnsupportedOperationException("TODO: implement debit");
+        if (!canAfford(amount)) {
+            throw new IllegalArgumentException("Insufficient balance");
+        }
+        this.cashBalance = cashBalance.subtract(amount);
     }
 
     public boolean canAfford(BigDecimal amount) {
-        throw new UnsupportedOperationException("TODO: implement canAfford");
+        if(cashBalance.compareTo(amount) >= 0){
+            return true;
+        }
+        return false;
     }
 }
