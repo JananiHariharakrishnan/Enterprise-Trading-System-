@@ -14,7 +14,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class PlaceOrderRequestValidationTest {
+class PlaceOrderRequestTest {
 
     private static ValidatorFactory validatorFactory;
     private static Validator validator;
