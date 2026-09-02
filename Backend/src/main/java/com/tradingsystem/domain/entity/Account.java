@@ -64,4 +64,20 @@ public class Account {
     }
     private LocalDateTime lastUpdated;
     private User holder;
+
+    public boolean isActive() {
+        throw new UnsupportedOperationException("TODO: implement isActive");
+    }
+
+    public void credit(BigDecimal amount) {
+        throw new UnsupportedOperationException("TODO: implement credit");
+    }
+
+    public void debit(BigDecimal amount) {
+        throw new UnsupportedOperationException("TODO: implement debit");
+    }
+
+    public boolean canAfford(BigDecimal amount) {
+        throw new UnsupportedOperationException("TODO: implement canAfford");
+    }
 }
