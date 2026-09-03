@@ -144,3 +144,38 @@ def test_corrupt_cache_is_ignored_and_replaced(tmp_path: Path):
 
     assert result == {"INFY.NS": good}
     assert cache_file.read_text(encoding="utf-8").startswith("{")
+
+def test_401_is_classified_as_symbol_error():
+    response = Mock()
+    response.status_code = 401
+    response.text = "unauthorized"
+
+    with patch(
+            "analytics_etl.pipeline.extract.requests.get",
+            return_value=response,
+    ):
+        with pytest.raises(SymbolRequestError):
+            _request(
+                "INFY.NS",
+                "2026-08-01",
+                "2026-08-26",
+                "fake-test-key",
+            )
+
+
+def test_400_is_classified_as_symbol_error():
+    response = Mock()
+    response.status_code = 400
+    response.text = "bad request"
+
+    with patch(
+            "analytics_etl.pipeline.extract.requests.get",
+            return_value=response,
+    ):
+        with pytest.raises(SymbolRequestError):
+            _request(
+                "INFY.NS",
+                "2026-08-01",
+                "2026-08-26",
+                "fake-test-key",
+            )
