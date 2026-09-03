@@ -21,6 +21,11 @@ classDiagram
         +BigDecimal buyingPower
         +AccountStatus status
         +Long version
+
+        +boolean isActive()
+        +boolean canAfford(BigDecimal amount)
+        +void credit(BigDecimal amount)
+        +void debit(BigDecimal amount)
     }
 
 
@@ -39,6 +44,8 @@ classDiagram
         +AssetClass assetClass
         +String currency
         +Boolean tradable
+
+        +boolean isTradable()
     }
 
 
@@ -70,6 +77,7 @@ classDiagram
         +String symbol
         +Int quantity
         +BigDecimal averageCost
+
     }
 
 
@@ -138,30 +146,21 @@ classDiagram
 %% RELATIONSHIPS
 %% ======================
 
-
     User "1" --> "1" Account : owns
-
 
     Account "1" --> "*" BalanceHistory : has
 
-
     Account "1" --> "*" Order : places
-
 
     Account "1" --> "*" Position : owns
 
-
     Account "1" --> "*" WatchlistEntry : maintains
-
 
     Instrument "1" --> "*" Order : traded_in
 
-
     Instrument "1" --> "*" Position : held_as
 
-
     Instrument "1" --> "*" WatchlistEntry : watched
-
 
     Order "1" --> "*" Execution : generates
 
