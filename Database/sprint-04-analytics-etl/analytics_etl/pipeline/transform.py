@@ -22,6 +22,7 @@ COLUMNS = [
 
 def transform(raw_data: dict) -> pd.DataFrame:
     """Convert raw API responses into a validated candle DataFrame."""
+    # type check
     if not isinstance(raw_data, dict):
         raise ValueError("raw_data must be a dictionary")
 
@@ -47,11 +48,13 @@ def transform(raw_data: dict) -> pd.DataFrame:
     frame = pd.DataFrame(rows)
     required = ["symbol", "date", "open", "high", "low", "close"]
 
+#     numeric conversion
     for column in ["open", "high", "low", "close", "volume"]:
         if column not in frame:
             frame[column] = pd.NA
         frame[column] = pd.to_numeric(frame[column], errors="coerce")
 
+#     date formatting
     frame["date"] = pd.to_datetime(
         frame["date"], format="%Y-%m-%d", errors="coerce"
     )
@@ -63,18 +66,21 @@ def transform(raw_data: dict) -> pd.DataFrame:
         )
     frame = frame[~missing_required]
 
+#     OHLC checks
     valid_prices = (
         (frame[["open", "high", "low", "close"]] > 0).all(axis=1)
         & (frame["high"] >= frame["low"])
         & frame["open"].between(frame["low"], frame["high"])
         & frame["close"].between(frame["low"], frame["high"])
     )
+#     volume check
     valid_volume = frame["volume"].isna() | (frame["volume"] >= 0)
     invalid_rows = ~(valid_prices & valid_volume)
     if invalid_rows.any():
         logger.warning("INVALID_CANDLES dropped=%s", int(invalid_rows.sum()))
     frame = frame[~invalid_rows]
 
+#     duplicate rows check
     frame = frame.drop_duplicates(subset=["symbol", "date"], keep="last")
     if "synthetic" not in frame:
         frame["synthetic"] = False

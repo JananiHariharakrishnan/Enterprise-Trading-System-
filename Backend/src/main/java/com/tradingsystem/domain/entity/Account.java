@@ -64,4 +64,25 @@ public class Account {
     }
     private LocalDateTime lastUpdated;
     private User holder;
+
+    public boolean isActive() {
+        return status == AccountStatus.ACTIVE;
+    }
+    public void credit(BigDecimal amount) {
+        this.cashBalance=cashBalance.add(amount);
+    }
+
+    public void debit(BigDecimal amount) {
+        if (!canAfford(amount)) {
+            throw new IllegalArgumentException("Insufficient balance");
+        }
+        this.cashBalance = cashBalance.subtract(amount);
+    }
+
+    public boolean canAfford(BigDecimal amount) {
+        if(cashBalance.compareTo(amount) >= 0){
+            return true;
+        }
+        return false;
+    }
 }

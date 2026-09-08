@@ -1,45 +1,87 @@
 # ==========================
-# Environment Variables
+# Maven / Java
 # ==========================
 
-.env
-.env.*
-!.env.example
+target/
+**/target/
+*.class
+
+# Keep Maven Wrapper JAR
+!.mvn/wrapper/maven-wrapper.jar
 
 
 # ==========================
-# Python Cache Files
+# IntelliJ IDEA
+# ==========================
+
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Optional IntelliJ generated files
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+
+
+# ==========================
+# Eclipse
+# ==========================
+
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.springBeans
+.sts4-cache/
+
+
+# ==========================
+# NetBeans
+# ==========================
+
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+
+# ==========================
+# VS Code
+# ==========================
+
+.vscode/
+
+
+# ==========================
+# Python
 # ==========================
 
 __pycache__/
 *.py[cod]
 *$py.class
 
-
-# Python virtual environments
-
+# Virtual environments
 venv/
 env/
 .venv/
 ENV/
 
-
-# ==========================
-# Jupyter Notebook Cache
-# ==========================
-
+# Jupyter
 .ipynb_checkpoints/
 
 
 # ==========================
-# IDE Files
+# Environment Variables
 # ==========================
 
-.vscode/
-.idea/
-
-*.swp
-*.swo
+.env
+.env.*
+!.env.example
 
 
 # ==========================
@@ -51,7 +93,7 @@ logs/
 
 
 # ==========================
-# Database Files
+# Database
 # ==========================
 
 *.sqlite
@@ -60,7 +102,7 @@ logs/
 
 
 # ==========================
-# Build / Distribution
+# Python Build / Distribution
 # ==========================
 
 build/
@@ -69,16 +111,15 @@ dist/
 
 
 # ==========================
-# Maven Build Files
+# Editor Temporary Files
 # ==========================
 
-target/
-**/target/
-*.class
+*.swp
+*.swo
 
 
 # ==========================
-# OS Generated Files
+# Operating System
 # ==========================
 
 .DS_Store
@@ -86,7 +127,7 @@ Thumbs.db
 
 
 # ==========================
-# Machine Learning / Data
+# Machine Learning / Large Files
 # ==========================
 
 *.pkl
@@ -95,13 +136,13 @@ Thumbs.db
 *.pt
 *.pth
 
-# Ignore large datasets
+# Large datasets
 data/raw/
 data/processed/
 
 
 # ==========================
-# Node (if frontend exists)
+# Node.js
 # ==========================
 
 node_modules/
@@ -109,10 +150,7 @@ npm-debug.log*
 
 
 # ==========================
-# Documentation / Markdown
+# Local Documentation / Notes
 # ==========================
 
-# Ignore command notes or local documentation
 Commands.md
-*.md
-
