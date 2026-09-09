@@ -1,4 +1,4 @@
-package com.tradingsystem.domain.enums;
+package com.tradingsystem.enums;
 
 public enum BalanceTransactionType {
     TRADE,

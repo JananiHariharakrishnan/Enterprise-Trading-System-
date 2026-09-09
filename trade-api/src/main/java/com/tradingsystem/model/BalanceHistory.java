@@ -1,6 +1,6 @@
 package com.tradingsystem.model;
 
-import com.tradingsystem.domain.enums.BalanceTransactionType;
+import com.tradingsystem.enums.BalanceTransactionType;
 
 import java.math.BigDecimal;
 import java.util.UUID;
