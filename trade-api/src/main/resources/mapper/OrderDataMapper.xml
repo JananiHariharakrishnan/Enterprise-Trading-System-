@@ -108,6 +108,47 @@
         )
     </insert>
 
+    <update id="updateAccountBalancesWithVersion">
+        UPDATE accounts
+        SET
+            cash_balance = #{cashBalance},
+            buying_power = #{buyingPower},
+            version = version + 1,
+            last_updated = CURRENT_TIMESTAMP
+        WHERE id = #{accountId}
+          AND version = #{expectedVersion}
+    </update>
+
+    <insert id="insertPosition">
+        INSERT INTO positions (
+            account_id,
+            symbol,
+            qty,
+            avg_cost
+        ) VALUES (
+            #{accountId},
+            #{symbol},
+            #{quantity},
+            #{averageCost}
+        )
+    </insert>
+
+    <update id="updatePosition">
+        UPDATE positions
+        SET
+            qty = #{quantity},
+            avg_cost = #{averageCost}
+        WHERE account_id = #{accountId}
+          AND symbol = #{symbol}
+    </update>
+
+    <update id="cancelOrderIfStatus">
+        UPDATE orders
+        SET status = #{newStatus}
+        WHERE id = #{orderId}
+          AND status = #{expectedStatus}
+    </update>
+
     <select id="findOrderHistory" resultMap="orderHistoryResultMap">
         SELECT
             CAST(id AS VARCHAR) AS id,

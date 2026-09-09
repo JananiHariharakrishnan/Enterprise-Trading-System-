@@ -8,8 +8,10 @@ import com.tradingsystem.model.Position;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Mapper
 public interface OrderDataMapper {
@@ -23,6 +25,33 @@ public interface OrderDataMapper {
     boolean existsByIdempotencyKey(@Param("idempotencyKey") String idempotencyKey);
 
     int insertOrder(Order order);
+
+    int updateAccountBalancesWithVersion(
+            @Param("accountId") Long accountId,
+            @Param("cashBalance") BigDecimal cashBalance,
+            @Param("buyingPower") BigDecimal buyingPower,
+            @Param("expectedVersion") int expectedVersion
+    );
+
+    int insertPosition(
+            @Param("accountId") Long accountId,
+            @Param("symbol") String symbol,
+            @Param("quantity") int quantity,
+            @Param("averageCost") BigDecimal averageCost
+    );
+
+    int updatePosition(
+            @Param("accountId") Long accountId,
+            @Param("symbol") String symbol,
+            @Param("quantity") int quantity,
+            @Param("averageCost") BigDecimal averageCost
+    );
+
+    int cancelOrderIfStatus(
+            @Param("orderId") UUID orderId,
+            @Param("expectedStatus") String expectedStatus,
+            @Param("newStatus") String newStatus
+    );
 
     List<OrderHistoryEntry> findOrderHistory(
             @Param("accountId") Long accountId,
