@@ -5,8 +5,16 @@
 The app resolves datasource and server values from environment variables in
 `src/main/resources/application.properties`.
 
+It now loads env files from the most common local launch locations so the API
+can be started from either the repository root or the `trade-api` folder.
+It also accepts either the module-local `DB_*` variables or the shared
+`Database/.env` `POSTGRES_*` variables.
+
 - Copy `.env.example` to `.env`.
 - Set at least `DB_PASSWORD` to your local database password.
+- Or keep using `Database/.env`; the API will fall back to
+  `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and
+  `POSTGRES_PASSWORD` when `DB_*` values are not present.
 
 ```properties
 SPRING_APPLICATION_NAME=trade-api
