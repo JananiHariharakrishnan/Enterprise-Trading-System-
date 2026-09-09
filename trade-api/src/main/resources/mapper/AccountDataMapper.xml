@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tradingsystem.mapper.AccountDataMapper">
+
+    <resultMap id="accountResultMap" type="com.tradingsystem.model.Account">
+        <id property="accountId" column="id"/>
+        <result property="accountReference" column="account_reference"/>
+        <result property="cashBalance" column="cash_balance"/>
+        <result property="buyingPower" column="buying_power"/>
+        <result property="status" column="status"/>
+        <result property="version" column="version"/>
+        <result property="lastUpdated" column="last_updated"/>
+    </resultMap>
+
+    <resultMap id="positionResultMap" type="com.tradingsystem.model.Position">
+        <id property="accountId" column="account_id"/>
+        <id property="symbol" column="symbol"/>
+        <result property="quantity" column="qty"/>
+        <result property="averageCost" column="avg_cost"/>
+    </resultMap>
+
+    <select id="findAccountById" resultMap="accountResultMap">
+        SELECT
+            id,
+            account_reference,
+            cash_balance,
+            buying_power,
+            status,
+            version,
+            last_updated
+        FROM accounts
+        WHERE id = #{accountId}
+    </select>
+
+    <select id="findAccountHolderName" resultType="string">
+        SELECT
+            CONCAT(first_name, ' ', last_name)
+        FROM users
+        WHERE account_id = #{accountId}
+    </select>
+
+    <select id="findPositionsByAccountId" resultMap="positionResultMap">
+        SELECT
+            account_id,
+            symbol,
+            qty,
+            avg_cost
+        FROM positions
+        WHERE account_id = #{accountId}
+        ORDER BY symbol ASC
+    </select>
+
+</mapper>
+
