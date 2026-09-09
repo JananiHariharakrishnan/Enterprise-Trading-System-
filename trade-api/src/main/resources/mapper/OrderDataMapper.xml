@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tradingsystem.mapper.OrderDataMapper">
+
+    <resultMap id="accountResultMap" type="com.tradingsystem.model.Account">
+        <id property="accountId" column="id"/>
+        <result property="accountReference" column="account_reference"/>
+        <result property="cashBalance" column="cash_balance"/>
+        <result property="buyingPower" column="buying_power"/>
+        <result property="status" column="status"/>
+        <result property="version" column="version"/>
+        <result property="lastUpdated" column="last_updated"/>
+    </resultMap>
+
+    <resultMap id="instrumentResultMap" type="com.tradingsystem.model.Instrument">
+        <id property="symbol" column="symbol"/>
+        <result property="name" column="name"/>
+        <result property="assetClass" column="asset_class"/>
+        <result property="currency" column="currency"/>
+        <result property="tradable" column="tradable"/>
+    </resultMap>
+
+    <resultMap id="positionResultMap" type="com.tradingsystem.model.Position">
+        <id property="accountId" column="account_id"/>
+        <id property="symbol" column="symbol"/>
+        <result property="quantity" column="qty"/>
+        <result property="averageCost" column="avg_cost"/>
+    </resultMap>
+
+    <resultMap id="orderHistoryResultMap" type="com.tradingsystem.dto.response.OrderHistoryEntry">
+        <id property="orderId" column="id"/>
+        <result property="accountId" column="account_id"/>
+        <result property="symbol" column="symbol"/>
+        <result property="side" column="side"/>
+        <result property="quantity" column="qty"/>
+        <result property="price" column="price"/>
+        <result property="status" column="status"/>
+        <result property="idempotencyKey" column="idempotency_key"/>
+        <result property="createdOn" column="created_on"/>
+    </resultMap>
+
+    <select id="findAccountById" resultMap="accountResultMap">
+        SELECT
+            id,
+            account_reference,
+            cash_balance,
+            buying_power,
+            status,
+            version,
+            last_updated
+        FROM accounts
+        WHERE id = #{accountId}
+    </select>
+
+    <select id="findInstrumentBySymbol" resultMap="instrumentResultMap">
+        SELECT
+            symbol,
+            name,
+            asset_class,
+            currency,
+            tradable
+        FROM instruments
+        WHERE symbol = #{symbol}
+    </select>
+
+    <select id="findPosition" resultMap="positionResultMap">
+        SELECT
+            account_id,
+            symbol,
+            qty,
+            avg_cost
+        FROM positions
+        WHERE account_id = #{accountId}
+          AND symbol = #{symbol}
+    </select>
+
+    <select id="existsByIdempotencyKey" resultType="boolean">
+        SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+        FROM orders
+        WHERE idempotency_key = #{idempotencyKey}
+    </select>
+
+    <insert id="insertOrder" parameterType="com.tradingsystem.model.Order">
+        INSERT INTO orders (
+            id,
+            account_id,
+            symbol,
+            side,
+            order_type,
+            qty,
+            price,
+            status,
+            idempotency_key,
+            created_on
+        ) VALUES (
+            #{id},
+            #{accountId},
+            #{symbol},
+            #{side},
+            #{orderType},
+            #{quantity},
+            #{price},
+            #{status},
+            #{idempotencyKey},
+            #{createdOn}
+        )
+    </insert>
+
+    <select id="findOrderHistory" resultMap="orderHistoryResultMap">
+        SELECT
+            CAST(id AS VARCHAR) AS id,
+            account_id,
+            symbol,
+            side,
+            qty,
+            price,
+            status,
+            idempotency_key,
+            created_on
+        FROM orders
+        WHERE account_id = #{accountId}
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="from != null">
+            AND created_on &gt;= #{from}
+        </if>
+        <if test="to != null">
+            AND created_on &lt;= #{to}
+        </if>
+        ORDER BY created_on DESC
+    </select>
+
+</mapper>
+
+
+

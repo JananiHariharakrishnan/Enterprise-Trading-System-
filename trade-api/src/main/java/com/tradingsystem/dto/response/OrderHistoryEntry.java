@@ -5,7 +5,9 @@ import com.tradingsystem.enums.OrderSide;
 import com.tradingsystem.enums.OrderStatus;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 public class OrderHistoryEntry {
 
@@ -101,6 +103,14 @@ public class OrderHistoryEntry {
 
     public void setCreatedOn(OffsetDateTime createdOn) {
         this.createdOn = createdOn;
+    }
+
+    public void setCreatedOn(LocalDateTime createdOn) {
+        if (createdOn == null) {
+            this.createdOn = null;
+            return;
+        }
+        this.createdOn = createdOn.atOffset(ZoneOffset.UTC);
     }
 }
 

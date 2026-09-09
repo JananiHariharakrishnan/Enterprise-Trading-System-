@@ -1,7 +1,7 @@
 package com.tradingsystem.service.Impl;
 
+import com.tradingsystem.mapper.OrderDataMapper;
 import com.tradingsystem.service.OrderLogic;
-import com.tradingsystem.dto.request.PlaceOrderRequest;
 import com.tradingsystem.dto.response.OrderHistoryEntry;
 import com.tradingsystem.dto.response.OrderResponse;
 import com.tradingsystem.enums.OrderStatus;
@@ -10,13 +10,12 @@ import com.tradingsystem.model.Instrument;
 import com.tradingsystem.model.Order;
 import com.tradingsystem.model.Position;
 import com.tradingsystem.service.OrderService;
+import com.tradingsystem.service.command.PlaceOrderCommand;
 
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,85 +23,53 @@ import java.util.UUID;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderLogic orderLogic;
+    private final OrderDataMapper orderDataMapper;
 
-    public OrderServiceImpl(OrderLogic orderLogic) {
+    public OrderServiceImpl(OrderLogic orderLogic, OrderDataMapper orderDataMapper) {
         this.orderLogic = orderLogic;
+        this.orderDataMapper = orderDataMapper;
     }
 
     @Override
-    public OrderResponse placeOrder(PlaceOrderRequest request) {
-
-        /*
-         * Temporary objects.
-         * Later these will come from repositories/database.
-         */
-
-        Account account = new Account();
-
-        // Temporary account setup
-        account.setCashBalance(
-                request.getPrice()
-                        .multiply(
-                                BigDecimal.valueOf(
-                                        request.getQuantity()
-                                )
-                        )
-        );
-
-
-        Instrument instrument = new Instrument();
-
-        instrument.setTradable(true);
-
+    public OrderResponse placeOrder(PlaceOrderCommand command) {
+        Account account = orderDataMapper.findAccountById(command.getAccountId());
+        Instrument instrument = orderDataMapper.findInstrumentBySymbol(command.getSymbol());
+        Position position = orderDataMapper.findPosition(command.getAccountId(), command.getSymbol());
+        boolean duplicateKey = orderDataMapper.existsByIdempotencyKey(command.getIdempotencyKey());
 
         Order order = new Order();
-
         order.setId(UUID.randomUUID());
-
-        order.setAccountId(request.getAccountId());
-
-        order.setSymbol(request.getSymbol());
-
-        order.setSide(request.getSide());
-
-        order.setQuantity(request.getQuantity());
-
-        order.setPrice(request.getPrice());
-
+        order.setAccountId(command.getAccountId());
+        order.setSymbol(command.getSymbol());
+        order.setSide(command.getSide());
+        order.setOrderType(command.getOrderType());
+        order.setQuantity(command.getQuantity());
+        order.setPrice(command.getPrice());
+        order.setIdempotencyKey(command.getIdempotencyKey());
         order.setStatus(OrderStatus.NEW);
-
         order.setCreatedOn(LocalDateTime.now());
 
-
-        Position position = new Position();
-
-
-        // Apply trading rules
         orderLogic.placeOrder(
                 account,
                 instrument,
                 order,
-                position
+                position,
+                duplicateKey
         );
 
+        int affectedRows = orderDataMapper.insertOrder(order);
+        if (affectedRows != 1) {
+            throw new IllegalStateException("Order insert did not affect exactly one row");
+        }
 
-        // Create response
         OrderResponse response = new OrderResponse();
-
         response.setOrderId(order.getId().toString());
-
         response.setStatus(OrderStatus.NEW);
-
         response.setMessage("Order accepted");
-
         response.setSymbol(order.getSymbol());
-
         response.setSide(order.getSide());
-
         response.setQuantity(order.getQuantity());
-
         response.setPrice(order.getPrice());
-
         return response;
     }
 
@@ -129,7 +96,6 @@ public class OrderServiceImpl implements OrderService {
             OffsetDateTime from,
             OffsetDateTime to
     ) {
-
-        return Collections.emptyList();
+        return orderDataMapper.findOrderHistory(accountId, status, from, to);
     }
 }

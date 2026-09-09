@@ -5,6 +5,7 @@ import com.tradingsystem.dto.request.PlaceOrderRequest;
 import com.tradingsystem.dto.response.OrderHistoryEntry;
 import com.tradingsystem.dto.response.OrderResponse;
 import com.tradingsystem.service.OrderService;
+import com.tradingsystem.service.command.PlaceOrderCommand;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,16 @@ public class OrderController {
     public ResponseEntity<OrderResponse> placeOrder(
             @Valid @RequestBody PlaceOrderRequest request) {
 
-        OrderResponse response = orderService.placeOrder(request);
+        PlaceOrderCommand command = new PlaceOrderCommand();
+        command.setAccountId(request.getAccountId());
+        command.setSymbol(request.getSymbol());
+        command.setSide(request.getSide());
+        command.setOrderType(request.getOrderType());
+        command.setQuantity(request.getQuantity());
+        command.setPrice(request.getPrice());
+        command.setIdempotencyKey(request.getIdempotencyKey());
+
+        OrderResponse response = orderService.placeOrder(command);
 
         return ResponseEntity.ok(response);
     }

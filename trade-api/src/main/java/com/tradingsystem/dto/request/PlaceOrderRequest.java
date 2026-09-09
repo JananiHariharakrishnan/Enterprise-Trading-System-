@@ -2,6 +2,7 @@
 package com.tradingsystem.dto.request;
 
 import com.tradingsystem.enums.OrderSide;
+import com.tradingsystem.enums.OrderType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -22,6 +23,9 @@ public class PlaceOrderRequest {
 
     @NotNull
     private OrderSide side;
+
+    @NotNull
+    private OrderType orderType;
 
     @NotNull
     @Min(1)
@@ -60,6 +64,14 @@ public class PlaceOrderRequest {
 
     public void setSide(OrderSide side) {
         this.side = side;
+    }
+
+    public OrderType getOrderType() {
+        return orderType;
+    }
+
+    public void setOrderType(OrderType orderType) {
+        this.orderType = orderType;
     }
 
     public Integer getQuantity() {
