@@ -1,7 +1,9 @@
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS positions;
+DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS instruments;
 DROP TABLE IF EXISTS accounts;
+
 
 CREATE TABLE accounts (
     id BIGINT PRIMARY KEY,
@@ -44,5 +46,17 @@ CREATE TABLE orders (
     created_on TIMESTAMP NOT NULL,
     CONSTRAINT fk_orders_account FOREIGN KEY (account_id) REFERENCES accounts (id),
     CONSTRAINT fk_orders_instrument FOREIGN KEY (symbol) REFERENCES instruments (symbol)
+);
+
+CREATE TABLE users (
+    account_id BIGINT PRIMARY KEY,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone_no VARCHAR(30),
+    password_hash VARCHAR(255) NOT NULL,
+    CONSTRAINT fk_users_account
+        FOREIGN KEY (account_id)
+        REFERENCES accounts (id)
 );
 

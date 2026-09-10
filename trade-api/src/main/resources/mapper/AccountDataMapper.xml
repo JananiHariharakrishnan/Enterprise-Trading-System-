@@ -49,6 +49,7 @@
             avg_cost
         FROM positions
         WHERE account_id = #{accountId}
+         AND qty &lt;&gt; 0
         ORDER BY symbol ASC
     </select>
 
