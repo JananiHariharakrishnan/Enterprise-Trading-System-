@@ -1,4 +1,3 @@
-
 package com.tradingsystem.controller;
 
 import com.tradingsystem.dto.request.PlaceOrderRequest;
@@ -8,6 +7,7 @@ import com.tradingsystem.service.OrderService;
 import com.tradingsystem.service.command.PlaceOrderCommand;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,7 +39,10 @@ public class OrderController {
 
         OrderResponse response = orderService.placeOrder(command);
 
-        return ResponseEntity.ok(response);
+        // EDGE CASE FIX: Return 201 CREATED instead of 200 OK for new resources
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
     }
 
     @DeleteMapping("/{id}")
@@ -48,6 +51,7 @@ public class OrderController {
 
         OrderResponse response = orderService.cancelOrder(id);
 
+        // EDGE CASE FIX: Return 200 OK with proper status
         return ResponseEntity.ok(response);
     }
 

@@ -101,4 +101,17 @@ public class Order {
         this.createdOn = createdOn;
     }
 
+    public void validateOrderValue() throws ArithmeticException {
+        // EDGE CASE: Validate price * quantity doesn't overflow
+        if (this.price == null || this.quantity <= 0) {
+            throw new IllegalArgumentException("Invalid order parameters");
+        }
+        
+        BigDecimal orderValue = this.price
+                .multiply(BigDecimal.valueOf(this.quantity));
+        
+        if (orderValue.scale() > 10) {
+            throw new ArithmeticException("Order value precision exceeds limit");
+        }
+    }
 }

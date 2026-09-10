@@ -5,6 +5,7 @@ import com.tradingsystem.dto.response.BalanceResponse;
 import com.tradingsystem.dto.response.PositionResponse;
 import com.tradingsystem.exception.AccountNotActiveException;
 import com.tradingsystem.exception.AccountNotFoundException;
+import com.tradingsystem.exception.TradingAuthenticationException;
 import com.tradingsystem.mapper.AccountDataMapper;
 import com.tradingsystem.model.Account;
 import com.tradingsystem.model.Position;
@@ -136,6 +137,11 @@ public class AccountServiceImpl implements AccountService {
      */
     private Account getAuthorizedAccount(Long accountId) {
 
+        // EDGE CASE FIX: Validate account ID is not null
+        if (accountId == null || accountId <= 0) {
+            throw new AccountNotFoundException();
+        }
+
         Account account =
                 accountDataMapper.findAccountById(accountId);
 
@@ -150,8 +156,12 @@ public class AccountServiceImpl implements AccountService {
         Long authenticatedAccountId =
                 currentUser.getAccountId();
 
-        if (authenticatedAccountId == null
-                || !accountId.equals(authenticatedAccountId)) {
+        // EDGE CASE FIX: Better handling of missing authentication context
+        if (authenticatedAccountId == null) {
+            throw new TradingAuthenticationException("No authentication context");
+        }
+
+        if (!accountId.equals(authenticatedAccountId)) {
 
             throw new AccountNotActiveException();
         }

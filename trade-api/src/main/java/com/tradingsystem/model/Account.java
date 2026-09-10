@@ -68,21 +68,34 @@ public class Account {
     public boolean isActive() {
         return status == AccountStatus.ACTIVE;
     }
+
+    public boolean canAfford(BigDecimal amount) {
+        // EDGE CASE FIX: Handle null cash balance
+        if (this.cashBalance == null || amount == null) {
+            return false;
+        }
+        return this.cashBalance.compareTo(amount) >= 0;
+    }
+
     public void credit(BigDecimal amount) {
-        this.cashBalance=cashBalance.add(amount);
+        // EDGE CASE FIX: Null check and negative amount check
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Invalid credit amount");
+        }
+        if (this.cashBalance == null) {
+            this.cashBalance = BigDecimal.ZERO;
+        }
+        this.cashBalance = this.cashBalance.add(amount);
     }
 
     public void debit(BigDecimal amount) {
+        // EDGE CASE FIX: Null check before canAfford
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Invalid debit amount");
+        }
         if (!canAfford(amount)) {
             throw new IllegalArgumentException("Insufficient balance");
         }
-        this.cashBalance = cashBalance.subtract(amount);
-    }
-
-    public boolean canAfford(BigDecimal amount) {
-        if(cashBalance.compareTo(amount) >= 0){
-            return true;
-        }
-        return false;
+        this.cashBalance = this.cashBalance.subtract(amount);
     }
 }

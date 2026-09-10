@@ -8,5 +8,12 @@ public class OrderStateConflictException extends TradingDomainException {
                 "Order state conflict"
         );
     }
+
+    public OrderStateConflictException(String message) {
+        super(
+                "ORD-409",
+                message
+        );
+    }
 }
 

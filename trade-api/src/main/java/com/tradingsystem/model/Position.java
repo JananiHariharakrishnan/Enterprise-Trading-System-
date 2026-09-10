@@ -40,4 +40,11 @@ public class Position {
     public void setAverageCost(BigDecimal averageCost) {
         this.averageCost = averageCost;
     }
+
+    public void validateQuantity() {
+        // EDGE CASE: Ensure quantity doesn't go negative
+        if (this.quantity < 0) {
+            throw new IllegalArgumentException("Position quantity cannot be negative");
+        }
+    }
 }

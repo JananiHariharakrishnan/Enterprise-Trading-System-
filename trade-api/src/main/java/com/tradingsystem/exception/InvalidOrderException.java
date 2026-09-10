@@ -7,4 +7,11 @@ public class InvalidOrderException extends TradingDomainException {
                 "Invalid order"
         );
     }
+
+    public InvalidOrderException(String message) {
+        super(
+                "VAL-422",
+                message
+        );
+    }
 }

@@ -59,5 +59,7 @@ public interface OrderDataMapper {
             @Param("from") OffsetDateTime from,
             @Param("to") OffsetDateTime to
     );
-}
 
+    // EDGE CASE: For order cancellation validation
+    Order findOrderById(@Param("orderId") UUID orderId);
+}

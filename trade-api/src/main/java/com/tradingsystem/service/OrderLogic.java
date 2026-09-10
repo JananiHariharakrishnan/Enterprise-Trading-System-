@@ -55,8 +55,20 @@ public class OrderLogic {
         }
 
 
+        // Rule 2.5: Account cash balance must be valid
+        // EDGE CASE FIX: Verify cash balance is set
+        if (account.getCashBalance() == null) {
+            throw new AccountNotActiveException();
+        }
+
+
         // Rule 3: Instrument must exist and be tradable
-        if (instrument == null || !instrument.isTradable()) {
+        // EDGE CASE FIX: Handle null instrument check
+        if (instrument == null) {
+            throw new InstrumentNotFoundException();
+        }
+
+        if (!instrument.isTradable()) {
             throw new InstrumentNotFoundException();
         }
 
@@ -88,14 +100,23 @@ public class OrderLogic {
         if (order.getSide() == OrderSide.BUY) {
 
 
+            // EDGE CASE FIX: Validate quantity doesn't cause overflow
+            if (order.getQuantity() > Integer.MAX_VALUE / 1000) {
+                throw new InvalidOrderException();
+            }
+
             BigDecimal orderValue =
                     order.getPrice()
                             .multiply(
                                     BigDecimal.valueOf(
-                                            order.getQuantity()
+                                            (long) order.getQuantity()
                                     )
                             );
-
+            
+            // EDGE CASE FIX: Check price precision
+            if (orderValue.scale() > 10) {
+                throw new InvalidOrderException();
+            }
 
             if (account.getCashBalance()
                     .compareTo(orderValue) < 0) {

@@ -128,6 +128,19 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleOrderNotFound(
+            OrderNotFoundException ex) {
+
+        log.warn("Order not found: {}", ex.getMessage());
+
+        return error(
+                HttpStatus.NOT_FOUND,
+                "ORD-404",
+                "Order not found"
+        );
+    }
+
     @ExceptionHandler(InvalidOrderException.class)
     public ResponseEntity<ErrorResponse> handleInvalidOrder(
             InvalidOrderException ex) {
@@ -186,6 +199,32 @@ public class GlobalExceptionHandler {
                 HttpStatus.UNPROCESSABLE_ENTITY,
                 "VAL-422",
                 "Invalid input"
+        );
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(
+            IllegalArgumentException ex) {
+
+        log.warn("Invalid argument: {}", ex.getMessage());
+
+        return error(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "VAL-422",
+                "Invalid input: " + ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalState(
+            IllegalStateException ex) {
+
+        log.error("Illegal state: {}", ex.getMessage());
+
+        return error(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "SYS-500",
+                "Internal server error"
         );
     }
 

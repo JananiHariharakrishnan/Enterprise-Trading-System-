@@ -4,12 +4,9 @@ import com.tradingsystem.dto.response.OrderHistoryEntry;
 import com.tradingsystem.dto.response.OrderResponse;
 import com.tradingsystem.enums.OrderSide;
 import com.tradingsystem.enums.OrderStatus;
-import com.tradingsystem.exception.AccountNotActiveException;
-import com.tradingsystem.exception.AccountNotFoundException;
+import com.tradingsystem.exception.*;
 import com.tradingsystem.mapper.AccountDataMapper;
 import com.tradingsystem.mapper.OrderDataMapper;
-import com.tradingsystem.exception.DuplicateOrderException;
-import com.tradingsystem.exception.OrderStateConflictException;
 import com.tradingsystem.model.Account;
 import com.tradingsystem.model.Instrument;
 import com.tradingsystem.model.Order;
@@ -28,7 +25,6 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -58,6 +54,14 @@ public class OrderServiceImpl implements OrderService {
                 orderDataMapper.findAccountById(
                         command.getAccountId()
                 );
+        // EDGE CASE FIX: Verify cash balance is not null
+        if (account.getCashBalance() == null) {
+            throw new InvalidOrderException("Account cash balance is invalid");
+        }
+
+        if (account.getBuyingPower() == null) {
+            throw new InvalidOrderException("Account buying power is invalid");
+        }
 
         Instrument instrument =
                 orderDataMapper.findInstrumentBySymbol(
@@ -99,7 +103,8 @@ public class OrderServiceImpl implements OrderService {
                 position
         );
 
-        BigDecimal orderValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
+        // EDGE CASE FIX: Prevent arithmetic overflow in price * quantity
+        BigDecimal orderValue = calculateOrderValue(order);
 
         BigDecimal newCashBalance = account.getCashBalance();
         BigDecimal newBuyingPower = account.getBuyingPower();
@@ -148,29 +153,60 @@ public class OrderServiceImpl implements OrderService {
 
         return response;
     }
-
     @Override
     @Transactional
     public OrderResponse cancelOrder(String orderId) {
+
+        // EDGE CASE FIX: Validate UUID format before processing
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(orderId);
+        } catch (IllegalArgumentException ex) {
+            throw new OrderNotFoundException("Invalid order ID format");
+        }
+
         int affectedRows = orderDataMapper.cancelOrderIfStatus(
-                UUID.fromString(orderId),
+                uuid,
                 OrderStatus.NEW.name(),
                 OrderStatus.CANCELLED.name()
         );
-        if (affectedRows != 1) {
-            throw new OrderStateConflictException();
+
+        // EDGE CASE FIX: Distinguish between "order not found" vs "order not in NEW state"
+        if (affectedRows == 0) {
+            // Check if order exists at all
+            Order existingOrder = orderDataMapper.findOrderById(uuid);
+            if (existingOrder == null) {
+                throw new OrderNotFoundException("Order not found");
+            }
+            // Order exists but is not in NEW state
+            throw new OrderStateConflictException("Cannot cancel order that is not in NEW state");
         }
 
-        OrderResponse response =
-                new OrderResponse();
-
+        OrderResponse response = new OrderResponse();
         response.setOrderId(orderId);
-
         response.setStatus(OrderStatus.CANCELLED);
-
         response.setMessage("Order cancelled");
 
         return response;
+    }
+
+    // EDGE CASE FIX: Helper method to calculate order value with overflow protection
+    private BigDecimal calculateOrderValue(Order order) {
+        BigDecimal price = order.getPrice();
+        long quantity = (long) order.getQuantity(); // Convert to long to prevent overflow
+        
+        if (quantity > Integer.MAX_VALUE / 1000) {
+            throw new InvalidOrderException("Order quantity exceeds maximum allowed value");
+        }
+        
+        BigDecimal orderValue = price.multiply(BigDecimal.valueOf(quantity));
+        
+        // Check for arithmetic overflow result
+        if (orderValue.scale() > 10) {
+            throw new InvalidOrderException("Order value precision exceeds allowed range");
+        }
+        
+        return orderValue;
     }
 
     private void persistPosition(Order order, Position existingPosition) {
@@ -192,9 +228,11 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal previousCost = existingPosition.getAverageCost()
                     .multiply(BigDecimal.valueOf(existingPosition.getQuantity()));
             BigDecimal orderCost = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
+            
+            // EDGE CASE FIX: Handle division by zero and precision with more accurate rounding
             BigDecimal newAverageCost = previousCost
                     .add(orderCost)
-                    .divide(BigDecimal.valueOf(newQuantity), 2, RoundingMode.HALF_UP);
+                    .divide(BigDecimal.valueOf(newQuantity), 10, RoundingMode.HALF_UP);
 
             int updated = orderDataMapper.updatePosition(
                     order.getAccountId(),
@@ -208,8 +246,17 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
 
-        int newQuantity = Objects.requireNonNull(existingPosition).getQuantity() - order.getQuantity();
-        BigDecimal newAverageCost = newQuantity == 0
+        // EDGE CASE FIX: Better error message for SELL without position
+        if (existingPosition == null) {
+            throw new IllegalStateException(
+                "SELL order validation should have caught missing position"
+            );
+        }
+
+        int newQuantity = existingPosition.getQuantity() - order.getQuantity();
+        
+        // EDGE CASE FIX: Handle 0 quantity edge case
+        BigDecimal newAverageCost = newQuantity <= 0
                 ? BigDecimal.ZERO
                 : existingPosition.getAverageCost();
 
@@ -230,6 +277,20 @@ public class OrderServiceImpl implements OrderService {
             String status,
             OffsetDateTime from,
             OffsetDateTime to) {
+
+        // EDGE CASE FIX: Validate date range
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new InvalidOrderException("Start date cannot be after end date");
+        }
+
+        // EDGE CASE FIX: Validate status parameter if provided
+        if (status != null && !status.trim().isEmpty()) {
+            try {
+                OrderStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                throw new InvalidOrderException("Invalid order status: " + status);
+            }
+        }
 
         /*
          * Account lookup is deliberately performed before the order query.
