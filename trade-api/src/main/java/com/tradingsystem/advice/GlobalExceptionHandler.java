@@ -2,11 +2,17 @@ package com.tradingsystem.advice;
 
 import com.tradingsystem.dto.response.ErrorResponse;
 import com.tradingsystem.exception.*;
+
 import jakarta.validation.ConstraintViolationException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -15,9 +21,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     private static final Logger log =
-            LoggerFactory.getLogger(
-                    GlobalExceptionHandler.class
-            );
+            LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+
+    // =========================================================
+    // ACCOUNT EXCEPTIONS
+    // =========================================================
 
     @ExceptionHandler(AccountNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleAccountNotFound(
@@ -35,6 +44,7 @@ public class GlobalExceptionHandler {
         );
     }
 
+
     @ExceptionHandler(AccountNotActiveException.class)
     public ResponseEntity<ErrorResponse> handleAccountNotActive(
             AccountNotActiveException ex) {
@@ -50,6 +60,11 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
     }
+
+
+    // =========================================================
+    // INSTRUMENT EXCEPTIONS
+    // =========================================================
 
     @ExceptionHandler(InstrumentNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleInstrumentNotFound(
@@ -67,6 +82,11 @@ public class GlobalExceptionHandler {
         );
     }
 
+
+    // =========================================================
+    // ORDER BUSINESS EXCEPTIONS
+    // =========================================================
+
     @ExceptionHandler(InsufficientFundsException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientFunds(
             InsufficientFundsException ex) {
@@ -81,6 +101,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
     }
+
 
     @ExceptionHandler(InsufficientHoldingsException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientHoldings(
@@ -97,6 +118,7 @@ public class GlobalExceptionHandler {
         );
     }
 
+
     @ExceptionHandler(DuplicateOrderException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateOrder(
             DuplicateOrderException ex) {
@@ -111,6 +133,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
     }
+
 
     @ExceptionHandler(OrderStateConflictException.class)
     public ResponseEntity<ErrorResponse> handleOrderStateConflict(
@@ -128,11 +151,15 @@ public class GlobalExceptionHandler {
         );
     }
 
+
     @ExceptionHandler(OrderNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleOrderNotFound(
             OrderNotFoundException ex) {
 
-        log.warn("Order not found: {}", ex.getMessage());
+        log.warn(
+                "Order not found: {}",
+                ex.getMessage()
+        );
 
         return error(
                 HttpStatus.NOT_FOUND,
@@ -141,12 +168,14 @@ public class GlobalExceptionHandler {
         );
     }
 
+
     @ExceptionHandler(InvalidOrderException.class)
     public ResponseEntity<ErrorResponse> handleInvalidOrder(
             InvalidOrderException ex) {
 
         log.warn(
-                "Order rejected because of invalid input"
+                "Order rejected because of invalid input: {}",
+                ex.getMessage()
         );
 
         return error(
@@ -155,6 +184,11 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
     }
+
+
+    // =========================================================
+    // AUTHENTICATION
+    // =========================================================
 
     @ExceptionHandler(TradingAuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthentication(
@@ -172,6 +206,11 @@ public class GlobalExceptionHandler {
         );
     }
 
+
+    // =========================================================
+    // BEAN VALIDATION
+    // =========================================================
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(
             MethodArgumentNotValidException ex) {
@@ -186,6 +225,7 @@ public class GlobalExceptionHandler {
                 "Invalid input"
         );
     }
+
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolation(
@@ -202,24 +242,61 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgument(
-            IllegalArgumentException ex) {
 
-        log.warn("Invalid argument: {}", ex.getMessage());
+    // =========================================================
+    // INVALID / MALFORMED REQUEST BODY
+    // =========================================================
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidJson(
+            HttpMessageNotReadableException ex) {
+
+        log.warn(
+                "Invalid request payload: {}",
+                ex.getMessage()
+        );
 
         return error(
                 HttpStatus.UNPROCESSABLE_ENTITY,
                 "VAL-422",
-                "Invalid input: " + ex.getMessage()
+                "Invalid input"
         );
     }
+
+
+    // =========================================================
+    // ILLEGAL ARGUMENT
+    // =========================================================
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(
+            IllegalArgumentException ex) {
+
+        log.warn(
+                "Invalid argument: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "VAL-422",
+                "Invalid input"
+        );
+    }
+
+
+    // =========================================================
+    // ILLEGAL STATE
+    // =========================================================
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalState(
             IllegalStateException ex) {
 
-        log.error("Illegal state: {}", ex.getMessage());
+        log.error(
+                "Illegal state: {}",
+                ex.getMessage()
+        );
 
         return error(
                 HttpStatus.INTERNAL_SERVER_ERROR,
@@ -227,6 +304,32 @@ public class GlobalExceptionHandler {
                 "Internal server error"
         );
     }
+
+
+    // =========================================================
+    // DATABASE CONSTRAINT VIOLATIONS
+    // =========================================================
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDatabaseError(
+            DataIntegrityViolationException ex) {
+
+        log.warn(
+                "Database constraint violation: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.CONFLICT,
+                "ORD-409",
+                "Order already exists or violates a database constraint"
+        );
+    }
+
+
+    // =========================================================
+    // TRADING DOMAIN EXCEPTION
+    // =========================================================
 
     @ExceptionHandler(TradingDomainException.class)
     public ResponseEntity<ErrorResponse> handleTradingDomain(
@@ -244,6 +347,11 @@ public class GlobalExceptionHandler {
         );
     }
 
+
+    // =========================================================
+    // GENERIC FALLBACK
+    // =========================================================
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(
             Exception ex) {
@@ -259,6 +367,11 @@ public class GlobalExceptionHandler {
                 "Internal server error"
         );
     }
+
+
+    // =========================================================
+    // COMMON ERROR RESPONSE
+    // =========================================================
 
     private ResponseEntity<ErrorResponse> error(
             HttpStatus status,

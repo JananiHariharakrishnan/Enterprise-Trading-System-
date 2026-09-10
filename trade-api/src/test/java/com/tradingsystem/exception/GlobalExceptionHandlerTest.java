@@ -13,6 +13,7 @@ class GlobalExceptionHandlerTest {
     private final GlobalExceptionHandler handler =
             new GlobalExceptionHandler();
 
+
     @Test
     void accountNotFound_mapsToAcc404() {
 
@@ -28,6 +29,7 @@ class GlobalExceptionHandlerTest {
                 "Account not found"
         );
     }
+
 
     @Test
     void accountNotActive_mapsToAcc403() {
@@ -45,6 +47,7 @@ class GlobalExceptionHandlerTest {
         );
     }
 
+
     @Test
     void instrumentNotFound_mapsToIns404() {
 
@@ -60,6 +63,7 @@ class GlobalExceptionHandlerTest {
                 "Instrument not found"
         );
     }
+
 
     @Test
     void insufficientFunds_mapsToOrd400() {
@@ -77,6 +81,7 @@ class GlobalExceptionHandlerTest {
         );
     }
 
+
     @Test
     void insufficientHoldings_mapsToOrd409() {
 
@@ -92,6 +97,7 @@ class GlobalExceptionHandlerTest {
                 "Insufficient holdings"
         );
     }
+
 
     @Test
     void duplicateOrder_mapsToOrd409() {
@@ -109,6 +115,7 @@ class GlobalExceptionHandlerTest {
         );
     }
 
+
     @Test
     void invalidOrder_mapsToVal422() {
 
@@ -121,9 +128,10 @@ class GlobalExceptionHandlerTest {
                 response,
                 HttpStatus.UNPROCESSABLE_ENTITY,
                 "VAL-422",
-                "Invalid input"
+                "Invalid order"
         );
     }
+
 
     @Test
     void authenticationFailure_mapsToAuth401() {
@@ -141,6 +149,36 @@ class GlobalExceptionHandlerTest {
         );
     }
 
+
+    @Test
+    void errorResponse_doesNotExposeInternalDetails() {
+
+        ResponseEntity<ErrorResponse> response =
+                handler.handleAccountNotFound(
+                        new AccountNotFoundException()
+                );
+
+        String body =
+                response.getBody().getMessage();
+
+        assertFalse(
+                body.contains("Exception")
+        );
+
+        assertFalse(
+                body.contains("SELECT")
+        );
+
+        assertFalse(
+                body.contains("accountId")
+        );
+
+        assertFalse(
+                body.contains("12345")
+        );
+    }
+
+
     private void assertError(
             ResponseEntity<ErrorResponse> response,
             HttpStatus status,
@@ -152,7 +190,9 @@ class GlobalExceptionHandlerTest {
                 response.getStatusCode()
         );
 
-        assertNotNull(response.getBody());
+        assertNotNull(
+                response.getBody()
+        );
 
         assertEquals(
                 code,
@@ -164,32 +204,4 @@ class GlobalExceptionHandlerTest {
                 response.getBody().getMessage()
         );
     }
-
-    @Test
-void errorResponse_doesNotExposeInternalDetails() {
-
-    ResponseEntity<ErrorResponse> response =
-            handler.handleAccountNotFound(
-                    new AccountNotFoundException()
-            );
-
-    String body =
-            response.getBody().getMessage();
-
-    assertFalse(
-            body.contains("Exception")
-    );
-
-    assertFalse(
-            body.contains("SELECT")
-    );
-
-    assertFalse(
-            body.contains("accountId")
-    );
-
-    assertFalse(
-            body.contains("12345")
-    );
-}
 }
