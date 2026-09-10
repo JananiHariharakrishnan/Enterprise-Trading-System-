@@ -1,14 +1,7 @@
 package com.tradingsystem.advice;
 
 import com.tradingsystem.dto.response.ErrorResponse;
-import com.tradingsystem.exception.AccountNotActiveException;
-import com.tradingsystem.exception.AccountNotFoundException;
-import com.tradingsystem.exception.DuplicateOrderException;
-import com.tradingsystem.exception.InstrumentNotFoundException;
-import com.tradingsystem.exception.InsufficientFundsException;
-import com.tradingsystem.exception.InsufficientHoldingsException;
-import com.tradingsystem.exception.InvalidOrderException;
-import com.tradingsystem.exception.TradingAuthenticationException;
+import com.tradingsystem.exception.*;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +30,8 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.NOT_FOUND,
-                "ACC-404",
-                "Account not found"
+                ex.getCode(),
+                ex.getMessage()
         );
     }
 
@@ -53,8 +46,8 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.FORBIDDEN,
-                "ACC-403",
-                "Account not active"
+                ex.getCode(),
+                ex.getMessage()
         );
     }
 
@@ -69,8 +62,8 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.NOT_FOUND,
-                "INS-404",
-                "Instrument not found"
+                ex.getCode(),
+                ex.getMessage()
         );
     }
 
@@ -84,8 +77,8 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.BAD_REQUEST,
-                "ORD-400",
-                "Insufficient funds"
+                ex.getCode(),
+                ex.getMessage()
         );
     }
 
@@ -99,8 +92,8 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.CONFLICT,
-                "ORD-409",
-                "Insufficient holdings"
+                ex.getCode(),
+                ex.getMessage()
         );
     }
 
@@ -114,8 +107,24 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.CONFLICT,
-                "ORD-409",
-                "Duplicate order"
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(OrderStateConflictException.class)
+    public ResponseEntity<ErrorResponse> handleOrderStateConflict(
+            OrderStateConflictException ex) {
+
+        log.warn(
+                "Order state conflict: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.CONFLICT,
+                ex.getCode(),
+                ex.getMessage()
         );
     }
 
@@ -129,8 +138,8 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.UNPROCESSABLE_ENTITY,
-                "VAL-422",
-                "Invalid input"
+                ex.getCode(),
+                ex.getMessage()
         );
     }
 
@@ -145,8 +154,8 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.UNAUTHORIZED,
-                "AUTH-401",
-                "Unauthorised"
+                ex.getCode(),
+                ex.getMessage()
         );
     }
 
@@ -177,6 +186,38 @@ public class GlobalExceptionHandler {
                 HttpStatus.UNPROCESSABLE_ENTITY,
                 "VAL-422",
                 "Invalid input"
+        );
+    }
+
+    @ExceptionHandler(TradingDomainException.class)
+    public ResponseEntity<ErrorResponse> handleTradingDomain(
+            TradingDomainException ex) {
+
+        log.error(
+                "Unhandled trading domain exception: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGenericException(
+            Exception ex) {
+
+        log.error(
+                "Unexpected internal server error",
+                ex
+        );
+
+        return error(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "SYS-500",
+                "Internal server error"
         );
     }
 
