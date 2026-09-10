@@ -158,7 +158,7 @@ public class AccountServiceImpl implements AccountService {
 
         // EDGE CASE FIX: Better handling of missing authentication context
         if (authenticatedAccountId == null) {
-            throw new TradingAuthenticationException("No authentication context");
+            throw new TradingAuthenticationException();
         }
 
         if (!accountId.equals(authenticatedAccountId)) {

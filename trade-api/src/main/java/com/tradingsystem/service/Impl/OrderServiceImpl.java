@@ -50,10 +50,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse placeOrder(PlaceOrderCommand command) {
-        Account account =
-                orderDataMapper.findAccountById(
-                        command.getAccountId()
-                );
+        Account account = getAuthorizedAccount(command.getAccountId());
         // EDGE CASE FIX: Verify cash balance is not null
         if (account.getCashBalance() == null) {
             throw new InvalidOrderException("Account cash balance is invalid");
@@ -297,9 +294,22 @@ public class OrderServiceImpl implements OrderService {
          * Otherwise an unknown account would incorrectly return an empty
          * order history instead of ACC-404.
          */
-        Account account =
-                accountDataMapper.findAccountById(accountId);
+        getAuthorizedAccount(accountId);
 
+        return orderDataMapper.findOrderHistory(
+                accountId,
+                status,
+                from,
+                to
+        );
+    }
+
+    private Account getAuthorizedAccount(Long accountId) {
+        if (accountId == null || accountId <= 0) {
+            throw new AccountNotFoundException();
+        }
+
+        Account account = accountDataMapper.findAccountById(accountId);
         if (account == null) {
             throw new AccountNotFoundException();
         }
@@ -308,20 +318,15 @@ public class OrderServiceImpl implements OrderService {
             throw new AccountNotActiveException();
         }
 
-        Long authenticatedAccountId =
-                currentUser.getAccountId();
+        Long authenticatedAccountId = currentUser.getAccountId();
+        if (authenticatedAccountId == null) {
+            throw new TradingAuthenticationException();
+        }
 
-        if (authenticatedAccountId == null
-                || !accountId.equals(authenticatedAccountId)) {
-
+        if (!accountId.equals(authenticatedAccountId)) {
             throw new AccountNotActiveException();
         }
 
-        return orderDataMapper.findOrderHistory(
-                accountId,
-                status,
-                from,
-                to
-        );
+        return account;
     }
 }
