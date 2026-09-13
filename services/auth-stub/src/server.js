@@ -81,7 +81,7 @@ const DEMO_PASSWORD = 'Trainee#2026';
  * person. The duplicated function below is deliberate: this file must have no
  * dependency on the service that replaces it.
  */
-const DEMO_USER_NAMESPACE = 'a1e3c9f2-5b7d-4c8e-9f10-2b6d4e8a7c31';
+const DEMO_USER_NAMESPACE = '2453122b-c341-4e8f-ad6a-445665adfb0e';
 
 function demoUserId(username) {
     const namespaceBytes = Buffer.from(DEMO_USER_NAMESPACE.replace(/-/g, ''), 'hex');
