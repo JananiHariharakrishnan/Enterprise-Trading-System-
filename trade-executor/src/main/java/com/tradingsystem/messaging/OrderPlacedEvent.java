@@ -13,6 +13,7 @@ public record OrderPlacedEvent(
         BigDecimal quantity,
         BigDecimal price,
         String status,
+        String idempotencyKey,
         OffsetDateTime createdOn
 ) {
 }

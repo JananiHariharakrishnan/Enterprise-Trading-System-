@@ -269,6 +269,7 @@ public class OrderServiceImpl implements OrderService {
                                 BigDecimal.valueOf(order.getQuantity()),
                                 order.getPrice(),
                                 order.getStatus() != null ? order.getStatus().name() : null,
+                                order.getIdempotencyKey(),
                                 createdOn
                         );
 

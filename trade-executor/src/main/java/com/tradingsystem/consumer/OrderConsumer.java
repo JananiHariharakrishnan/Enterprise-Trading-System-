@@ -33,13 +33,14 @@ public class OrderConsumer {
                     objectMapper.readValue(message, OrderPlacedEvent.class);
 
             log.info(
-                    "Received order: orderId={}, accountId={}, symbol={}, side={}, quantity={}, createdOn={}",
+                    "Received order: orderId={}, accountId={}, symbol={}, side={}, quantity={}, createdOn={}, idempotencyKey={}",
                     event.orderId(),
                     event.accountId(),
                     event.symbol(),
                     event.side(),
                     event.quantity(),
-                    event.createdOn()
+                    event.createdOn(),
+                    event.idempotencyKey()
             );
 
             acknowledgment.acknowledge();
