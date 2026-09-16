@@ -1,4 +1,4 @@
-package com.tradingsystem.executor;
+package com.tradingsystem;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
