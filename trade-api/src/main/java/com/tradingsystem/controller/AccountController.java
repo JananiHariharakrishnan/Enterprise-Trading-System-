@@ -80,7 +80,7 @@ public class AccountController {
         );
     }
 
-    @KafkaListener(topics = "orders", groupId = "test-consumer")
+    @KafkaListener(topics = "orders", groupId = "${spring.kafka.consumer.group-id}")
     public void testKafka(String message) {
         System.out.println("KAFKA MESSAGE: " + message);
     }
