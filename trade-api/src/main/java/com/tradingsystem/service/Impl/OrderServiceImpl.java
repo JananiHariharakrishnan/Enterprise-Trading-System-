@@ -1,12 +1,20 @@
 package com.tradingsystem.service.Impl;
 
+import java.time.ZoneOffset;
 import com.tradingsystem.dto.response.OrderHistoryEntry;
 import com.tradingsystem.dto.response.OrderResponse;
 import com.tradingsystem.enums.OrderSide;
 import com.tradingsystem.enums.OrderStatus;
-import com.tradingsystem.exception.*;
+import com.tradingsystem.exception.AccountNotActiveException;
+import com.tradingsystem.exception.AccountNotFoundException;
+import com.tradingsystem.exception.DuplicateOrderException;
+import com.tradingsystem.exception.InvalidOrderException;
+import com.tradingsystem.exception.OrderNotFoundException;
+import com.tradingsystem.exception.OrderStateConflictException;
+import com.tradingsystem.exception.TradingAuthenticationException;
 import com.tradingsystem.mapper.AccountDataMapper;
 import com.tradingsystem.mapper.OrderDataMapper;
+import com.tradingsystem.messaging.OrderEventPublisher;
 import com.tradingsystem.model.Account;
 import com.tradingsystem.model.Instrument;
 import com.tradingsystem.model.Order;
@@ -15,10 +23,12 @@ import com.tradingsystem.security.CurrentUser;
 import com.tradingsystem.service.OrderLogic;
 import com.tradingsystem.service.OrderService;
 import com.tradingsystem.service.command.PlaceOrderCommand;
-
+import com.tradingsystem.messaging.OrderPlacedEvent;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -30,34 +40,49 @@ import java.util.UUID;
 @Service
 public class OrderServiceImpl implements OrderService {
 
+    private static final int MAX_ORDER_QUANTITY = 1_000_000;
+    private static final int AVERAGE_COST_SCALE = 10;
+
     private final OrderLogic orderLogic;
     private final OrderDataMapper orderDataMapper;
     private final AccountDataMapper accountDataMapper;
     private final CurrentUser currentUser;
+    private final OrderEventPublisher orderEventPublisher;
 
     public OrderServiceImpl(
             OrderLogic orderLogic,
             OrderDataMapper orderDataMapper,
             AccountDataMapper accountDataMapper,
-            CurrentUser currentUser) {
-
+            CurrentUser currentUser,
+            OrderEventPublisher orderEventPublisher
+    ) {
         this.orderLogic = orderLogic;
         this.orderDataMapper = orderDataMapper;
         this.accountDataMapper = accountDataMapper;
         this.currentUser = currentUser;
+        this.orderEventPublisher = orderEventPublisher;
     }
 
     @Override
     @Transactional
     public OrderResponse placeOrder(PlaceOrderCommand command) {
+
+        if (command == null) {
+            throw new InvalidOrderException("Order request cannot be null");
+        }
+
         Account account = getAuthorizedAccount(command.getAccountId());
-        // EDGE CASE FIX: Verify cash balance is not null
+
         if (account.getCashBalance() == null) {
-            throw new InvalidOrderException("Account cash balance is invalid");
+            throw new InvalidOrderException(
+                    "Account cash balance is invalid"
+            );
         }
 
         if (account.getBuyingPower() == null) {
-            throw new InvalidOrderException("Account buying power is invalid");
+            throw new InvalidOrderException(
+                    "Account buying power is invalid"
+            );
         }
 
         Instrument instrument =
@@ -93,6 +118,15 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.NEW);
         order.setCreatedOn(LocalDateTime.now());
 
+        /*
+         * OrderLogic validates:
+         * - account status
+         * - instrument availability
+         * - quantity
+         * - price
+         * - available funds
+         * - available holdings
+         */
         orderLogic.placeOrder(
                 account,
                 instrument,
@@ -100,25 +134,29 @@ public class OrderServiceImpl implements OrderService {
                 position
         );
 
-        // EDGE CASE FIX: Prevent arithmetic overflow in price * quantity
         BigDecimal orderValue = calculateOrderValue(order);
 
         BigDecimal newCashBalance = account.getCashBalance();
         BigDecimal newBuyingPower = account.getBuyingPower();
+
         if (order.getSide() == OrderSide.BUY) {
             newCashBalance = newCashBalance.subtract(orderValue);
             newBuyingPower = newBuyingPower.subtract(orderValue);
-        } else {
+        } else if (order.getSide() == OrderSide.SELL) {
             newCashBalance = newCashBalance.add(orderValue);
             newBuyingPower = newBuyingPower.add(orderValue);
+        } else {
+            throw new InvalidOrderException("Invalid order side");
         }
 
-        int accountRows = orderDataMapper.updateAccountBalancesWithVersion(
-                account.getAccountId(),
-                newCashBalance,
-                newBuyingPower,
-                account.getVersion()
-        );
+        int accountRows =
+                orderDataMapper.updateAccountBalancesWithVersion(
+                        account.getAccountId(),
+                        newCashBalance,
+                        newBuyingPower,
+                        account.getVersion()
+                );
+
         if (accountRows != 1) {
             throw new OrderStateConflictException();
         }
@@ -127,20 +165,25 @@ public class OrderServiceImpl implements OrderService {
 
         try {
             int affectedRows = orderDataMapper.insertOrder(order);
+
             if (affectedRows != 1) {
-                throw new IllegalStateException("Order insert did not affect exactly one row");
+                throw new IllegalStateException(
+                        "Order insert did not affect exactly one row"
+                );
             }
-        } catch (DataIntegrityViolationException ex) {
+
+        } catch (DataIntegrityViolationException exception) {
             throw new DuplicateOrderException();
         }
 
-        OrderResponse response =
-                new OrderResponse();
+        /*
+         * Kafka publishing occurs only after successful database commit.
+         */
+        publishAfterCommit(order);
 
-        response.setOrderId(
-                order.getId().toString()
-        );
+        OrderResponse response = new OrderResponse();
 
+        response.setOrderId(order.getId().toString());
         response.setStatus(OrderStatus.NEW);
         response.setMessage("Order accepted");
         response.setSymbol(order.getSymbol());
@@ -150,119 +193,228 @@ public class OrderServiceImpl implements OrderService {
 
         return response;
     }
+
     @Override
     @Transactional
     public OrderResponse cancelOrder(String orderId) {
 
-        // EDGE CASE FIX: Validate UUID format before processing
-        UUID uuid;
-        try {
-            uuid = UUID.fromString(orderId);
-        } catch (IllegalArgumentException ex) {
-            throw new OrderNotFoundException("Invalid order ID format");
+        if (orderId == null || orderId.isBlank()) {
+            throw new OrderNotFoundException("Order ID is required");
         }
 
-        int affectedRows = orderDataMapper.cancelOrderIfStatus(
-                uuid,
-                OrderStatus.NEW.name(),
-                OrderStatus.CANCELLED.name()
-        );
+        UUID uuid;
 
-        // EDGE CASE FIX: Distinguish between "order not found" vs "order not in NEW state"
+        try {
+            uuid = UUID.fromString(orderId);
+        } catch (IllegalArgumentException exception) {
+            throw new OrderNotFoundException(
+                    "Invalid order ID format"
+            );
+        }
+
+        int affectedRows =
+                orderDataMapper.cancelOrderIfStatus(
+                        uuid,
+                        OrderStatus.NEW.name(),
+                        OrderStatus.CANCELLED.name()
+                );
+
         if (affectedRows == 0) {
-            // Check if order exists at all
-            Order existingOrder = orderDataMapper.findOrderById(uuid);
+
+            Order existingOrder =
+                    orderDataMapper.findOrderById(uuid);
+
             if (existingOrder == null) {
                 throw new OrderNotFoundException("Order not found");
             }
-            // Order exists but is not in NEW state
-            throw new OrderStateConflictException("Cannot cancel order that is not in NEW state");
+
+            throw new OrderStateConflictException(
+                    "Cannot cancel order that is not in NEW state"
+            );
         }
 
         OrderResponse response = new OrderResponse();
+
         response.setOrderId(orderId);
         response.setStatus(OrderStatus.CANCELLED);
         response.setMessage("Order cancelled");
 
         return response;
     }
+    private void publishAfterCommit(Order order) {
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        // Convert model Order -> messaging.OrderPlacedEvent
+                        OrderPlacedEvent event = new OrderPlacedEvent(
+                                order.getId(),
+                                order.getAccountId(),
+                                order.getSymbol(),
+                                order.getSide() == null ? null : order.getSide().name(),
+                                order.getOrderType() == null ? null : order.getOrderType().name(),
+                                order.getQuantity(),
+                                order.getPrice(),
+                                order.getIdempotencyKey(),
+                                // createdOn in Order is LocalDateTime; convert to UTC OffsetDateTime
+                                order.getCreatedOn() == null
+                                        ? OffsetDateTime.now(ZoneOffset.UTC)
+                                        : order.getCreatedOn().atOffset(ZoneOffset.UTC)
+                        );
 
-    // EDGE CASE FIX: Helper method to calculate order value with overflow protection
+                        orderEventPublisher.publishOrderPlaced(event);
+                    }
+                }
+        );
+    }
     private BigDecimal calculateOrderValue(Order order) {
-        BigDecimal price = order.getPrice();
-        long quantity = (long) order.getQuantity(); // Convert to long to prevent overflow
-        
-        if (quantity > Integer.MAX_VALUE / 1000) {
-            throw new InvalidOrderException("Order quantity exceeds maximum allowed value");
+
+        if (order == null) {
+            throw new InvalidOrderException("Order cannot be null");
         }
-        
-        BigDecimal orderValue = price.multiply(BigDecimal.valueOf(quantity));
-        
-        // Check for arithmetic overflow result
-        if (orderValue.scale() > 10) {
-            throw new InvalidOrderException("Order value precision exceeds allowed range");
+
+        if (order.getPrice() == null) {
+            throw new InvalidOrderException(
+                    "Order price cannot be null"
+            );
         }
-        
-        return orderValue;
+
+        if (order.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidOrderException(
+                    "Order price must be greater than zero"
+            );
+        }
+
+        if (order.getQuantity() <= 0) {
+            throw new InvalidOrderException(
+                    "Order quantity must be greater than zero"
+            );
+        }
+
+        if (order.getQuantity() > MAX_ORDER_QUANTITY) {
+            throw new InvalidOrderException(
+                    "Order quantity exceeds maximum allowed value"
+            );
+        }
+
+        return order.getPrice()
+                .multiply(BigDecimal.valueOf(order.getQuantity()));
     }
 
-    private void persistPosition(Order order, Position existingPosition) {
+    private void persistPosition(
+            Order order,
+            Position existingPosition
+    ) {
+
         if (order.getSide() == OrderSide.BUY) {
+
             if (existingPosition == null) {
-                int inserted = orderDataMapper.insertPosition(
-                        order.getAccountId(),
-                        order.getSymbol(),
-                        order.getQuantity(),
-                        order.getPrice()
-                );
+
+                int inserted =
+                        orderDataMapper.insertPosition(
+                                order.getAccountId(),
+                                order.getSymbol(),
+                                order.getQuantity(),
+                                order.getPrice()
+                        );
+
                 if (inserted != 1) {
-                    throw new IllegalStateException("Position insert did not affect exactly one row");
+                    throw new IllegalStateException(
+                            "Position insert did not affect exactly one row"
+                    );
                 }
+
                 return;
             }
 
-            int newQuantity = existingPosition.getQuantity() + order.getQuantity();
-            BigDecimal previousCost = existingPosition.getAverageCost()
-                    .multiply(BigDecimal.valueOf(existingPosition.getQuantity()));
-            BigDecimal orderCost = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
-            
-            // EDGE CASE FIX: Handle division by zero and precision with more accurate rounding
-            BigDecimal newAverageCost = previousCost
-                    .add(orderCost)
-                    .divide(BigDecimal.valueOf(newQuantity), 10, RoundingMode.HALF_UP);
+            int existingQuantity = existingPosition.getQuantity();
 
-            int updated = orderDataMapper.updatePosition(
-                    order.getAccountId(),
-                    order.getSymbol(),
-                    newQuantity,
-                    newAverageCost
-            );
+            if (existingQuantity < 0) {
+                throw new OrderStateConflictException(
+                        "Existing position quantity is invalid"
+                );
+            }
+
+            int newQuantity =
+                    existingQuantity + order.getQuantity();
+
+            BigDecimal averageCost =
+                    existingPosition.getAverageCost();
+
+            if (averageCost == null) {
+                throw new OrderStateConflictException(
+                        "Existing position average cost is invalid"
+                );
+            }
+
+            BigDecimal previousCost =
+                    averageCost.multiply(
+                            BigDecimal.valueOf(existingQuantity)
+                    );
+
+            BigDecimal orderCost =
+                    order.getPrice().multiply(
+                            BigDecimal.valueOf(order.getQuantity())
+                    );
+
+            BigDecimal newAverageCost =
+                    previousCost
+                            .add(orderCost)
+                            .divide(
+                                    BigDecimal.valueOf(newQuantity),
+                                    AVERAGE_COST_SCALE,
+                                    RoundingMode.HALF_UP
+                            );
+
+            int updated =
+                    orderDataMapper.updatePosition(
+                            order.getAccountId(),
+                            order.getSymbol(),
+                            newQuantity,
+                            newAverageCost
+                    );
+
             if (updated != 1) {
                 throw new OrderStateConflictException();
             }
+
             return;
         }
 
-        // EDGE CASE FIX: Better error message for SELL without position
+        if (order.getSide() != OrderSide.SELL) {
+            throw new InvalidOrderException("Invalid order side");
+        }
+
         if (existingPosition == null) {
-            throw new IllegalStateException(
-                "SELL order validation should have caught missing position"
+            throw new InvalidOrderException(
+                    "Cannot sell without an existing position"
             );
         }
 
-        int newQuantity = existingPosition.getQuantity() - order.getQuantity();
-        
-        // EDGE CASE FIX: Handle 0 quantity edge case
-        BigDecimal newAverageCost = newQuantity <= 0
-                ? BigDecimal.ZERO
-                : existingPosition.getAverageCost();
+        int existingQuantity = existingPosition.getQuantity();
 
-        int updated = orderDataMapper.updatePosition(
-                order.getAccountId(),
-                order.getSymbol(),
-                newQuantity,
-                newAverageCost
-        );
+        if (existingQuantity < order.getQuantity()) {
+            throw new InvalidOrderException(
+                    "Insufficient holdings for SELL order"
+            );
+        }
+
+        int newQuantity =
+                existingQuantity - order.getQuantity();
+
+        BigDecimal newAverageCost =
+                newQuantity == 0
+                        ? BigDecimal.ZERO
+                        : existingPosition.getAverageCost();
+
+        int updated =
+                orderDataMapper.updatePosition(
+                        order.getAccountId(),
+                        order.getSymbol(),
+                        newQuantity,
+                        newAverageCost
+                );
+
         if (updated != 1) {
             throw new OrderStateConflictException();
         }
@@ -273,43 +425,49 @@ public class OrderServiceImpl implements OrderService {
             Long accountId,
             String status,
             OffsetDateTime from,
-            OffsetDateTime to) {
+            OffsetDateTime to
+    ) {
 
-        // EDGE CASE FIX: Validate date range
         if (from != null && to != null && from.isAfter(to)) {
-            throw new InvalidOrderException("Start date cannot be after end date");
+            throw new InvalidOrderException(
+                    "Start date cannot be after end date"
+            );
         }
 
-        // EDGE CASE FIX: Validate status parameter if provided
+        String normalizedStatus = null;
+
         if (status != null && !status.trim().isEmpty()) {
+
+            normalizedStatus = status.trim().toUpperCase();
+
             try {
-                OrderStatus.valueOf(status.toUpperCase());
-            } catch (IllegalArgumentException ex) {
-                throw new InvalidOrderException("Invalid order status: " + status);
+                OrderStatus.valueOf(normalizedStatus);
+            } catch (IllegalArgumentException exception) {
+                throw new InvalidOrderException(
+                        "Invalid order status: " + status
+                );
             }
         }
 
-        /*
-         * Account lookup is deliberately performed before the order query.
-         * Otherwise an unknown account would incorrectly return an empty
-         * order history instead of ACC-404.
-         */
         getAuthorizedAccount(accountId);
 
         return orderDataMapper.findOrderHistory(
                 accountId,
-                status,
+                normalizedStatus,
                 from,
                 to
         );
     }
 
     private Account getAuthorizedAccount(Long accountId) {
+
         if (accountId == null || accountId <= 0) {
             throw new AccountNotFoundException();
         }
 
-        Account account = accountDataMapper.findAccountById(accountId);
+        Account account =
+                accountDataMapper.findAccountById(accountId);
+
         if (account == null) {
             throw new AccountNotFoundException();
         }
@@ -318,13 +476,15 @@ public class OrderServiceImpl implements OrderService {
             throw new AccountNotActiveException();
         }
 
-        Long authenticatedAccountId = currentUser.getAccountId();
+        Long authenticatedAccountId =
+                currentUser.getAccountId();
+
         if (authenticatedAccountId == null) {
             throw new TradingAuthenticationException();
         }
 
         if (!accountId.equals(authenticatedAccountId)) {
-            throw new AccountNotActiveException();
+            throw new TradingAuthenticationException();
         }
 
         return account;
