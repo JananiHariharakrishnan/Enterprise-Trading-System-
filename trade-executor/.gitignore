@@ -1,0 +1,99 @@
+# Generated Files
+HELP.md
+*.md.bak
+
+# Build Directories
+target/
+build/
+!**/src/main/**/target/
+!**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+.m2/
+dependency-reduced-pom.xml
+pom.xml.bak
+*.jar.original
+
+# IDE - STS (Spring Tool Suite)
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+# IDE - IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+*.iml.bak
+*.idea.bak
+
+# IDE - NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+nb-configuration.xml
+
+# IDE - VS Code
+.vscode/
+.devcontainer/
+
+# IDE - Eclipse
+.metadata/
+bin/
+tmp/
+*.tmp
+
+# Operating System
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+.~lock.*
+
+# Application Logs
+*.log
+*.log.*
+logs/
+log/
+out/
+
+# Local Environment Files
+.env
+.env.local
+.env.*.local
+application-local.properties
+application-local.yml
+local.properties
+
+# Java Crash Dumps
+hs_err_*.log
+replay_pid*.log
+
+# OS X
+.AppleDouble
+.AppleLatitudes
+.AppleQuarantine
+
+# Temporary Files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+.~*
+*.orig
