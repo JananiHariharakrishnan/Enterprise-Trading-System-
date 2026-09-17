@@ -1,0 +1,23 @@
+{
+  "data": {
+    "quotes": [
+      {
+        "quote": {
+          "symbol": "AAPL",
+          "price": 150.25,
+          "currency": "USD",
+          "change": 0.5,
+          "changePercent": 0.33,
+          "previousClose": 149.75,
+          "marketState": "CLOSED",
+          "asOf": "2026-09-16T06:00:00Z"
+        },
+        "stale": false
+      },
+      {
+        "quote": null,
+        "stale": true
+      }
+    ]
+  }
+}

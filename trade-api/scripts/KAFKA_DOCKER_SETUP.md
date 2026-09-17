@@ -35,6 +35,11 @@ Verify the container is removed:
 docker ps
 ```
 
+If the container might not be active , alternatively use
+```bash
+docker ps -a
+```
+
 ### 2. Run Kafka Container
 
 Replace `<LINUX_IP_ADDRESS>` with your actual Linux/Server IP address before running:
@@ -69,13 +74,13 @@ cd trade-api
 Make the topic creation script executable:
 
 ```bash
-chmod +x scripts/create-kafka-topics.sh
+chmod +x scripts/create-kafka-topic.sh
 ```
 
 Run the script:
 
 ```bash
-./scripts/create-kafka-topics.sh
+./scripts/create-kafka-topic.sh
 ```
 
 **Expected output:**

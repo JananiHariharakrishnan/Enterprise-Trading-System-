@@ -1,10 +1,11 @@
 package com.tradingsystem.controller;
 
+import com.tradingsystem.advice.GlobalExceptionHandler;
 import com.tradingsystem.dto.response.AccountResponse;
+import com.tradingsystem.dto.response.BalanceResponse;
 import com.tradingsystem.exception.AccountNotFoundException;
 import com.tradingsystem.service.AccountService;
 import com.tradingsystem.service.OrderService;
-import com.tradingsystem.advice.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,9 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
-public class AccountControllerTest {
-
-    private MockMvc mockMvc;
+class AccountControllerTest {
 
     @Mock
     private AccountService accountService;
@@ -38,9 +37,14 @@ public class AccountControllerTest {
     @InjectMocks
     private AccountController controller;
 
+    private MockMvc mockMvc;
+
     @BeforeEach
     void setUp() {
-        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+
+        LocalValidatorFactoryBean validator =
+                new LocalValidatorFactoryBean();
+
         validator.afterPropertiesSet();
 
         mockMvc = MockMvcBuilders
@@ -52,27 +56,79 @@ public class AccountControllerTest {
 
     @Test
     void getAccount_returnsAccount() throws Exception {
-        AccountResponse resp = new AccountResponse();
-        resp.setId(1001L);
-        resp.setAccountId("ACC-1001");
-        resp.setHolderName("Test User");
-        resp.setCashBalance(new BigDecimal("123.45"));
-        resp.setLastUpdated(OffsetDateTime.now());
 
-        when(accountService.getAccount(1001L)).thenReturn(resp);
+        AccountResponse response =
+                new AccountResponse();
 
-        mockMvc.perform(get("/api/v1/accounts/1001").accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.holderName").value("Test User"))
-                .andExpect(jsonPath("$.cashBalance").value(123.45));
+        response.setId(1001L);
+        response.setAccountId("ACC-1001");
+        response.setHolderName("Test User");
+        response.setCashBalance(
+                new BigDecimal("123.45")
+        );
+        response.setLastUpdated(
+                OffsetDateTime.now()
+        );
+
+        when(accountService.getAccount(1001L))
+                .thenReturn(response);
+
+        mockMvc.perform(
+                get("/api/v1/accounts/1001")
+                        .accept(MediaType.APPLICATION_JSON)
+        )
+        .andExpect(status().isOk())
+        .andExpect(
+                jsonPath("$.holderName")
+                        .value("Test User")
+        )
+        .andExpect(
+                jsonPath("$.cashBalance")
+                        .value(123.45)
+        );
     }
 
     @Test
-    void getAccount_unknownAccount_returnsAcc404() throws Exception {
-        when(accountService.getAccount(999L)).thenThrow(new AccountNotFoundException());
+    void getAccount_unknownAccount_returnsAcc404()
+            throws Exception {
 
-        mockMvc.perform(get("/api/v1/accounts/999").accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.errorCode").value("ACC-404"));
+        when(accountService.getAccount(999L))
+                .thenThrow(
+                        new AccountNotFoundException()
+                );
+
+        mockMvc.perform(
+                get("/api/v1/accounts/999")
+                        .accept(MediaType.APPLICATION_JSON)
+        )
+        .andExpect(status().isNotFound())
+        .andExpect(
+                jsonPath("$.errorCode")
+                        .value("ACC-404")
+        );
+    }
+
+    @Test
+    void getBalance_returnsOk() throws Exception {
+
+        BalanceResponse response =
+                new BalanceResponse();
+
+        response.setCashBalance(
+                new BigDecimal("500")
+        );
+
+        when(accountService.getBalance(1001L))
+                .thenReturn(response);
+
+        mockMvc.perform(
+                get("/api/v1/accounts/1001/balance")
+                        .accept(MediaType.APPLICATION_JSON)
+        )
+        .andExpect(status().isOk())
+        .andExpect(
+                jsonPath("$.cashBalance")
+                        .value(500)
+        );
     }
 }

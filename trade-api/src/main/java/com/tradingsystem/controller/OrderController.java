@@ -3,6 +3,7 @@ package com.tradingsystem.controller;
 import com.tradingsystem.dto.request.PlaceOrderRequest;
 import com.tradingsystem.dto.response.OrderHistoryEntry;
 import com.tradingsystem.dto.response.OrderResponse;
+import com.tradingsystem.exception.InvalidOrderException;
 import com.tradingsystem.service.OrderService;
 import com.tradingsystem.service.command.PlaceOrderCommand;
 import jakarta.validation.Valid;
@@ -28,18 +29,29 @@ public class OrderController {
     public ResponseEntity<OrderResponse> placeOrder(
             @Valid @RequestBody PlaceOrderRequest request) {
 
+        // Require price only for LIMIT orders.
+        if (request.getOrderType() == null) {
+            throw new InvalidOrderException("Order type is required");
+        }
+
+        if (request.getOrderType().name().equalsIgnoreCase("LIMIT") && request.getPrice() == null) {
+            throw new InvalidOrderException("Price is required for LIMIT orders");
+        }
+
         PlaceOrderCommand command = new PlaceOrderCommand();
         command.setAccountId(request.getAccountId());
         command.setSymbol(request.getSymbol());
         command.setSide(request.getSide());
         command.setOrderType(request.getOrderType());
         command.setQuantity(request.getQuantity());
-        command.setPrice(request.getPrice());
+        // Only set price when provided (MARKET orders will leave price null)
+        if (request.getPrice() != null) {
+            command.setPrice(request.getPrice());
+        }
         command.setIdempotencyKey(request.getIdempotencyKey());
 
         OrderResponse response = orderService.placeOrder(command);
 
-        // EDGE CASE FIX: Return 201 CREATED instead of 200 OK for new resources
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
@@ -51,7 +63,6 @@ public class OrderController {
 
         OrderResponse response = orderService.cancelOrder(id);
 
-        // EDGE CASE FIX: Return 200 OK with proper status
         return ResponseEntity.ok(response);
     }
 
@@ -73,4 +84,3 @@ public class OrderController {
     }
 
 }
-

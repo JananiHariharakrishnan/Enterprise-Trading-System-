@@ -43,37 +43,37 @@
 
     <select id="findAccountById" resultMap="accountResultMap">
         SELECT
-            id,
-            account_reference,
-            cash_balance,
-            buying_power,
-            status,
-            version,
-            last_updated
+        id,
+        account_reference,
+        cash_balance,
+        buying_power,
+        status,
+        version,
+        last_updated
         FROM accounts
         WHERE id = #{accountId}
     </select>
 
     <select id="findInstrumentBySymbol" resultMap="instrumentResultMap">
         SELECT
-            symbol,
-            name,
-            asset_class,
-            currency,
-            tradable
+        symbol,
+        name,
+        asset_class,
+        currency,
+        tradable
         FROM instruments
         WHERE symbol = #{symbol}
     </select>
 
     <select id="findPosition" resultMap="positionResultMap">
         SELECT
-            account_id,
-            symbol,
-            qty,
-            avg_cost
+        account_id,
+        symbol,
+        qty,
+        avg_cost
         FROM positions
         WHERE account_id = #{accountId}
-          AND symbol = #{symbol}
+        AND symbol = #{symbol}
     </select>
 
     <select id="existsByIdempotencyKey" resultType="boolean">
@@ -84,82 +84,105 @@
 
     <insert id="insertOrder" parameterType="com.tradingsystem.model.Order">
         INSERT INTO orders (
-            id,
-            account_id,
-            symbol,
-            side,
-            order_type,
-            qty,
-            price,
-            status,
-            idempotency_key,
-            created_on
+        id,
+        account_id,
+        symbol,
+        side,
+        order_type,
+        qty,
+        price,
+        status,
+        idempotency_key,
+        created_on
         ) VALUES (
-            #{id},
-            #{accountId},
-            #{symbol},
-            #{side},
-            #{orderType},
-            #{quantity},
-            #{price},
-            #{status},
-            #{idempotencyKey},
-            #{createdOn}
+        #{id},
+        #{accountId},
+        #{symbol},
+        #{side},
+        #{orderType},
+        #{quantity},
+        #{price},
+        #{status},
+        #{idempotencyKey},
+        #{createdOn}
         )
     </insert>
 
     <update id="updateAccountBalancesWithVersion">
         UPDATE accounts
         SET
-            cash_balance = #{cashBalance},
-            buying_power = #{buyingPower},
-            version = version + 1,
-            last_updated = CURRENT_TIMESTAMP
+        cash_balance = #{cashBalance},
+        buying_power = #{buyingPower},
+        version = version + 1,
+        last_updated = CURRENT_TIMESTAMP
         WHERE id = #{accountId}
-          AND version = #{expectedVersion}
+        AND version = #{expectedVersion}
     </update>
 
     <insert id="insertPosition">
         INSERT INTO positions (
-            account_id,
-            symbol,
-            qty,
-            avg_cost
+        account_id,
+        symbol,
+        qty,
+        avg_cost
         ) VALUES (
-            #{accountId},
-            #{symbol},
-            #{quantity},
-            #{averageCost}
+        #{accountId},
+        #{symbol},
+        #{quantity},
+        #{averageCost}
         )
     </insert>
 
     <update id="updatePosition">
         UPDATE positions
         SET
-            qty = #{quantity},
-            avg_cost = #{averageCost}
+        qty = #{quantity},
+        avg_cost = #{averageCost}
         WHERE account_id = #{accountId}
-          AND symbol = #{symbol}
+        AND symbol = #{symbol}
     </update>
 
     <update id="cancelOrderIfStatus">
         UPDATE orders
         SET status = #{newStatus}
         WHERE id = #{orderId}
-          AND status = #{expectedStatus}
+        AND status = #{expectedStatus}
     </update>
+
+    <!-- New: guarded update for general use -->
+    <update id="updateOrderStatusIfStatus">
+        UPDATE orders
+        SET status = #{newStatus}
+        WHERE id = #{orderId}
+        AND status = #{expectedStatus}
+    </update>
+
+    <!-- New: insert execution record -->
+    <insert id="insertExecution" parameterType="map">
+        INSERT INTO executions (
+        order_id,
+        quantity,
+        price,
+        executed_at
+        ) VALUES (
+        #{orderId},
+        #{quantity},
+        #{price},
+        now()
+        )
+    </insert>
 
     <select id="findOrderHistory" resultMap="orderHistoryResultMap">
         SELECT
-            CAST(id AS VARCHAR) AS id,
-            account_id,
-            symbol,
-            side,
-            qty,
-            price,
-            status,
-            idempotency_key,
-            created_on
+        CAST(id AS VARCHAR) AS id,
+        account_id,
+        symbol,
+        side,
+        qty,
+        price,
+        status,
+        idempotency_key,
+        created_on
         FROM orders
         WHERE account_id = #{accountId}
         <if test="status != null and status != ''">
@@ -190,21 +213,18 @@
     <!-- EDGE CASE: For order cancellation validation -->
     <select id="findOrderById" resultMap="orderResultMap">
         SELECT
-            id,
-            account_id,
-            symbol,
-            side,
-            order_type,
-            qty,
-            price,
-            status,
-            idempotency_key,
-            created_on
+        id,
+        account_id,
+        symbol,
+        side,
+        order_type,
+        qty,
+        price,
+        status,
+        idempotency_key,
+        created_on
         FROM orders
         WHERE id = #{orderId}
     </select>
 
 </mapper>
-
-
-

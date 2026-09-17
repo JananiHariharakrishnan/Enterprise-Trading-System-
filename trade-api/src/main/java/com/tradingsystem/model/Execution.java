@@ -51,4 +51,26 @@ public class Execution{
     public void setExecutedAt(LocalDateTime executedAt) {
         this.executedAt = executedAt;
     }
+
+    public BigDecimal totalValue() {
+        if (this.price == null) return BigDecimal.ZERO;
+        return this.price.multiply(BigDecimal.valueOf(this.quantity));
+    }
+
+    public void validate() {
+        if (this.orderId == null) throw new IllegalArgumentException("orderId required");
+        if (this.quantity <= 0) throw new IllegalArgumentException("quantity must be positive");
+        if (this.price == null || this.price.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalArgumentException("price must be > 0");
+        if (this.executedAt == null) throw new IllegalArgumentException("executedAt required");
+    }
+
+    @Override
+    public String toString() {
+        return "Execution{" +
+                "orderId=" + orderId +
+                ", quantity=" + quantity +
+                ", price=" + price +
+                ", executedAt=" + executedAt +
+                '}';
+    }
 }

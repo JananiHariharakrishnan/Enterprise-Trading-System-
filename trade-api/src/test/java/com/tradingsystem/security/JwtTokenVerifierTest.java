@@ -2,6 +2,12 @@ package com.tradingsystem.security;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Base64;
+
+import static org.junit.jupiter.api.Assertions.*;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +26,78 @@ class JwtTokenVerifierTest {
             SECRET,
             ISSUER
     );
+
+    private static String base64UrlEncode(String s) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(s.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String sign(String signingInput, String secret) throws Exception {
+        javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new javax.crypto.spec.SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+        byte[] hmac = mac.doFinal(signingInput.getBytes(StandardCharsets.UTF_8));
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(hmac);
+    }
+
+    @Test
+    void verify_validToken_returnsAccountId() throws Exception {
+        String secret = "test-secret";
+        String issuer = "test-issuer";
+        long exp = Instant.now().getEpochSecond() + 3600;
+
+        String header = base64UrlEncode("{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
+        String payload = base64UrlEncode("{\"exp\":" + exp + ",\"accountId\":1001,\"iss\":\"" + issuer + "\"}");
+
+        String signingInput = header + "." + payload;
+        String signature = sign(signingInput, secret);
+
+        String token = signingInput + "." + signature;
+
+        JwtTokenVerifier verifier = new JwtTokenVerifier(secret, issuer);
+        Long accountId = verifier.verifyAndGetAccountId(token);
+
+        assertNotNull(accountId);
+        assertEquals(1001L, accountId.longValue());
+    }
+
+    @Test
+    void verify_expiredToken_returnsNull() throws Exception {
+        String secret = "s";
+        String issuer = "i";
+        long exp = Instant.now().getEpochSecond() - 10;
+
+        String header = base64UrlEncode("{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
+        String payload = base64UrlEncode("{\"exp\":" + exp + ",\"accountId\":1001,\"iss\":\"" + issuer + "\"}");
+        String signingInput = header + "." + payload;
+        String signature = sign(signingInput, secret);
+        String token = signingInput + "." + signature;
+
+        JwtTokenVerifier verifier = new JwtTokenVerifier(secret, issuer);
+        assertNull(verifier.verifyAndGetAccountId(token));
+    }
+
+    @Test
+    void verify_wrongIssuer_returnsNull() throws Exception {
+        String secret = "s";
+        String issuer = "i";
+        long exp = Instant.now().getEpochSecond() + 1000;
+
+        String header = base64UrlEncode("{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
+        String payload = base64UrlEncode("{\"exp\":" + exp + ",\"accountId\":1001,\"iss\":\"other\"}");
+        String signingInput = header + "." + payload;
+        String signature = sign(signingInput, secret);
+        String token = signingInput + "." + signature;
+
+        JwtTokenVerifier verifier = new JwtTokenVerifier(secret, issuer);
+        assertNull(verifier.verifyAndGetAccountId(token));
+    }
+
+    @Test
+    void verify_malformedToken_returnsNull() {
+        JwtTokenVerifier verifier = new JwtTokenVerifier("s", "i");
+        assertNull(verifier.verifyAndGetAccountId("bad.token"));
+        assertNull(verifier.verifyAndGetAccountId(null));
+        assertNull(verifier.verifyAndGetAccountId(""));
+    }
 
     @Test
     void verify_returnsAccountId_whenTokenIsValid() {

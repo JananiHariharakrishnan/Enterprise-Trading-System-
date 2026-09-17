@@ -62,4 +62,17 @@ public interface OrderDataMapper {
 
     // EDGE CASE: For order cancellation validation
     Order findOrderById(@Param("orderId") UUID orderId);
+
+    // New methods for execution processing:
+    int updateOrderStatusIfStatus(
+            @Param("orderId") UUID orderId,
+            @Param("expectedStatus") String expectedStatus,
+            @Param("newStatus") String newStatus
+    );
+
+    int insertExecution(
+            @Param("orderId") UUID orderId,
+            @Param("quantity") int quantity,
+            @Param("price") java.math.BigDecimal price
+    );
 }
