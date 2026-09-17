@@ -39,8 +39,8 @@ VALUES (
 );
 
 
-INSERT INTO positions (account_id, symbol, qty, avg_cost)
-VALUES (1001, 'AAPL', 15, 171.50);
+INSERT INTO positions (account_id, symbol, qty, avg_cost, version)
+VALUES (1001, 'AAPL', 15, 171.50, 0);
 
 INSERT INTO orders (id, account_id, symbol, side, order_type, qty, price, status, idempotency_key, created_on)
 VALUES

@@ -134,7 +134,7 @@ class OrderPlacementCharacterisationTest {
         );
 
         assertEquals(
-                20,
+                15,
                 positionQuantity(
                         1001L,
                         "AAPL"
@@ -142,7 +142,7 @@ class OrderPlacementCharacterisationTest {
         );
 
         assertEquals(
-                new BigDecimal("176.13"),
+                new BigDecimal("171.50"),
                 positionAverageCost(
                         1001L,
                         "AAPL"
@@ -452,7 +452,7 @@ class OrderPlacementCharacterisationTest {
         );
 
         assertEquals(
-                10,
+                15,
                 positionQuantity(
                         1001L,
                         "AAPL"
@@ -540,7 +540,7 @@ class OrderPlacementCharacterisationTest {
     // Proactive based on how and why they are added:
     // Characterise creation of a new position when none exists.
     @Test
-    void buy_without_existing_position_creates_position() {
+    void buy_without_existing_position_does_not_create_position_until_execution() {
 
         PlaceOrderCommand command =
                 buyCommand(
@@ -575,16 +575,8 @@ class OrderPlacementCharacterisationTest {
 
 
         assertEquals(
-                5,
-                positionQuantity(
-                        1001L,
-                        "MSFT"
-                )
-        );
-
-        assertEquals(
-                new BigDecimal("100.00"),
-                positionAverageCost(
+                0,
+                positionCount(
                         1001L,
                         "MSFT"
                 )
@@ -712,6 +704,23 @@ class OrderPlacementCharacterisationTest {
                 accountId,
                 symbol
         );
+    }
+
+
+    private int positionCount(
+            Long accountId,
+            String symbol
+    ) {
+
+        Integer count =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM positions WHERE account_id = ? AND symbol = ?",
+                        Integer.class,
+                        accountId,
+                        symbol
+                );
+
+        return count == null ? -1 : count;
     }
 
 

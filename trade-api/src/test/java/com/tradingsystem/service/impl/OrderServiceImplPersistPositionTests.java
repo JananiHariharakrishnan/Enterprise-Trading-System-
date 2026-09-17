@@ -1,7 +1,6 @@
 package com.tradingsystem.service.impl;
 
 import com.tradingsystem.enums.OrderSide;
-import com.tradingsystem.exception.OrderStateConflictException;
 import com.tradingsystem.model.Account;
 import com.tradingsystem.model.Instrument;
 import com.tradingsystem.model.Order;
@@ -9,15 +8,18 @@ import com.tradingsystem.model.Position;
 import com.tradingsystem.service.Impl.OrderServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class OrderServiceImplPersistPositionTests {
@@ -32,6 +34,8 @@ class OrderServiceImplPersistPositionTests {
 
     @BeforeEach
     void setUp() {
+        TransactionSynchronizationManager.initSynchronization();
+
         orderLogic = mock(com.tradingsystem.service.OrderLogic.class);
         orderDataMapper = mock(com.tradingsystem.mapper.OrderDataMapper.class);
         accountDataMapper = mock(com.tradingsystem.mapper.AccountDataMapper.class);
@@ -47,8 +51,15 @@ class OrderServiceImplPersistPositionTests {
         );
     }
 
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
     @Test
-    void persistPosition_insertFails_throwsIllegalState() {
+    void placeOrder_does_not_insert_position_when_buying() {
         Order o = new Order();
         o.setAccountId(1L);
         o.setSymbol("X");
@@ -70,17 +81,18 @@ class OrderServiceImplPersistPositionTests {
         when(orderDataMapper.findInstrumentBySymbol(anyString())).thenReturn(new Instrument(){ { setTradable(true); } });
         when(orderDataMapper.findPosition(anyLong(), anyString())).thenReturn(null);
         when(orderDataMapper.updateAccountBalancesWithVersion(anyLong(), any(BigDecimal.class), any(BigDecimal.class), anyInt())).thenReturn(1);
-        when(orderDataMapper.insertPosition(anyLong(), anyString(), anyInt(), any(BigDecimal.class))).thenReturn(0);
+        when(orderDataMapper.insertOrder(any(Order.class))).thenReturn(1);
 
-        // insertPosition failing should cause IllegalStateException during placeOrder
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
-                () -> orderService.placeOrder(new com.tradingsystem.service.command.PlaceOrderCommand() {{
-                    setAccountId(1L); setSymbol("X"); setSide(OrderSide.BUY); setQuantity(1); setPrice(new BigDecimal("1.00")); setIdempotencyKey("k1");
-                }}));
+        assertDoesNotThrow(() -> orderService.placeOrder(new com.tradingsystem.service.command.PlaceOrderCommand() {{
+            setAccountId(1L); setSymbol("X"); setSide(OrderSide.BUY); setQuantity(1); setPrice(new BigDecimal("1.00")); setIdempotencyKey("k1");
+        }}));
+
+        verify(orderDataMapper, never()).insertPosition(anyLong(), anyString(), anyInt(), any(BigDecimal.class));
+        verify(orderDataMapper, never()).updatePosition(anyLong(), anyString(), anyInt(), any(BigDecimal.class));
     }
 
     @Test
-    void persistPosition_updatePositionFails_throwsOrderStateConflict() {
+    void placeOrder_does_not_update_position_when_selling() {
         Order o = new Order();
         o.setAccountId(1L);
         o.setSymbol("X");
@@ -108,10 +120,13 @@ class OrderServiceImplPersistPositionTests {
         when(orderDataMapper.findInstrumentBySymbol(anyString())).thenReturn(new Instrument(){ { setTradable(true); } });
         when(orderDataMapper.findPosition(anyLong(), anyString())).thenReturn(pos);
         when(orderDataMapper.updateAccountBalancesWithVersion(anyLong(), any(BigDecimal.class), any(BigDecimal.class), anyInt())).thenReturn(1);
-        when(orderDataMapper.updatePosition(anyLong(), anyString(), anyInt(), any(BigDecimal.class))).thenReturn(0);
+        when(orderDataMapper.insertOrder(any(Order.class))).thenReturn(1);
 
-        assertThrows(OrderStateConflictException.class, () -> orderService.placeOrder(new com.tradingsystem.service.command.PlaceOrderCommand() {{
+        assertDoesNotThrow(() -> orderService.placeOrder(new com.tradingsystem.service.command.PlaceOrderCommand() {{
             setAccountId(1L); setSymbol("X"); setSide(OrderSide.SELL); setQuantity(1); setPrice(new BigDecimal("1.00")); setIdempotencyKey("k2");
         }}));
+
+        verify(orderDataMapper, never()).insertPosition(anyLong(), anyString(), anyInt(), any(BigDecimal.class));
+        verify(orderDataMapper, never()).updatePosition(anyLong(), anyString(), anyInt(), any(BigDecimal.class));
     }
 }
