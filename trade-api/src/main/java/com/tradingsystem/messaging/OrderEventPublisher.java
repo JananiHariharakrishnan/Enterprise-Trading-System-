@@ -37,7 +37,6 @@ public class OrderEventPublisher {
 
             OrderPlacedPayload payload =
                     new OrderPlacedPayload(
-                            event.orderId().toString(),
                             event.accountId(),
                             event.symbol(),
                             event.side(),

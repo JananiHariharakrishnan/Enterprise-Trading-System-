@@ -1,9 +1,7 @@
-
 package com.tradingsystem.dto.request;
 
 import com.tradingsystem.enums.OrderSide;
 import com.tradingsystem.enums.OrderType;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -31,8 +29,8 @@ public class PlaceOrderRequest {
     @Min(1)
     private Integer quantity;
 
-    @NotNull
-    @DecimalMin(value = "0.01")
+    // Price is optional at the HTTP API level. It is required for LIMIT orders,
+    // and should be null for MARKET orders where pricing is the executor's job.
     private BigDecimal price;
 
     @NotBlank
@@ -98,4 +96,3 @@ public class PlaceOrderRequest {
         this.idempotencyKey = idempotencyKey;
     }
 }
-

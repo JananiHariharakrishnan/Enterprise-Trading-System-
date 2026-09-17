@@ -9,12 +9,17 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Component
 public class TradeEventProducer {
 
     private static final String TRADE_EVENTS_TOPIC = "trade-events";
     private static final String SOURCE = "trade-executor";
     private static final int SCHEMA_VERSION = 1;
+
+    private static final Logger log = LoggerFactory.getLogger(TradeEventProducer.class);
 
     private final KafkaTemplate<String, KafkaEvent<TradeEventPayload>> kafkaTemplate;
 
@@ -53,9 +58,11 @@ public class TradeEventProducer {
                 event
         );
 
-
-        System.out.println(
-                "Published event: " + eventType
+        log.info("Published event: {} eventId={} orderId={} accountId={}",
+                eventType,
+                event.getEventId(),
+                payload.getOrderId(),
+                payload.getAccountId()
         );
 
     }

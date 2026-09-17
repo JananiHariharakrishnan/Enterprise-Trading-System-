@@ -1,11 +1,13 @@
 package com.tradingsystem.messaging;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Generic Kafka event envelope containing metadata common to all events.
  * Follows the contract defined in contracts/kafka-topics.md
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class KafkaEventEnvelope<T> {
     @JsonProperty("eventId")
     private String eventId;

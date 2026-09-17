@@ -1,4 +1,3 @@
-
 package com.tradingsystem.controller;
 
 import com.tradingsystem.dto.response.AccountResponse;
@@ -9,7 +8,6 @@ import com.tradingsystem.service.AccountService;
 import com.tradingsystem.service.OrderService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
@@ -18,7 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/accounts")
 public class AccountController {
-
 
     private final AccountService accountService;
     private final OrderService orderService;
@@ -80,9 +77,4 @@ public class AccountController {
         );
     }
 
-    @KafkaListener(topics = "orders", groupId = "${spring.kafka.consumer.group-id}")
-    public void testKafka(String message) {
-        System.out.println("KAFKA MESSAGE: " + message);
-    }
 }
-

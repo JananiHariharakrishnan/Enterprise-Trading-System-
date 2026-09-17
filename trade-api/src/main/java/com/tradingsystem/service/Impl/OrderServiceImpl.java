@@ -114,7 +114,7 @@ public class OrderServiceImpl implements OrderService {
         order.setSide(command.getSide());
         order.setOrderType(command.getOrderType());
         order.setQuantity(command.getQuantity());
-        order.setPrice(command.getPrice());
+        order.setPrice(command.getPrice()); // may be null for MARKET orders
         order.setIdempotencyKey(command.getIdempotencyKey());
         order.setStatus(OrderStatus.NEW);
         order.setCreatedOn(LocalDateTime.now());
@@ -124,9 +124,9 @@ public class OrderServiceImpl implements OrderService {
          * - account status
          * - instrument availability
          * - quantity
-         * - price
-         * - available funds
-         * - available holdings
+         * - price (for LIMIT orders)
+         * - available funds (for LIMIT BUY orders)
+         * - available holdings (for SELL)
          */
         orderLogic.placeOrder(
                 account,
@@ -135,34 +135,42 @@ public class OrderServiceImpl implements OrderService {
                 position
         );
 
-        BigDecimal orderValue = calculateOrderValue(order);
+        // If a price is present (LIMIT path or explicitly provided), perform synchronous
+        // balance and position updates. If price is null (MARKET), skip synchronous fill
+        // and let the executor price/execute later.
+        boolean pricePresent = order.getPrice() != null;
 
-        BigDecimal newCashBalance = account.getCashBalance();
-        BigDecimal newBuyingPower = account.getBuyingPower();
+        if (pricePresent) {
 
-        if (order.getSide() == OrderSide.BUY) {
-            newCashBalance = newCashBalance.subtract(orderValue);
-            newBuyingPower = newBuyingPower.subtract(orderValue);
-        } else if (order.getSide() == OrderSide.SELL) {
-            newCashBalance = newCashBalance.add(orderValue);
-            newBuyingPower = newBuyingPower.add(orderValue);
-        } else {
-            throw new InvalidOrderException("Invalid order side");
+            BigDecimal orderValue = calculateOrderValue(order);
+
+            BigDecimal newCashBalance = account.getCashBalance();
+            BigDecimal newBuyingPower = account.getBuyingPower();
+
+            if (order.getSide() == OrderSide.BUY) {
+                newCashBalance = newCashBalance.subtract(orderValue);
+                newBuyingPower = newBuyingPower.subtract(orderValue);
+            } else if (order.getSide() == OrderSide.SELL) {
+                newCashBalance = newCashBalance.add(orderValue);
+                newBuyingPower = newBuyingPower.add(orderValue);
+            } else {
+                throw new InvalidOrderException("Invalid order side");
+            }
+
+            int accountRows =
+                    orderDataMapper.updateAccountBalancesWithVersion(
+                            account.getAccountId(),
+                            newCashBalance,
+                            newBuyingPower,
+                            account.getVersion()
+                    );
+
+            if (accountRows != 1) {
+                throw new OrderStateConflictException();
+            }
+
+            persistPosition(order, position);
         }
-
-        int accountRows =
-                orderDataMapper.updateAccountBalancesWithVersion(
-                        account.getAccountId(),
-                        newCashBalance,
-                        newBuyingPower,
-                        account.getVersion()
-                );
-
-        if (accountRows != 1) {
-            throw new OrderStateConflictException();
-        }
-
-        persistPosition(order, position);
 
         try {
             int affectedRows = orderDataMapper.insertOrder(order);
@@ -186,7 +194,7 @@ public class OrderServiceImpl implements OrderService {
 
         response.setOrderId(order.getId().toString());
         response.setStatus(OrderStatus.NEW);
-        response.setMessage("Order accepted");
+        response.setMessage("Order Placed");
         response.setSymbol(order.getSymbol());
         response.setSide(order.getSide());
         response.setQuantity(order.getQuantity());

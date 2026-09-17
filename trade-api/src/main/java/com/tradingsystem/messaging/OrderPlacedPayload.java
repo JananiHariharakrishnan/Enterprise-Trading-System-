@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 
 public class OrderPlacedPayload {
 
-    private String orderId;
     private Long accountId;
     private String symbol;
     private String side;
@@ -18,7 +17,6 @@ public class OrderPlacedPayload {
     }
 
     public OrderPlacedPayload(
-            String orderId,
             Long accountId,
             String symbol,
             String side,
@@ -28,7 +26,6 @@ public class OrderPlacedPayload {
             String idempotencyKey,
             String createdOn
     ) {
-        this.orderId = orderId;
         this.accountId = accountId;
         this.symbol = symbol;
         this.side = side;
@@ -37,14 +34,6 @@ public class OrderPlacedPayload {
         this.price = price;
         this.idempotencyKey = idempotencyKey;
         this.createdOn = createdOn;
-    }
-
-    public String getOrderId() {
-        return orderId;
-    }
-
-    public void setOrderId(String orderId) {
-        this.orderId = orderId;
     }
 
     public Long getAccountId() {
