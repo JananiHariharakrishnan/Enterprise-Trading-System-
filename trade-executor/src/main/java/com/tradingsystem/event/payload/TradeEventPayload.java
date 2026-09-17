@@ -22,7 +22,7 @@ public class TradeEventPayload {
     private String side;
 
     @JsonProperty("quantity")
-    private Integer quantity;
+    private BigDecimal quantity;
 
     @JsonProperty("price")
     private BigDecimal price;
@@ -63,8 +63,8 @@ public class TradeEventPayload {
     public String getSide() { return side; }
     public void setSide(String side) { this.side = side; }
 
-    public Integer getQuantity() { return quantity; }
-    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public BigDecimal getQuantity() { return quantity; }
+    public void setQuantity(BigDecimal quantity) { this.quantity = quantity; }
 
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal price) { this.price = price; }

@@ -1,7 +1,9 @@
 package com.tradingsystem.execution;
 
+import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
+@Component
 public class ExecutionRule {
 
     public ExecutionDecision decide(
@@ -38,7 +40,7 @@ public class ExecutionRule {
         }
 
         return ExecutionDecision.rejected(
-                "Unsupported order side: " + side
+                "Unsupported order side"
         );
     }
 }
