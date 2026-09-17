@@ -163,12 +163,17 @@ CREATE TABLE  IF NOT EXISTS executions(
     quantity      INT           NOT NULL,
     price         NUMERIC(18,2) NOT NULL,
     executed_at   TIMESTAMP     NOT NULL DEFAULT NOW(),
+    created_at    TIMESTAMP     NOT NULL DEFAULT NOW(),
+    event_id      UUID,
 
     CONSTRAINT pk_executions PRIMARY KEY (id),
 
     CONSTRAINT fk_executions_order
         FOREIGN KEY (order_id)
         REFERENCES orders (id),
+
+    CONSTRAINT uq_executions_event_id
+        UNIQUE (event_id),
 
     CONSTRAINT ck_executions_quantity_positive
         CHECK (quantity > 0),
@@ -188,6 +193,7 @@ CREATE TABLE  IF NOT EXISTS positions(
     symbol       VARCHAR(20)   NOT NULL,
     qty          INT           NOT NULL,
     avg_cost     NUMERIC(18,2) NOT NULL,
+    version      INT           NOT NULL DEFAULT 0,
 
     CONSTRAINT pk_positions PRIMARY KEY (account_id, symbol),
 
@@ -203,7 +209,10 @@ CREATE TABLE  IF NOT EXISTS positions(
         CHECK (qty >= 0),
 
     CONSTRAINT ck_positions_avg_cost_non_negative
-        CHECK (avg_cost >= 0)
+        CHECK (avg_cost >= 0),
+
+    CONSTRAINT ck_positions_version_non_negative
+        CHECK (version >= 0)
 );
 
 -- -----------------------------------------------------------------------------
@@ -313,8 +322,14 @@ CREATE INDEX ix_orders_symbol_created
 CREATE INDEX ix_executions_order
     ON executions (order_id);
 
+CREATE INDEX ix_executions_event_id
+    ON executions (event_id);
+
 CREATE INDEX ix_positions_symbol
     ON positions (symbol);
+
+CREATE INDEX ix_positions_account_symbol_version
+    ON positions (account_id, symbol, version);
 
 CREATE INDEX ix_balance_history_account
     ON balance_history (account_id);
@@ -324,5 +339,14 @@ CREATE INDEX ix_balance_history_order
 
 CREATE INDEX ix_watchlist_symbol
     ON watchlist (symbol);
+
+COMMENT ON COLUMN executions.event_id IS
+    'Kafka event UUID for idempotency: if same event_id exists, execution already applied';
+
+COMMENT ON COLUMN executions.created_at IS
+    'Timestamp when execution was recorded, separate from executed_at (market time)';
+
+COMMENT ON COLUMN positions.version IS
+    'Optimistic lock version: incremented on each successful update. Used to detect concurrent modifications.';
 
 COMMIT;

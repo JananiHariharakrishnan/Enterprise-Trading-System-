@@ -65,9 +65,59 @@ public class KafkaProducerConfig {
     }
 
     @Bean
+    public ProducerFactory<String, String> stringProducerFactory() {
+
+        Map<String, Object> props = new HashMap<>();
+
+        props.put(
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                bootstrapServers
+        );
+
+        props.put(
+                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class
+        );
+
+        props.put(
+                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class
+        );
+
+        props.put(
+                ProducerConfig.ACKS_CONFIG,
+                "all"
+        );
+
+        props.put(
+                ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG,
+                true
+        );
+
+        props.put(
+                ProducerConfig.RETRIES_CONFIG,
+                10
+        );
+
+        props.put(
+                ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION,
+                5
+        );
+
+        return new DefaultKafkaProducerFactory<>(props);
+    }
+
+    @Bean
     public KafkaTemplate<String, KafkaEvent<TradeEventPayload>> kafkaTemplate(
             ProducerFactory<String, KafkaEvent<TradeEventPayload>> producerFactory) {
 
         return new KafkaTemplate<>(producerFactory);
+    }
+
+    @Bean
+    public KafkaTemplate<String, String> stringKafkaTemplate(
+            ProducerFactory<String, String> stringProducerFactory) {
+
+        return new KafkaTemplate<>(stringProducerFactory);
     }
 }

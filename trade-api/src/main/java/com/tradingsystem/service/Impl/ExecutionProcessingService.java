@@ -9,6 +9,8 @@ import com.tradingsystem.model.Order;
 import com.tradingsystem.model.Position;
 import com.tradingsystem.exception.DuplicateOrderException;
 import com.tradingsystem.exception.OrderStateConflictException;
+import com.tradingsystem.exception.OptimisticLockException;
+import com.tradingsystem.exception.MalformedExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -38,29 +40,48 @@ public class ExecutionProcessingService {
         this.tradeEventPublisher = tradeEventPublisher;
     }
 
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final long BACKOFF_BASE_MS = 50;
+
     /**
      * Apply decision for an order. This method is transactional.
-     * If the order was already processed (guarded update affects 0 rows) we throw DuplicateOrderException.
+     * 
+     * Idempotency: If eventId is provided and execution with that eventId exists,
+     * returns silently (Kafka replay scenario).
+     * 
+     * Optimistic Locking: Position updates use version-based guards with 3 retry attempts.
+     * If all 3 attempts fail, throws OptimisticLockException (permanent failure).
+     * 
+     * Guarded State Transition: Order status update is conditional on order being NEW.
+     * If guarded update affects 0 rows, throws DuplicateOrderException.
      */
     @Transactional
     public void applyExecution(UUID orderId, ExecutionRequest request) {
 
         String targetStatus = request.getStatus();
         if (targetStatus == null) {
-            throw new IllegalArgumentException("status is required");
+            throw new MalformedExecutionException("status is required");
         }
 
-        // 1) Guarded update: TRY change order status from NEW -> targetStatus
+        // STEP 0: Check idempotency by event_id (Kafka replay detection)
+        // If caller provides eventId and execution with that eventId exists, return silently
+        UUID eventId = request.getEventId();
+        if (eventId != null && orderDataMapper.existsExecutionByEventId(eventId)) {
+            log.info("Execution with event_id {} already exists (idempotent replay)", eventId);
+            return;
+        }
+
+        // STEP 1: Guarded update: TRY change order status from NEW -> targetStatus
         int affected = orderDataMapper.updateOrderStatusIfStatus(orderId, "NEW", targetStatus);
         if (affected != 1) {
             log.info("Guarded update for order {} failed (already processed or not NEW)", orderId);
             throw new DuplicateOrderException();
         }
 
-        // 2) Load the order (now status = targetStatus)
+        // STEP 2: Load the order (now status = targetStatus)
         Order order = orderDataMapper.findOrderById(orderId);
         if (order == null) {
-            throw new IllegalArgumentException("Order not found: " + orderId);
+            throw new MalformedExecutionException("Order not found: " + orderId);
         }
 
         // For REJECTED: we will publish a REJECTED event after commit and return
@@ -81,6 +102,13 @@ public class ExecutionProcessingService {
             payload.setAverageCostAfter(null);
             payload.setExecutedOn(java.time.OffsetDateTime.now().toString());
 
+            // Record the execution (rejection) with eventId for idempotency
+            if (eventId != null) {
+                orderDataMapper.insertExecutionWithEventId(orderId, order.getQuantity(), order.getPrice(), eventId);
+            } else {
+                orderDataMapper.insertExecution(orderId, order.getQuantity(), order.getPrice());
+            }
+            
             // publish after commit
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
@@ -97,13 +125,13 @@ public class ExecutionProcessingService {
 
             BigDecimal executedPrice = request.getExecutedPrice();
             if (executedPrice == null) {
-                throw new IllegalArgumentException("executedPrice is required for FILLED");
+                throw new MalformedExecutionException("executedPrice is required for FILLED");
             }
 
             // 3) Account update: optimistic version check
             Account account = orderDataMapper.findAccountById(order.getAccountId());
             if (account == null) {
-                throw new IllegalArgumentException("Account not found: " + order.getAccountId());
+                throw new MalformedExecutionException("Account not found: " + order.getAccountId());
             }
 
             BigDecimal orderValue = executedPrice.multiply(BigDecimal.valueOf((long) order.getQuantity()));
@@ -131,50 +159,48 @@ public class ExecutionProcessingService {
                 throw new OrderStateConflictException();
             }
 
-            // 4) Position update (insert or update)
+            // 4) Position update (insert or update) with RETRY LOGIC
             Position position = orderDataMapper.findPosition(order.getAccountId(), order.getSymbol());
             int newQuantity;
             java.math.BigDecimal newAverageCost = null;
 
             if ("BUY".equalsIgnoreCase(order.getSide().name())) {
                 if (position == null) {
-                    // insert a new position
+                    // insert a new position with version 0
                     orderDataMapper.insertPosition(order.getAccountId(), order.getSymbol(), order.getQuantity(), executedPrice);
                     newQuantity = order.getQuantity();
                     newAverageCost = executedPrice;
                 } else {
-                    int existingQty = position.getQuantity();
-                    int existingQuantity = existingQty;
-                    newQuantity = existingQuantity + order.getQuantity();
-                    java.math.BigDecimal previousCost = position.getAverageCost().multiply(java.math.BigDecimal.valueOf(existingQuantity));
+                    // UPDATE with retry logic for optimistic locking
+                    newQuantity = position.getQuantity() + order.getQuantity();
+                    java.math.BigDecimal previousCost = position.getAverageCost().multiply(java.math.BigDecimal.valueOf(position.getQuantity()));
                     java.math.BigDecimal orderCost = executedPrice.multiply(java.math.BigDecimal.valueOf(order.getQuantity()));
                     newAverageCost = previousCost.add(orderCost)
                             .divide(java.math.BigDecimal.valueOf(newQuantity), 10, java.math.RoundingMode.HALF_UP);
 
-                    int updated = orderDataMapper.updatePosition(order.getAccountId(), order.getSymbol(), newQuantity, newAverageCost);
-                    if (updated != 1) {
-                        throw new OrderStateConflictException();
-                    }
+                    updatePositionWithRetry(order.getAccountId(), order.getSymbol(), newQuantity, newAverageCost, position.getVersion());
                 }
             } else {
                 // SELL: decrement existing position
                 if (position == null) {
-                    throw new IllegalArgumentException("Cannot sell without existing position");
+                    throw new MalformedExecutionException("Cannot sell without existing position");
                 }
                 int existingQty = position.getQuantity();
                 if (existingQty < order.getQuantity()) {
-                    throw new IllegalArgumentException("Insufficient holdings for SELL");
+                    throw new MalformedExecutionException("Insufficient holdings for SELL");
                 }
                 newQuantity = existingQty - order.getQuantity();
                 newAverageCost = newQuantity == 0 ? java.math.BigDecimal.ZERO : position.getAverageCost();
-                int updated = orderDataMapper.updatePosition(order.getAccountId(), order.getSymbol(), newQuantity, newAverageCost);
-                if (updated != 1) {
-                    throw new OrderStateConflictException();
-                }
+                
+                updatePositionWithRetry(order.getAccountId(), order.getSymbol(), newQuantity, newAverageCost, position.getVersion());
             }
 
-            // 5) Insert execution row
-            orderDataMapper.insertExecution(orderId, order.getQuantity(), executedPrice);
+            // 5) Insert execution row with eventId for idempotency
+            if (eventId != null) {
+                orderDataMapper.insertExecutionWithEventId(orderId, order.getQuantity(), executedPrice, eventId);
+            } else {
+                orderDataMapper.insertExecution(orderId, order.getQuantity(), executedPrice);
+            }
 
             // 6) Build trade-event payload and publish after commit
             TradeEventPayload payload = new TradeEventPayload();
@@ -209,6 +235,65 @@ public class ExecutionProcessingService {
         }
 
         // Unknown status
-        throw new IllegalArgumentException("Unknown status: " + targetStatus);
+        throw new MalformedExecutionException("Unknown status: " + targetStatus);
+    }
+
+    /**
+     * Update position with optimistic locking and retry logic.
+     * 
+     * Retries up to MAX_RETRY_ATTEMPTS times with exponential backoff.
+     * On each retry, re-reads the position version and attempts update again.
+     * 
+     * If all retries fail: throws OptimisticLockException (permanent failure, to DLT).
+     */
+    private void updatePositionWithRetry(Long accountId, String symbol, int quantity, 
+                                         java.math.BigDecimal averageCost, int initialVersion) {
+        int currentVersion = initialVersion;
+        
+        for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+            try {
+                int updated = orderDataMapper.updatePositionWithVersion(
+                        accountId, symbol, quantity, averageCost, currentVersion
+                );
+                
+                if (updated == 1) {
+                    // Success!
+                    log.info("Position update succeeded for account={} symbol={} on attempt {}", 
+                        accountId, symbol, attempt);
+                    return;
+                }
+                
+                // Version mismatch - concurrent update detected
+                log.warn("Position update failed due to version mismatch (concurrent update), attempt {}/{}", 
+                    attempt, MAX_RETRY_ATTEMPTS);
+                
+                if (attempt < MAX_RETRY_ATTEMPTS) {
+                    // Wait before retrying (exponential backoff)
+                    long backoffMs = BACKOFF_BASE_MS * attempt; // 50ms, 100ms, ...
+                    log.info("Retrying position update in {}ms...", backoffMs);
+                    Thread.sleep(backoffMs);
+                    
+                    // Re-read position to get updated version
+                    Position latestPosition = orderDataMapper.findPosition(accountId, symbol);
+                    if (latestPosition != null) {
+                        currentVersion = latestPosition.getVersion();
+                        log.info("Re-read position version: {}", currentVersion);
+                    } else {
+                        throw new MalformedExecutionException("Position disappeared during retry for account=" + 
+                            accountId + " symbol=" + symbol);
+                    }
+                }
+                
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new OptimisticLockException("Position update interrupted: " + ie.getMessage(), ie);
+            }
+        }
+        
+        // All retries exhausted
+        throw new OptimisticLockException(
+            "Failed to update position after " + MAX_RETRY_ATTEMPTS + " retries for account=" + 
+            accountId + " symbol=" + symbol + ". Concurrent updates may be blocking this transaction."
+        );
     }
 }

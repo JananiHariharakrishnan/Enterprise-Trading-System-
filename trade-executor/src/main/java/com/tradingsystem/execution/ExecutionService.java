@@ -74,13 +74,14 @@ public class ExecutionService {
         }
 
         UUID orderId = UUID.fromString(order.getOrderId());
+        String eventId = order.getEventId(); // Extract event ID for idempotency
 
         // 1) Obtain quotes and decide
         List<Quote> quotes = fauxnanceClient.getQuotes(List.of(order.getSymbol()));
 
         if (quotes == null || quotes.isEmpty()) {
             // Call trade-api to mark REJECTED due to quote unavailable
-            callTradeApiApplyDecision(orderId, "REJECTED", null, "Quote unavailable");
+            callTradeApiApplyDecision(orderId, "REJECTED", null, "Quote unavailable", eventId);
             return;
         }
 
@@ -99,17 +100,19 @@ public class ExecutionService {
 
             log.info("Order {} decided FILLED at price {} — delegating DB update to trade-api", orderId, executedPrice);
 
-            callTradeApiApplyDecision(orderId, "FILLED", executedPrice, null);
+            callTradeApiApplyDecision(orderId, "FILLED", executedPrice, null, eventId);
 
         } else {
             log.info("Order {} decided REJECTED (reason={}) — delegating DB update to trade-api", orderId, decision.getReason());
-            callTradeApiApplyDecision(orderId, "REJECTED", null, decision.getReason());
+            callTradeApiApplyDecision(orderId, "REJECTED", null, decision.getReason(), eventId);
         }
     }
+    
     private void callTradeApiApplyDecision(UUID orderId,
                                            String status,
                                            BigDecimal executedPrice,
-                                           String reason) {
+                                           String reason,
+                                           String eventId) {
 
         String url = tradeApiBaseUrl + "/internal/orders/" + orderId.toString() + "/execution";
 
@@ -124,6 +127,9 @@ public class ExecutionService {
         }
         if (reason != null) {
             payload.put("reason", reason);
+        }
+        if (eventId != null) {
+            payload.put("eventId", eventId);
         }
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
