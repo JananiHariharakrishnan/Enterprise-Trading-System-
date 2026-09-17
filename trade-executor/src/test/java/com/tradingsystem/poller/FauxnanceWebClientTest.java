@@ -1,5 +1,10 @@
 package com.tradingsystem.poller;
 
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -27,7 +32,22 @@ class FauxnanceWebClientTest {
     void tearDown() throws Exception {
         server.shutdown();
     }
+    @Test
+    void getQuotes_nullOrEmptySymbols_returnsEmptyList() {
+        FauxnanceWebClient client = new FauxnanceWebClient("http://localhost", "/quotes", "key");
 
+        assertTrue(client.getQuotes(null).isEmpty());
+        assertTrue(client.getQuotes(List.of()).isEmpty());
+    }
+
+    @Test
+    void getQuote_nullOrBlankSymbol_returnsNull() {
+        FauxnanceWebClient client = new FauxnanceWebClient("http://localhost", "/quotes", "key");
+
+        assertNull(client.getQuote(null));
+        assertNull(client.getQuote(""));
+        assertNull(client.getQuote("   "));
+    }
     @Test
     void getQuotesMapsFauxnanceResponseCorrectly()
             throws Exception {
