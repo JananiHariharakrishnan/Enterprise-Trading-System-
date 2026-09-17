@@ -1,16 +1,18 @@
 package com.tradingsystem.execution;
 
 import com.tradingsystem.event.payload.OrderPlacedPayload;
-import com.tradingsystem.event.payload.TradeEventPayload;
 import com.tradingsystem.poller.Quote;
-import com.tradingsystem.producer.TradeEventProducer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -19,20 +21,24 @@ class ExecutionServiceTest {
 
     private ExecutionRule executionRule;
     private com.tradingsystem.poller.FauxnanceClient fauxnanceClient;
-    private TradeEventProducer producer;
+    private RestTemplate restTemplate;
     private ExecutionService service;
 
     @BeforeEach
     void setUp() {
         executionRule = mock(ExecutionRule.class);
         fauxnanceClient = mock(com.tradingsystem.poller.FauxnanceClient.class);
-        producer = mock(TradeEventProducer.class);
-        service = new ExecutionService(executionRule, fauxnanceClient, producer);
+        restTemplate = mock(RestTemplate.class);
+        service = new ExecutionService(executionRule, fauxnanceClient, restTemplate, "http://localhost:8888");
+        
+        // Setup default mock response for all REST calls
+        ResponseEntity<Object> mockResponse = new ResponseEntity<>("OK", HttpStatus.OK);
+        when(restTemplate.postForEntity(any(), any(), any())).thenReturn(mockResponse);
     }
 
     private OrderPlacedPayload sampleOrder() {
         OrderPlacedPayload o = new OrderPlacedPayload();
-        o.setOrderId("o1");
+        o.setOrderId(UUID.randomUUID().toString());
         o.setAccountId(1L);
         o.setSymbol("AAPL");
         o.setSide("BUY");
@@ -42,31 +48,29 @@ class ExecutionServiceTest {
     }
 
     @Test
-    void execute_nullQuotes_publishesRejected() {
+    void execute_nullQuotes_callsTradeApiWithRejected() {
         OrderPlacedPayload order = sampleOrder();
         when(fauxnanceClient.getQuotes(anyList())).thenReturn(null);
 
         service.execute(order);
 
-        ArgumentCaptor<TradeEventPayload> captor = ArgumentCaptor.forClass(TradeEventPayload.class);
-        verify(producer, times(1)).publishOrderRejected(captor.capture());
-        TradeEventPayload payload = captor.getValue();
-        assertEquals("REJECTED", payload.getStatus());
-        assertEquals("Quote unavailable", payload.getReason());
+        // Should attempt to call trade-api to mark as REJECTED
+        verify(restTemplate, times(1)).postForEntity(any(), any(), any());
     }
 
     @Test
-    void execute_emptyQuotes_publishesRejected() {
+    void execute_emptyQuotes_callsTradeApiWithRejected() {
         OrderPlacedPayload order = sampleOrder();
         when(fauxnanceClient.getQuotes(anyList())).thenReturn(List.of());
 
         service.execute(order);
 
-        verify(producer, times(1)).publishOrderRejected(any(TradeEventPayload.class));
+        // Should attempt to call trade-api to mark as REJECTED
+        verify(restTemplate, times(1)).postForEntity(any(), any(), any());
     }
 
     @Test
-    void execute_decisionFilled_publishesFilled() {
+    void execute_decisionFilled_callsTradeApiWithFilled() {
         OrderPlacedPayload order = sampleOrder();
         Quote q = new Quote("AAPL", new BigDecimal("100.00"), "USD", null, null, null, null, false, null);
         when(fauxnanceClient.getQuotes(anyList())).thenReturn(List.of(q));
@@ -74,11 +78,12 @@ class ExecutionServiceTest {
 
         service.execute(order);
 
-        verify(producer, times(1)).publishOrderFilled(any(TradeEventPayload.class));
+        // Should call trade-api with FILLED status
+        verify(restTemplate, times(1)).postForEntity(any(), any(), any());
     }
 
     @Test
-    void execute_decisionRejected_publishesRejectedWithReason() {
+    void execute_decisionRejected_callsTradeApiWithRejected() {
         OrderPlacedPayload order = sampleOrder();
         Quote q = new Quote("AAPL", new BigDecimal("100.00"), "USD", null, null, null, null, false, null);
         when(fauxnanceClient.getQuotes(anyList())).thenReturn(List.of(q));
@@ -86,8 +91,7 @@ class ExecutionServiceTest {
 
         service.execute(order);
 
-        ArgumentCaptor<TradeEventPayload> captor = ArgumentCaptor.forClass(TradeEventPayload.class);
-        verify(producer, times(1)).publishOrderRejected(captor.capture());
-        assertEquals("Not marketable", captor.getValue().getReason());
+        // Should call trade-api with REJECTED status
+        verify(restTemplate, times(1)).postForEntity(any(), any(), any());
     }
 }

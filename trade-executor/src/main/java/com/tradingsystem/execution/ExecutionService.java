@@ -68,6 +68,11 @@ public class ExecutionService {
      */
     public void execute(OrderPlacedPayload order) {
 
+        if (order.getOrderId() == null || order.getOrderId().isBlank()) {
+            log.error("Order execution failed: orderId is missing in payload");
+            throw new IllegalArgumentException("Order ID cannot be null or empty");
+        }
+
         UUID orderId = UUID.fromString(order.getOrderId());
 
         // 1) Obtain quotes and decide

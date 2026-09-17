@@ -194,7 +194,7 @@ public class OrderServiceImpl implements OrderService {
 
         response.setOrderId(order.getId().toString());
         response.setStatus(OrderStatus.NEW);
-        response.setMessage("Order Placed");
+         response.setMessage("Order accepted");
         response.setSymbol(order.getSymbol());
         response.setSide(order.getSide());
         response.setQuantity(order.getQuantity());
