@@ -139,4 +139,18 @@ class MarketDataPollerTest {
                 Instant.parse("2026-09-28T09:14:58Z")
         );
     }
+
+    @Test
+    void noSymbolsDoesNotCallFauxnanceOrProducer() {
+        when(symbolSource.findSymbols()).thenReturn(List.of());
+
+        MarketDataPoller poller = createPoller(60);
+
+        poller.pollMarketData();
+
+        verifyNoInteractions(fauxnanceClient);
+        verifyNoInteractions(marketDataProducer);
+    }
+
+
 }

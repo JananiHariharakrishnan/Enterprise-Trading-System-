@@ -1,6 +1,7 @@
 package com.tradingsystem.service.impl;
 
 import com.tradingsystem.exception.AccountNotActiveException;
+import com.tradingsystem.exception.TradingAuthenticationException;
 import com.tradingsystem.exception.AccountNotFoundException;
 import com.tradingsystem.mapper.AccountDataMapper;
 import com.tradingsystem.mapper.OrderDataMapper;
@@ -132,7 +133,7 @@ class OrderServiceImplTest {
                 .thenReturn(2002L);
 
         assertThrows(
-                AccountNotActiveException.class,
+                TradingAuthenticationException.class,
                 () -> orderService.getOrderHistory(
                         1001L,
                         null,
