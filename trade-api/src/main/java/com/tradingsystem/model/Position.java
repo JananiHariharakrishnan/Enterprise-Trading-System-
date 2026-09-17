@@ -8,6 +8,7 @@ public class Position {
     private String symbol;
     private int quantity;
     private BigDecimal averageCost;
+    private int version; // Optimistic locking counter
 
     public Long getAccountId() {
         return accountId;
@@ -39,6 +40,14 @@ public class Position {
 
     public void setAverageCost(BigDecimal averageCost) {
         this.averageCost = averageCost;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
     }
 
     public void validateQuantity() {

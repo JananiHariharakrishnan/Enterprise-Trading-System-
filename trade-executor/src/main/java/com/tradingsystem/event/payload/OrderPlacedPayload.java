@@ -3,6 +3,7 @@ package com.tradingsystem.event.payload;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class OrderPlacedPayload {
 
@@ -15,6 +16,7 @@ public class OrderPlacedPayload {
     private BigDecimal price;
     private String idempotencyKey;
     private String createdOn;
+    private String eventId; // Kafka event ID for idempotency tracking
 
     public OrderPlacedPayload() {
     }
@@ -89,5 +91,13 @@ public class OrderPlacedPayload {
 
     public void setCreatedOn(String createdOn) {
         this.createdOn = createdOn;
+    }
+
+    public String getEventId() {
+        return eventId;
+    }
+
+    public void setEventId(String eventId) {
+        this.eventId = eventId;
     }
 }

@@ -27,6 +27,7 @@
         <id property="symbol" column="symbol"/>
         <result property="quantity" column="qty"/>
         <result property="averageCost" column="avg_cost"/>
+        <result property="version" column="version"/>
     </resultMap>
 
     <resultMap id="orderHistoryResultMap" type="com.tradingsystem.dto.response.OrderHistoryEntry">
@@ -70,7 +71,8 @@
         account_id,
         symbol,
         qty,
-        avg_cost
+        avg_cost,
+        version
         FROM positions
         WHERE account_id = #{accountId}
         AND symbol = #{symbol}
@@ -142,6 +144,17 @@
         AND symbol = #{symbol}
     </update>
 
+    <update id="updatePositionWithVersion">
+        UPDATE positions
+        SET
+        qty = #{quantity},
+        avg_cost = #{averageCost},
+        version = version + 1
+        WHERE account_id = #{accountId}
+        AND symbol = #{symbol}
+        AND version = #{expectedVersion}
+    </update>
+
     <update id="cancelOrderIfStatus">
         UPDATE orders
         SET status = #{newStatus}
@@ -171,6 +184,32 @@
         now()
         )
     </insert>
+
+    <!-- New: insert execution with event_id for Kafka idempotency -->
+    <insert id="insertExecutionWithEventId" parameterType="map">
+        INSERT INTO executions (
+        order_id,
+        quantity,
+        price,
+        event_id,
+        executed_at,
+        created_at
+        ) VALUES (
+        #{orderId},
+        #{quantity},
+        #{price},
+        #{eventId},
+        now(),
+        now()
+        )
+    </insert>
+
+    <!-- New: Check if execution with event_id exists (for replay detection) -->
+    <select id="existsExecutionByEventId" resultType="boolean">
+        SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+        FROM executions
+        WHERE event_id = #{eventId}
+    </select>
 
     <select id="findOrderHistory" resultMap="orderHistoryResultMap">
         SELECT

@@ -169,7 +169,9 @@ public class OrderServiceImpl implements OrderService {
                 throw new OrderStateConflictException();
             }
 
-            persistPosition(order, position);
+            // Note: Position is NOT updated at order placement time.
+            // Position updates happen only during order execution (in ExecutionProcessingService).
+            // This prevents duplicate position updates and maintains clear separation of concerns.
         }
 
         try {

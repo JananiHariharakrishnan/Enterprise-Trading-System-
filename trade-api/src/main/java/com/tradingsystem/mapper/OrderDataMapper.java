@@ -47,6 +47,14 @@ public interface OrderDataMapper {
             @Param("averageCost") BigDecimal averageCost
     );
 
+    int updatePositionWithVersion(
+            @Param("accountId") Long accountId,
+            @Param("symbol") String symbol,
+            @Param("quantity") int quantity,
+            @Param("averageCost") BigDecimal averageCost,
+            @Param("expectedVersion") int expectedVersion
+    );
+
     int cancelOrderIfStatus(
             @Param("orderId") UUID orderId,
             @Param("expectedStatus") String expectedStatus,
@@ -75,4 +83,13 @@ public interface OrderDataMapper {
             @Param("quantity") int quantity,
             @Param("price") java.math.BigDecimal price
     );
+
+    int insertExecutionWithEventId(
+            @Param("orderId") UUID orderId,
+            @Param("quantity") int quantity,
+            @Param("price") java.math.BigDecimal price,
+            @Param("eventId") UUID eventId
+    );
+
+    boolean existsExecutionByEventId(@Param("eventId") UUID eventId);
 }
