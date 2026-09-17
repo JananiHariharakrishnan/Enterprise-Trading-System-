@@ -27,7 +27,7 @@ public class TestTradeEventController {
         payload.setAccountId(1L);
         payload.setSymbol("AAPL");
         payload.setSide("BUY");
-        payload.setQuantity(10);
+        payload.setQuantity(BigDecimal.valueOf(10));
         payload.setPrice(new BigDecimal("100.00"));
         payload.setExecutedPrice(new BigDecimal("99.50"));
         payload.setStatus("FILLED");

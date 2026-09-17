@@ -67,4 +67,51 @@ public class FauxnanceWebClient implements FauxnanceClient {
                 ))
                 .toList();
     }
+
+    @Override
+    public Quote getQuote(String symbol) {
+
+        if (symbol == null || symbol.isBlank()) {
+            return null;
+        }
+
+        FauxnanceQuoteResponse response =
+                webClient.get()
+                        .uri(uriBuilder -> uriBuilder
+                                .path(quoteEndpoint)
+                                .queryParam("symbols", symbol)
+                                .build())
+                        .header("X-API-Key", apiKey)
+                        .retrieve()
+                        .bodyToMono(FauxnanceQuoteResponse.class)
+                        .block();
+
+
+        if (response == null
+                || response.data() == null
+                || response.data().quotes() == null
+                || response.data().quotes().isEmpty()) {
+
+            return null;
+        }
+
+
+        return response.data()
+                .quotes()
+                .stream()
+                .filter(q -> q.quote() != null)
+                .findFirst()
+                .map(q -> new Quote(
+                        q.quote().symbol(),
+                        q.quote().price(),
+                        q.quote().currency(),
+                        q.quote().change(),
+                        q.quote().changePercent(),
+                        q.quote().previousClose(),
+                        q.quote().marketState(),
+                        q.stale(),
+                        q.quote().asOf()
+                ))
+                .orElse(null);
+    }
 }

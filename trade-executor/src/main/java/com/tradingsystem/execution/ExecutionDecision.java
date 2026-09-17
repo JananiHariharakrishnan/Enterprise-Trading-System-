@@ -22,11 +22,11 @@ public class ExecutionDecision {
         this.executedPrice = executedPrice;
         this.reason = reason;
     }
+    public static ExecutionDecision filled(BigDecimal price){
 
-    public static ExecutionDecision filled(BigDecimal executedPrice) {
         return new ExecutionDecision(
                 Status.FILLED,
-                executedPrice,
+                price,
                 null
         );
     }
@@ -38,16 +38,13 @@ public class ExecutionDecision {
                 reason
         );
     }
-
-    public Status getStatus() {
+    public Status getStatus(){
         return status;
     }
-
-    public BigDecimal getExecutedPrice() {
+    public BigDecimal getExecutedPrice(){
         return executedPrice;
     }
-
-    public String getReason() {
+    public String getReason(){
         return reason;
     }
 }

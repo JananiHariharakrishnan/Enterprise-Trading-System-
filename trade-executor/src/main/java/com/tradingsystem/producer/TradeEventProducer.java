@@ -33,23 +33,30 @@ public class TradeEventProducer {
 
     private void publish(
             String eventType,
-            TradeEventPayload payload) {
+            TradeEventPayload payload
+    ){
 
-        KafkaEvent<TradeEventPayload> event = new KafkaEvent<>(
-                UUID.randomUUID().toString(),
-                eventType,
-                OffsetDateTime.now(ZoneOffset.UTC).toString(),
-                SOURCE,
-                SCHEMA_VERSION,
-                payload
-        );
+        KafkaEvent<TradeEventPayload> event =
+                new KafkaEvent<>(
+                        UUID.randomUUID().toString(),
+                        eventType,
+                        OffsetDateTime.now(ZoneOffset.UTC).toString(),
+                        SOURCE,
+                        SCHEMA_VERSION,
+                        payload
+                );
 
-        String key = String.valueOf(payload.getAccountId());
 
         kafkaTemplate.send(
                 TRADE_EVENTS_TOPIC,
-                key,
+                String.valueOf(payload.getAccountId()),
                 event
         );
+
+
+        System.out.println(
+                "Published event: " + eventType
+        );
+
     }
 }

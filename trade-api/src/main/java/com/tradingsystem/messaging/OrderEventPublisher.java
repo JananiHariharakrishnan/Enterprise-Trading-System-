@@ -6,8 +6,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.UUID;
+
 @Component
 public class OrderEventPublisher {
+
+    private static final String EVENT_TYPE = "ORDER_PLACED";
+    private static final String SOURCE = "trade-api";
+    private static final int SCHEMA_VERSION = 1;
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
@@ -24,16 +32,43 @@ public class OrderEventPublisher {
     }
 
     public void publishOrderPlaced(OrderPlacedEvent event) {
+
         try {
-            String message = objectMapper.writeValueAsString(event);
+
+            OrderPlacedPayload payload =
+                    new OrderPlacedPayload(
+                            event.orderId().toString(),
+                            event.accountId(),
+                            event.symbol(),
+                            event.side(),
+                            event.orderType(),
+                            event.quantity(),
+                            event.price(),
+                            event.idempotencyKey(),
+                            event.createdOn().toString()
+                    );
+
+            KafkaEventEnvelope<OrderPlacedPayload> kafkaEvent =
+                    new KafkaEventEnvelope<>(
+                            UUID.randomUUID().toString(),
+                            EVENT_TYPE,
+                            OffsetDateTime.now(ZoneOffset.UTC).toString(),
+                            SOURCE,
+                            SCHEMA_VERSION,
+                            payload
+                    );
+
+            String message =
+                    objectMapper.writeValueAsString(kafkaEvent);
 
             kafkaTemplate.send(
                     ordersTopic,
-                    event.orderId().toString(),
+                    String.valueOf(event.accountId()),
                     message
             );
 
         } catch (JsonProcessingException ex) {
+
             throw new IllegalStateException(
                     "Unable to serialize order event",
                     ex

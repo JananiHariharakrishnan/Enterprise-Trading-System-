@@ -1,76 +1,91 @@
 package com.tradingsystem.event.payload;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.math.BigDecimal;
 
-/**
- * Payload for ORDER_PLACED events from the orders Kafka topic.
- * Follows the contract defined in kafka-topics.md
- */
 public class OrderPlacedPayload {
-    @JsonProperty("orderId")
+
     private String orderId;
-
-    @JsonProperty("accountId")
     private Long accountId;
-
-    @JsonProperty("symbol")
     private String symbol;
-
-    @JsonProperty("side")
     private String side;
-
-    @JsonProperty("quantity")
-    private Integer quantity;
-
-    @JsonProperty("price")
+    private String orderType;
+    private BigDecimal quantity;
     private BigDecimal price;
-
-    @JsonProperty("idempotencyKey")
     private String idempotencyKey;
-
-    @JsonProperty("createdOn")
     private String createdOn;
 
-    public OrderPlacedPayload() {}
-
-    public OrderPlacedPayload(String orderId, Long accountId, String symbol, String side,
-                            Integer quantity, BigDecimal price, String idempotencyKey, String createdOn) {
-        this.orderId = orderId;
-        this.accountId = accountId;
-        this.symbol = symbol;
-        this.side = side;
-        this.quantity = quantity;
-        this.price = price;
-        this.idempotencyKey = idempotencyKey;
-        this.createdOn = createdOn;
+    public OrderPlacedPayload() {
     }
 
-    // Getters and Setters
-    public String getOrderId() { return orderId; }
-    public void setOrderId(String orderId) { this.orderId = orderId; }
+    public String getOrderId() {
+        return orderId;
+    }
 
-    public Long getAccountId() { return accountId; }
-    public void setAccountId(Long accountId) { this.accountId = accountId; }
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
 
-    public String getSymbol() { return symbol; }
-    public void setSymbol(String symbol) { this.symbol = symbol; }
+    public Long getAccountId() {
+        return accountId;
+    }
 
-    public String getSide() { return side; }
-    public void setSide(String side) { this.side = side; }
+    public void setAccountId(Long accountId) {
+        this.accountId = accountId;
+    }
 
-    public Integer getQuantity() { return quantity; }
-    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public String getSymbol() {
+        return symbol;
+    }
 
-    public BigDecimal getPrice() { return price; }
-    public void setPrice(BigDecimal price) { this.price = price; }
+    public void setSymbol(String symbol) {
+        this.symbol = symbol;
+    }
 
-    public String getIdempotencyKey() { return idempotencyKey; }
-    public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
+    public String getSide() {
+        return side;
+    }
 
-    public String getCreatedOn() { return createdOn; }
-    public void setCreatedOn(String createdOn) { this.createdOn = createdOn; }
+    public void setSide(String side) {
+        this.side = side;
+    }
+
+    public String getOrderType() {
+        return orderType;
+    }
+
+    public void setOrderType(String orderType) {
+        this.orderType = orderType;
+    }
+
+    public BigDecimal getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(BigDecimal quantity) {
+        this.quantity = quantity;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
+    }
+
+    public String getCreatedOn() {
+        return createdOn;
+    }
+
+    public void setCreatedOn(String createdOn) {
+        this.createdOn = createdOn;
+    }
 }
-
-

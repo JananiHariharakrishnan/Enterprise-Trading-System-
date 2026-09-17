@@ -1,7 +1,11 @@
 package com.tradingsystem.consumer;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tradingsystem.messaging.OrderPlacedEvent;
+import com.tradingsystem.event.KafkaEvent;
+import com.tradingsystem.event.payload.OrderPlacedPayload;
+import com.tradingsystem.execution.ExecutionService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -16,8 +20,16 @@ public class OrderConsumer {
 
     private final ObjectMapper objectMapper;
 
-    public OrderConsumer(ObjectMapper objectMapper) {
+    private final ExecutionService executionService;
+
+    public OrderConsumer(
+            ObjectMapper objectMapper,
+            ExecutionService executionService
+    ){
+
         this.objectMapper = objectMapper;
+
+        this.executionService = executionService;
     }
 
     @KafkaListener(
@@ -26,27 +38,34 @@ public class OrderConsumer {
     )
     public void consumeOrder(
             String message,
-            Acknowledgment acknowledgment) {
+            Acknowledgment acknowledgment
+    ){
+
 
         try {
-            OrderPlacedEvent event =
-                    objectMapper.readValue(message, OrderPlacedEvent.class);
+            KafkaEvent<OrderPlacedPayload> event =
+                    objectMapper.readValue(
+                            message,
+                            new TypeReference<
+                                    KafkaEvent<OrderPlacedPayload>
+                                    >(){}
+                    );
+
+
 
             log.info(
-                    "Received order: orderId={}, accountId={}, symbol={}, side={}, quantity={}, createdOn={}, idempotencyKey={}",
-                    event.orderId(),
-                    event.accountId(),
-                    event.symbol(),
-                    event.side(),
-                    event.quantity(),
-                    event.createdOn(),
-                    event.idempotencyKey()
+                    "ORDER_PLACED received: {}",
+                    event.getPayload().getOrderId()
+            );
+         executionService.execute(
+                    event.getPayload()
             );
 
             acknowledgment.acknowledge();
 
-        } catch (Exception e) {
-            log.error("Failed to process order message: {}", message, e);
+        }
+        catch(Exception e){
+            log.error("Order execution failed",e);
         }
     }
 }
