@@ -49,8 +49,8 @@ class JwtTokenVerifierTest {
 
         String token = signingInput + "." + signature;
 
-        JwtTokenVerifier verifier = new JwtTokenVerifier(secret, issuer);
-        Long accountId = verifier.verifyAndGetAccountId(token);
+        JwtTokenVerifier testVerifier = new JwtTokenVerifier(secret, issuer);
+        Long accountId = testVerifier.verifyAndGetAccountId(token);
 
         assertNotNull(accountId);
         assertEquals(1001L, accountId.longValue());
@@ -68,8 +68,8 @@ class JwtTokenVerifierTest {
         String signature = sign(signingInput, secret);
         String token = signingInput + "." + signature;
 
-        JwtTokenVerifier verifier = new JwtTokenVerifier(secret, issuer);
-        assertNull(verifier.verifyAndGetAccountId(token));
+        JwtTokenVerifier testVerifier = new JwtTokenVerifier(secret, issuer);
+        assertNull(testVerifier.verifyAndGetAccountId(token));
     }
 
     @Test
@@ -84,16 +84,16 @@ class JwtTokenVerifierTest {
         String signature = sign(signingInput, secret);
         String token = signingInput + "." + signature;
 
-        JwtTokenVerifier verifier = new JwtTokenVerifier(secret, issuer);
-        assertNull(verifier.verifyAndGetAccountId(token));
+        JwtTokenVerifier testVerifier = new JwtTokenVerifier(secret, issuer);
+        assertNull(testVerifier.verifyAndGetAccountId(token));
     }
 
     @Test
     void verify_malformedToken_returnsNull() {
-        JwtTokenVerifier verifier = new JwtTokenVerifier("s", "i");
-        assertNull(verifier.verifyAndGetAccountId("bad.token"));
-        assertNull(verifier.verifyAndGetAccountId(null));
-        assertNull(verifier.verifyAndGetAccountId(""));
+        JwtTokenVerifier testVerifier = new JwtTokenVerifier("s", "i");
+        assertNull(testVerifier.verifyAndGetAccountId("bad.token"));
+        assertNull(testVerifier.verifyAndGetAccountId(null));
+        assertNull(testVerifier.verifyAndGetAccountId(""));
     }
 
     @Test

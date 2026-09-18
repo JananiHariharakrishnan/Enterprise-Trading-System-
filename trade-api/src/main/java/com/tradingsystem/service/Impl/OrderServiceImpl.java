@@ -71,9 +71,7 @@ public class OrderServiceImpl implements OrderService {
         Account account = getAuthorizedAccount(command.getAccountId());
 
         if (account.getCashBalance() == null) {
-            throw new InvalidOrderException(
-                    "Account cash balance is invalid"
-            );
+            throw new InvalidOrderException("Account cash balance is invalid");
         }
 
         if (account.getBuyingPower() == null) {

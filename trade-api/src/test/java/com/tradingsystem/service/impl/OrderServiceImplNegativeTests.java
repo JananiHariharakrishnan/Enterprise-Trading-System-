@@ -2,7 +2,6 @@ package com.tradingsystem.service.impl;
 
 import com.tradingsystem.exception.DuplicateOrderException;
 import com.tradingsystem.exception.InvalidOrderException;
-import com.tradingsystem.exception.OrderStateConflictException;
 import com.tradingsystem.model.Account;
 import com.tradingsystem.service.Impl.OrderServiceImpl;
 import com.tradingsystem.service.command.PlaceOrderCommand;
@@ -63,14 +62,6 @@ class OrderServiceImplNegativeTests {
         when(orderDataMapper.existsByIdempotencyKey(any())).thenReturn(true);
 
         assertThrows(DuplicateOrderException.class, () -> orderService.placeOrder(cmd));
-    }
-
-    @Test
-    void placeOrder_updateAccountFails_throwsOrderStateConflict() {
-        // NOTE: With the fix for double-charging bug, balance is NO LONGER updated at placement.
-        // Account updates only happen during execution (ExecutionProcessingService).
-        // This test is no longer valid and can be removed or repurposed.
-        // Keeping it as a reminder of the old behavior.
     }
 
     @Test
