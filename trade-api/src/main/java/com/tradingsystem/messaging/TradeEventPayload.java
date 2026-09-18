@@ -49,7 +49,9 @@ public class TradeEventPayload {
     @JsonProperty("executedOn")
     private String executedOn;
 
-    public TradeEventPayload() {}
+    public TradeEventPayload() {
+        // Empty Constructor
+    }
 
     // Getters / Setters omitted for brevity — include all standard getters/setters
 

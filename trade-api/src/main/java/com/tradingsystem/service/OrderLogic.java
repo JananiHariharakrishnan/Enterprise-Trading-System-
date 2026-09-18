@@ -89,8 +89,7 @@ public class OrderLogic {
         }
 
         // Rule 5: Price must be positive
-        if (order.getPrice() == null
-                || order.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+        if (order.getPrice() == null || order.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidOrderException();
         }
     }
@@ -103,8 +102,7 @@ public class OrderLogic {
                 throw new InvalidOrderException();
             }
 
-            BigDecimal orderValue = order.getPrice()
-                    .multiply(BigDecimal.valueOf(order.getQuantity()));
+            BigDecimal orderValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
 
             // EDGE CASE FIX: Check price precision
             if (orderValue.scale() > 10) {
@@ -157,9 +155,7 @@ public class OrderLogic {
         );
 
         // Rule 7
-        if (order.getSide() == OrderSide.SELL
-                && (position == null
-                || position.getQuantity() < order.getQuantity())) {
+        if (order.getSide() == OrderSide.SELL && (position == null || position.getQuantity() < order.getQuantity())) {
             throw new InsufficientHoldingsException();
         }
     }
