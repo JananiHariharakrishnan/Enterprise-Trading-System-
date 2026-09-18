@@ -15,6 +15,7 @@ public class AccountResponse {
     private OffsetDateTime lastUpdated;
     //default constructor
     public AccountResponse() {
+        // Empty Constructor
     }
 
     public Long getId() {

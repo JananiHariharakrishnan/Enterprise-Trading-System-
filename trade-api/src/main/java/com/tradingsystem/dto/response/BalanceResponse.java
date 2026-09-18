@@ -13,6 +13,7 @@ public class BalanceResponse {
 
     //default constructor
     public BalanceResponse() {
+        // Empty Constructor
     }
 
     public Long getAccountId() {

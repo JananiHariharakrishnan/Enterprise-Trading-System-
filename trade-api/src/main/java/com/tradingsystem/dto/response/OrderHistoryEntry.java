@@ -23,6 +23,7 @@ public class OrderHistoryEntry {
     private OffsetDateTime createdOn;
 
     public OrderHistoryEntry() {
+        // Empty Constructor
     }
 
     public String getOrderId() {
