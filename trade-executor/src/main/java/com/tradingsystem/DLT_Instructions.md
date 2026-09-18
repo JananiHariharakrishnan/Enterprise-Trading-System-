@@ -30,6 +30,7 @@ docker exec -it kafka /opt/kafka/bin/kafka-console-producer.sh \
 1:{"eventId":"test-2","eventType":"ORDER_PLACED","eventTime":"2026-09-18T10:00:00Z","source":"test","schemaVersion":1,"payload":{"orderId":null,"accountId":null,"symbol":"AAPL","side":"BUY","quantity":100,"price":150.00,"idempotencyKey":"key-123","createdOn":"2026-09-18T10:00:00Z"}}
 ```
 
+
 ## List Kafka Topics
 
 ```bash
