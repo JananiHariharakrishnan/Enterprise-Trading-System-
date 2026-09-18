@@ -13,6 +13,7 @@ public class ExecutionRequest {
     private String reason; // optional
     private UUID eventId; // optional: Kafka event ID for idempotency tracking
 
+    //default constructor
     public ExecutionRequest() {}
 
     public String getStatus() { return status; }

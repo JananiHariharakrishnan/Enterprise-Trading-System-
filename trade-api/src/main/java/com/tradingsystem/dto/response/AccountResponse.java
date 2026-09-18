@@ -13,7 +13,7 @@ public class AccountResponse {
     private String status;
     private Integer version;
     private OffsetDateTime lastUpdated;
-
+    //default constructor
     public AccountResponse() {
     }
 
