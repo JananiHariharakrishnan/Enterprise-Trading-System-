@@ -1,8 +1,9 @@
 package com.tradingsystem.poller;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -66,8 +67,15 @@ class JdbcSymbolSourceTest {
         assertTrue(result.isEmpty());
     }
 
-    @Test
-    void queryIncludesPositionsTable() {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "positions",
+            "qty > 0",
+            "watchlist",
+            "UNION",
+            "ORDER BY symbol"
+    })
+    void queryContainsExpectedSqlPart(String expectedSqlPart) {
 
         when(jdbcTemplate.queryForList(
                 anyString(),
@@ -79,125 +87,9 @@ class JdbcSymbolSourceTest {
 
         source.findSymbols();
 
-        ArgumentCaptor<String> sqlCaptor =
-                ArgumentCaptor.forClass(String.class);
-
         verify(jdbcTemplate).queryForList(
-                sqlCaptor.capture(),
+                argThat(sql -> sql.contains(expectedSqlPart)),
                 eq(String.class)
-        );
-
-        assertTrue(
-                sqlCaptor.getValue()
-                        .contains("positions")
-        );
-    }
-
-    @Test
-    void queryOnlyIncludesPositivePositions() {
-
-        when(jdbcTemplate.queryForList(
-                anyString(),
-                eq(String.class)
-        )).thenReturn(List.of());
-
-        JdbcSymbolSource source =
-                new JdbcSymbolSource(jdbcTemplate);
-
-        source.findSymbols();
-
-        ArgumentCaptor<String> sqlCaptor =
-                ArgumentCaptor.forClass(String.class);
-
-        verify(jdbcTemplate).queryForList(
-                sqlCaptor.capture(),
-                eq(String.class)
-        );
-
-        assertTrue(
-                sqlCaptor.getValue()
-                        .contains("qty > 0")
-        );
-    }
-
-    @Test
-    void queryIncludesWatchlist() {
-
-        when(jdbcTemplate.queryForList(
-                anyString(),
-                eq(String.class)
-        )).thenReturn(List.of());
-
-        JdbcSymbolSource source =
-                new JdbcSymbolSource(jdbcTemplate);
-
-        source.findSymbols();
-
-        ArgumentCaptor<String> sqlCaptor =
-                ArgumentCaptor.forClass(String.class);
-
-        verify(jdbcTemplate).queryForList(
-                sqlCaptor.capture(),
-                eq(String.class)
-        );
-
-        assertTrue(
-                sqlCaptor.getValue()
-                        .contains("watchlist")
-        );
-    }
-
-    @Test
-    void queryUsesUnion() {
-
-        when(jdbcTemplate.queryForList(
-                anyString(),
-                eq(String.class)
-        )).thenReturn(List.of());
-
-        JdbcSymbolSource source =
-                new JdbcSymbolSource(jdbcTemplate);
-
-        source.findSymbols();
-
-        ArgumentCaptor<String> sqlCaptor =
-                ArgumentCaptor.forClass(String.class);
-
-        verify(jdbcTemplate).queryForList(
-                sqlCaptor.capture(),
-                eq(String.class)
-        );
-
-        assertTrue(
-                sqlCaptor.getValue()
-                        .contains("UNION")
-        );
-    }
-
-    @Test
-    void queryOrdersSymbols() {
-
-        when(jdbcTemplate.queryForList(
-                anyString(),
-                eq(String.class)
-        )).thenReturn(List.of());
-
-        JdbcSymbolSource source =
-                new JdbcSymbolSource(jdbcTemplate);
-
-        source.findSymbols();
-
-        ArgumentCaptor<String> sqlCaptor =
-                ArgumentCaptor.forClass(String.class);
-
-        verify(jdbcTemplate).queryForList(
-                sqlCaptor.capture(),
-                eq(String.class)
-        );
-
-        assertTrue(
-                sqlCaptor.getValue()
-                        .contains("ORDER BY symbol")
         );
     }
 }
