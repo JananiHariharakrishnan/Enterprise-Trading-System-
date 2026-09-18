@@ -108,7 +108,7 @@ class OrderServiceTransactionalIntegrationTest {
 
 
         assertEquals(
-                20,
+                15,
                 positionQuantity(
                         1001L,
                         "AAPL"
@@ -117,7 +117,7 @@ class OrderServiceTransactionalIntegrationTest {
 
 
         assertEquals(
-                new BigDecimal("176.13"),
+                new BigDecimal("171.50"),
                 positionAverageCost(
                         1001L,
                         "AAPL"

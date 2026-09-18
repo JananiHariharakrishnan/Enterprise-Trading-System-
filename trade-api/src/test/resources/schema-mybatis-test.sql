@@ -28,6 +28,7 @@ CREATE TABLE positions (
     symbol VARCHAR(20) NOT NULL,
     qty INT NOT NULL,
     avg_cost NUMERIC(18,2) NOT NULL,
+    version INT NOT NULL DEFAULT 0,
     PRIMARY KEY (account_id, symbol),
     CONSTRAINT fk_positions_account FOREIGN KEY (account_id) REFERENCES accounts (id),
     CONSTRAINT fk_positions_instrument FOREIGN KEY (symbol) REFERENCES instruments (symbol)
