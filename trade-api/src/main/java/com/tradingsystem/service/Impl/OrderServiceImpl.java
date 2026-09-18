@@ -135,44 +135,11 @@ public class OrderServiceImpl implements OrderService {
                 position
         );
 
-        // If a price is present (LIMIT path or explicitly provided), perform synchronous
-        // balance and position updates. If price is null (MARKET), skip synchronous fill
-        // and let the executor price/execute later.
-        boolean pricePresent = order.getPrice() != null;
-
-        if (pricePresent) {
-
-            BigDecimal orderValue = calculateOrderValue(order);
-
-            BigDecimal newCashBalance = account.getCashBalance();
-            BigDecimal newBuyingPower = account.getBuyingPower();
-
-            if (order.getSide() == OrderSide.BUY) {
-                newCashBalance = newCashBalance.subtract(orderValue);
-                newBuyingPower = newBuyingPower.subtract(orderValue);
-            } else if (order.getSide() == OrderSide.SELL) {
-                newCashBalance = newCashBalance.add(orderValue);
-                newBuyingPower = newBuyingPower.add(orderValue);
-            } else {
-                throw new InvalidOrderException("Invalid order side");
-            }
-
-            int accountRows =
-                    orderDataMapper.updateAccountBalancesWithVersion(
-                            account.getAccountId(),
-                            newCashBalance,
-                            newBuyingPower,
-                            account.getVersion()
-                    );
-
-            if (accountRows != 1) {
-                throw new OrderStateConflictException();
-            }
-
-            // Note: Position is NOT updated at order placement time.
-            // Position updates happen only during order execution (in ExecutionProcessingService).
-            // This prevents duplicate position updates and maintains clear separation of concerns.
-        }
+         // Note: Balance and position are NOT updated at order placement time.
+         // Updates happen only during order execution (in ExecutionProcessingService).
+         // This prevents double-charging/duplicate updates and maintains clear separation of concerns.
+         // By deferring balance updates until execution, we use the actual executed price
+         // rather than the order price, ensuring accurate cash balance calculations.
 
         try {
             int affectedRows = orderDataMapper.insertOrder(order);
