@@ -1,32 +1,29 @@
 # Auth Service
 
-Minimal Node.js 20+ and TypeScript scaffold for the upcoming login/signup work.
+Minimal Next.js setup for the auth service.
 
-## What is included
+## Requirements
 
-- Node 20+ compatible TypeScript service under `src/`
-- Specs beside the code they cover
-- Runtime config loaded from environment variables
-- `npm ci`, `npm run build`, and `npm test` ready once `package-lock.json` is committed
+- Node.js 20 or later
 
-## Local setup
+## Setup
 
-1. Copy `.env.example` to `.env`
-2. Set `JWT_SECRET` and database values for your machine
-3. Run the commands below from `services/auth-service`
+Run the commands below from `services/auth-service`.
 
 ```powershell
 npm ci
+npm run typecheck
 npm run build
-npm test
+npm run dev
+```
+
+For a production run:
+
+```powershell
 npm start
 ```
 
-## Current routes
+The app uses the standard Next.js app router under `src/app/`.
 
-- `GET /health`
-- `POST /auth/login` - placeholder
-- `POST /auth/signup` - placeholder
-
-The existing `services/auth-stub` remains untouched and can continue to be used until the real login/signup story is implemented.
+By default, Next.js serves on port `3000`. You can override that with the standard `PORT` environment variable.
 
