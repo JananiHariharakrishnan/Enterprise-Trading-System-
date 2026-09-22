@@ -19,6 +19,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.time.ZoneId;
 import java.util.UUID;
 
 /**
@@ -100,7 +101,7 @@ public class ExecutionProcessingService {
             payload.setCashDelta(null);
             payload.setPositionQuantityAfter(null);
             payload.setAverageCostAfter(null);
-            payload.setExecutedOn(java.time.OffsetDateTime.now().toString());
+            payload.setExecutedOn(java.time.OffsetDateTime.now(ZoneId.of("UTC")).toString());
 
             // Record the execution (rejection) with eventId for idempotency
             if (eventId != null) {
@@ -134,7 +135,7 @@ public class ExecutionProcessingService {
                 throw new MalformedExecutionException("Account not found: " + order.getAccountId());
             }
 
-            BigDecimal orderValue = executedPrice.multiply(BigDecimal.valueOf((long) order.getQuantity()));
+            BigDecimal orderValue = executedPrice.multiply(BigDecimal.valueOf(order.getQuantity()));
 
             BigDecimal newCashBalance = account.getCashBalance();
             BigDecimal newBuyingPower = account.getBuyingPower();
@@ -222,7 +223,7 @@ public class ExecutionProcessingService {
             payload.setCashDelta(cashDelta);
             payload.setPositionQuantityAfter(newQuantity);
             payload.setAverageCostAfter(newAverageCost);
-            payload.setExecutedOn(java.time.OffsetDateTime.now().toString());
+            payload.setExecutedOn(java.time.OffsetDateTime.now(ZoneId.of("UTC")).toString());
 
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override

@@ -11,6 +11,7 @@ public class PositionResponse {
     private BigDecimal averageCost;
 
     public PositionResponse() {
+        // Empty Constructor
     }
 
     public Long getAccountId() {

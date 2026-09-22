@@ -26,7 +26,7 @@ public class ExecutionController {
     }
 
     @PostMapping("/{orderId}/execution")
-    public ResponseEntity<?> applyExecution(@PathVariable("orderId") String orderId, @RequestBody ExecutionRequest request) {
+    public ResponseEntity<String> applyExecution(@PathVariable("orderId") String orderId, @RequestBody ExecutionRequest request) {
         try {
             executionProcessingService.applyExecution(UUID.fromString(orderId), request);
             return ResponseEntity.ok().build();

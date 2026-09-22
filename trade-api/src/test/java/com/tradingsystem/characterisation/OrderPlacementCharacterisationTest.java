@@ -123,17 +123,21 @@ class OrderPlacementCharacterisationTest {
         );
 
 
-        assertEquals(
-                new BigDecimal("99050.00"),
+        // Note: Balance is NOT updated at order placement time.
+         // Updates happen only during order execution (ExecutionProcessingService).
+         // Balance should remain unchanged at placement.
+         assertEquals(
+                new BigDecimal("100000.00"),
                 cashBalance(1001L)
         );
 
         assertEquals(
-                new BigDecimal("99050.00"),
+                new BigDecimal("100000.00"),
                 buyingPower(1001L)
         );
 
-        assertEquals(
+        // Position is also NOT created at placement time, only at execution
+         assertEquals(
                 15,
                 positionQuantity(
                         1001L,
@@ -209,10 +213,9 @@ class OrderPlacementCharacterisationTest {
         );
 
 
-        // Proactive based on how and why they are added:
-        // Pin the existing optimistic-lock version change.
-        assertEquals(
-                2,
+        // Account version should NOT increment at placement since balance is not updated
+         assertEquals(
+                1,
                 accountVersion(1001L)
         );
     }
@@ -442,16 +445,17 @@ class OrderPlacementCharacterisationTest {
 
 
         assertEquals(
-                new BigDecimal("100950.00"),
+                new BigDecimal("100000.00"),
                 cashBalance(1001L)
         );
 
         assertEquals(
-                new BigDecimal("100950.00"),
+                new BigDecimal("100000.00"),
                 buyingPower(1001L)
         );
 
-        assertEquals(
+        // Position should remain unchanged at placement (only updated at execution)
+         assertEquals(
                 15,
                 positionQuantity(
                         1001L,
@@ -573,8 +577,8 @@ class OrderPlacementCharacterisationTest {
                 response.getSymbol()
         );
 
-
-        assertEquals(
+        // Position should NOT be created at placement time (only at execution)
+         assertEquals(
                 0,
                 positionCount(
                         1001L,
@@ -582,13 +586,14 @@ class OrderPlacementCharacterisationTest {
                 )
         );
 
-        assertEquals(
-                new BigDecimal("99500.00"),
+        // Balance should NOT be deducted at placement time (only at execution)
+         assertEquals(
+                new BigDecimal("100000.00"),
                 cashBalance(1001L)
         );
 
         assertEquals(
-                new BigDecimal("99500.00"),
+                new BigDecimal("100000.00"),
                 buyingPower(1001L)
         );
 

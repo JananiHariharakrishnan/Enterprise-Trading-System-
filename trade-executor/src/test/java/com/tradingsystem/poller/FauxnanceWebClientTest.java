@@ -10,13 +10,11 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
 
 class FauxnanceWebClientTest {
 
@@ -50,7 +48,7 @@ class FauxnanceWebClientTest {
     }
     @Test
     void getQuotesMapsFauxnanceResponseCorrectly()
-            throws Exception {
+            {
 
         server.enqueue(
                 new MockResponse()
@@ -214,7 +212,7 @@ class FauxnanceWebClientTest {
 
     @Test
     void getQuotesReturnsEmptyListWhenResponseIsNull()
-            throws Exception {
+           {
 
         server.enqueue(
                 new MockResponse()
@@ -237,7 +235,7 @@ class FauxnanceWebClientTest {
 
     @Test
     void getQuotesReturnsEmptyListWhenDataIsNull()
-            throws Exception {
+            {
 
         server.enqueue(
                 new MockResponse()
@@ -268,7 +266,7 @@ class FauxnanceWebClientTest {
 
     @Test
     void getQuotesReturnsEmptyListWhenQuotesIsNull()
-            throws Exception {
+             {
 
         server.enqueue(
                 new MockResponse()
@@ -301,7 +299,7 @@ class FauxnanceWebClientTest {
 
     @Test
     void getQuotesIgnoresEntriesWithNullQuote()
-            throws Exception {
+     {
 
         server.enqueue(
                 new MockResponse()
@@ -357,7 +355,7 @@ class FauxnanceWebClientTest {
 
     @Test
     void getQuotesMapsMultipleQuotes()
-            throws Exception {
+         {
 
         server.enqueue(
                 new MockResponse()

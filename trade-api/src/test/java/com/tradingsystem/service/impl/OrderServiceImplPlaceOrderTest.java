@@ -3,13 +3,12 @@ package com.tradingsystem.service.impl;
 import com.tradingsystem.dto.response.OrderResponse;
 import com.tradingsystem.enums.OrderSide;
 import com.tradingsystem.model.Account;
-import com.tradingsystem.model.Position;
 import com.tradingsystem.service.Impl.OrderServiceImpl;
 import com.tradingsystem.service.command.PlaceOrderCommand;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;

@@ -1,7 +1,5 @@
 package com.tradingsystem.controller;
 
-import com.tradingsystem.controller.OrderController;
-import com.tradingsystem.dto.request.PlaceOrderRequest;
 import com.tradingsystem.dto.response.OrderResponse;
 import com.tradingsystem.service.OrderService;
 import com.tradingsystem.advice.GlobalExceptionHandler;
@@ -16,7 +14,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
-import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -25,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
-public class OrderControllerTest {
+class OrderControllerTest {
 
     private MockMvc mockMvc;
 

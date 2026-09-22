@@ -19,17 +19,21 @@ class OrderLogicTest {
 
     @Test
     void placeOrder_nullAccount_throwsAccountNotFound() {
+        Instrument instrument = new Instrument();
+        Order order = new Order();
         assertThrows(AccountNotFoundException.class, () ->
-                logic.placeOrder(null, new Instrument(), new Order())
+                logic.placeOrder(null, instrument, order)
         );
     }
 
     @Test
     void placeOrder_inactiveAccount_throwsAccountNotActive() {
+        Instrument instrument = new Instrument();
+        Order order = new Order();
         Account a = new Account();
         a.setStatus(AccountStatus.SUSPENDED);
         assertThrows(AccountNotActiveException.class, () ->
-                logic.placeOrder(a, new Instrument(), new Order())
+                logic.placeOrder(a, instrument, order)
         );
     }
 

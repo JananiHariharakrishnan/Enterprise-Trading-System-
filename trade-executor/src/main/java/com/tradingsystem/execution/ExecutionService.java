@@ -6,7 +6,6 @@ import com.tradingsystem.poller.Quote;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -143,14 +142,13 @@ public class ExecutionService {
             } else {
                 log.warn("trade-api returned unexpected status {} for order {}", statusCode, orderId);
                 // For unexpected 4xx/5xx we want to surface an error so the consumer can retry.
-                throw new RuntimeException("Unexpected HTTP status " + statusCode + " from trade-api");
+                throw new IllegalStateException("Unexpected HTTP status " + statusCode + " from trade-api");
             }
 
         } catch (HttpClientErrorException hcee) {
             if (hcee.getStatusCode() == HttpStatus.CONFLICT) {
                 // 409 Conflict - treat as duplicate/already processed
                 log.info("trade-api indicated order {} already processed (409) — ignoring replay", orderId);
-                return;
             } else {
                 log.error("HTTP error calling trade-api for order {}: {} {}", orderId, hcee.getStatusCode(), hcee.getResponseBodyAsString());
                 throw new RuntimeException("HTTP error calling trade-api", hcee);
