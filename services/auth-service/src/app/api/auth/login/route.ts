@@ -36,9 +36,6 @@ export async function POST(req: Request) {
         { status: 422 },
       );
     }
-
-    // Use the credentials table for verification so plaintext passwords are
-    // never stored on the `users` table and argon2 is used.
     const credential = await findCredentialByUsername(dto.username);
 
     const passwordValid = await verifyCredentialPassword(credential, dto.password);
@@ -54,7 +51,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Load the user record for token claims. If missing, fail safely.
     const user = await findUserByUsername(dto.username);
     if (!user) {
       logger.error('credential exists without user', { username: dto.username });

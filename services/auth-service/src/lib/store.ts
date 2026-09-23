@@ -29,9 +29,6 @@ export async function accountExists(accountId: number): Promise<boolean> {
   return result.rowCount === 1;
 }
 
-/**
- * Check whether a username is already registered.
- */
 export async function usernameExists(
   username: string,
 ): Promise<boolean> {

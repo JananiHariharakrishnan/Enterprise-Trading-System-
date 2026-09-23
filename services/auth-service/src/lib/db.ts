@@ -28,9 +28,6 @@ if (process.env.NODE_ENV !== 'test') {
     loadAuthServiceEnv();
 }
 
-// In test mode, provide a lightweight in-memory mock so Jest tests run
-// without a real Postgres server. The mock implements the minimal
-// `query(sql, params)` contract used by the credential tests.
 let db: any;
 
 if (process.env.NODE_ENV === 'test') {
@@ -57,7 +54,7 @@ if (process.env.NODE_ENV === 'test') {
             }
 
             if (s.startsWith('UPDATE CREDENTIALS')) {
-                // Very small mock for tests: find by username param at the end
+
                 const newHash = params?.[0];
                 const newAlg = params?.[1];
                 const newParams = params?.[2] ? JSON.parse(params[2]) : null;
@@ -78,8 +75,6 @@ if (process.env.NODE_ENV === 'test') {
                 const found = credentials.find((r) => r.username === username);
                 return { rows: found ? [found] : [] } as any;
             }
-
-            // Fallback: no-op return
             return { rows: [] } as any;
         },
     } as const;
@@ -87,11 +82,6 @@ if (process.env.NODE_ENV === 'test') {
 } else {
     const rawDatabaseUrl = process.env.DATABASE_URL ?? process.env.DB_URL;
 
-    // Some environments (or legacy setups) provide a JDBC-style URL
-    // like `jdbc:postgresql://host:5432/db`. `pg.Pool` expects the
-    // standard libpq/postgres connection string (`postgresql://...`).
-    // Normalize by stripping a leading `jdbc:` if present so local
-    // `.env` values continue to work without forcing edits.
     const databaseUrl = rawDatabaseUrl && rawDatabaseUrl.startsWith('jdbc:')
         ? rawDatabaseUrl.replace(/^jdbc:/, '')
         : rawDatabaseUrl;
@@ -128,9 +118,6 @@ if (process.env.NODE_ENV === 'test') {
         process.env.PGPASSWORD;
 
     let connectionString = databaseUrl;
-
-    // If a URL is provided without credentials (common with JDBC-style DB_URL),
-    // merge in fallback env credentials so pg SCRAM auth receives string values.
     if (connectionString) {
         try {
             const url = new URL(connectionString);
@@ -142,7 +129,6 @@ if (process.env.NODE_ENV === 'test') {
             }
             connectionString = url.toString();
         } catch {
-            // Keep original URL. pg will surface a clear parse/connection error.
         }
     }
 
@@ -190,12 +176,10 @@ if (process.env.NODE_ENV === 'test') {
             if (error instanceof Error && error.message.startsWith('Database configuration error:')) {
                 throw error;
             }
-            // Invalid URL parsing is left to pg connection handling.
+
         }
     }
 
-    // Do not throw at module import time. Tests and local runs can set envs.
-    // If you want a hard fail in production, add a runtime check elsewhere.
     db = new Pool(poolConfig);
 }
 export { db };

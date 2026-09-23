@@ -6,9 +6,6 @@ export const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 export const ACCESS_TOKEN_LIFETIME = 15 * 60; // 15 minutes (seconds)
 
 export function signAccessToken(user: UserRecord): string {
-  // Use jsonwebtoken options so it emits `iat` and `exp` consistently.
-  // Put non-reserved fields in the payload, and pass `subject`, `issuer`
-  // and `expiresIn` as options to ensure `iat` and `exp` are present.
   const payload = {
     accountId: user.accountId,
     roles: user.roles,

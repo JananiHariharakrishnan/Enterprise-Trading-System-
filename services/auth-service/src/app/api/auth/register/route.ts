@@ -54,34 +54,15 @@ function getSafeErrorMessage(err: unknown): string {
 
 export async function POST(req: Request) {
   try {
-    // ------------------------------------------------------------
-    // 1. Read request body
-    // ------------------------------------------------------------
+
     const body = await req.json();
-
-    // ------------------------------------------------------------
-    // 2. Convert request body into DTO
-    // ------------------------------------------------------------
     const dto = plainToInstance(RegisterRequest, body);
-
-    // ------------------------------------------------------------
-    // 3. Validate request
-    // ------------------------------------------------------------
     const errors = await validate(dto, {
       whitelist: true,
       forbidNonWhitelisted: true,
     });
 
     if (errors.length > 0) {
-      /*
-       * Log only validation metadata.
-       *
-       * DO NOT log:
-       * - body
-       * - dto
-       * - password
-       * - request object
-       */
       const validationDetails = errors.map((error) => ({
         property: error.property,
         constraints: error.constraints,
@@ -91,12 +72,6 @@ export async function POST(req: Request) {
         validationDetails,
       });
 
-      /*
-       * During development, return validation details so you can
-       * immediately see why the request failed.
-       *
-       * Production keeps the API response generic.
-       */
       if (process.env.NODE_ENV === 'development') {
         return NextResponse.json(
           {
@@ -117,9 +92,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // ------------------------------------------------------------
-    // 4. Check username uniqueness
-    // ------------------------------------------------------------
     const existing = await findUserByUsername(dto.username);
 
     if (existing) {
@@ -132,9 +104,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // ------------------------------------------------------------
-    // 5. Verify that the trading account exists
-    // ------------------------------------------------------------
     const accountExistsForUser = await accountExists(dto.accountId);
 
     if (!accountExistsForUser) {
@@ -147,25 +116,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // ------------------------------------------------------------
-    // 6. Create credential
-    // ------------------------------------------------------------
-    /*
-     * createCredential() is responsible for hashing the password.
-     *
-     * IMPORTANT:
-     * dto.password is passed only to the credential layer.
-     * It must NEVER be stored directly.
-     */
     const credential = await createCredential(
       dto.accountId,
       dto.username,
       dto.password,
     );
 
-    // ------------------------------------------------------------
-    // 7. Create user using the generated password hash
-    // ------------------------------------------------------------
     const user = await createUser(
       dto.username,
       credential.password_hash,
@@ -176,15 +132,6 @@ export async function POST(req: Request) {
       dto.phone_no,
     );
 
-    // ------------------------------------------------------------
-    // 8. Build response
-    // ------------------------------------------------------------
-    /*
-     * Never return:
-     * - password
-     * - password_hash
-     * - credential information
-     */
     const response = {
       id: user.id,
       username: user.username,
@@ -197,28 +144,13 @@ export async function POST(req: Request) {
       status: 201,
     });
   } catch (err: unknown) {
-    // ------------------------------------------------------------
-    // 9. Safe error handling
-    // ------------------------------------------------------------
 
-    /*
-     * Extract only the error message.
-     *
-     * DO NOT log the complete error object because it can contain
-     * request/credential information through nested properties.
-     */
     const errorMessage = getSafeErrorMessage(err);
 
     logger.error('Registration error', {
       message: errorMessage,
     });
 
-    /*
-     * During development, expose the actual error message so that
-     * database/configuration problems can be diagnosed quickly.
-     *
-     * In production, return only the contract-safe generic message.
-     */
     if (process.env.NODE_ENV === 'development') {
       return NextResponse.json(
         {

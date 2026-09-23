@@ -21,13 +21,11 @@ export function verifyAuthorizationHeader(authHeader: string | null): { ok: true
   const parsed = parseAuthorizationHeader(authHeader);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  // verifyAccessToken enforces signature and expiry via jsonwebtoken
   const result = verifyAccessToken(parsed.token);
   if (!result.valid) return { ok: false, error: 'AUTH-401' };
 
   const payload = result.payload as any;
 
-  // Required claims check
   if (
     typeof payload?.sub !== 'string' ||
     typeof payload?.accountId !== 'number' ||
@@ -49,8 +47,6 @@ export class AuthError extends Error {
   }
 }
 
-// Decorator-like helper for Next.js route handlers. It verifies the
-// authorization header and invokes the handler with the authenticated payload.
 export function withAuth(handler: (req: Request, payload: AuthPayload) => Promise<Response> | Response) {
   return async function (req: Request) {
     const verified = verifyAuthorizationHeader(req.headers.get('authorization'));

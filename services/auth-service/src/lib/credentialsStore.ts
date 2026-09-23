@@ -60,8 +60,6 @@ async function updateUsersPasswordByUsername(
     }
   }
 
-  // Older schemas store auth data only in credentials. Do not fail login/register
-  // if users table has neither password_hash nor password column.
   if (sawMissingColumn) {
     logger.warn('users password column missing; skipped users hash backfill', redact({ username }));
     return;
@@ -108,10 +106,6 @@ export async function createCredential(
   username: string,
   plainPassword: string,
 ): Promise<CredentialRow> {
-  // Ensure the password is a string. Clients may send passwords containing
-  // arbitrary characters; coerce to string to avoid downstream errors from
-  // libraries that expect string inputs (e.g., SASL/argon2). This preserves
-  // characters while preventing non-string types from causing crashes.
   const passwordStr = typeof plainPassword === 'string' ? plainPassword : String(plainPassword);
 
   const fullHash = await argon2.hash(passwordStr, DEFAULT_ARGON2_OPTIONS);
@@ -156,21 +150,18 @@ export async function verifyPassword(
     suppliedPassword: string,
 ): Promise<boolean> {
     if (!stored) {
-        // perform a dummy verify to equalise timing (argon2 dummy hash)
         try {
             await argon2.verify(
                 '$argon2id$v=19$m=65536,t=3,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
                 suppliedPassword,
             );
         } catch (e) {
-            // ignore
         }
         return false;
     }
 
     const alg = (stored.algorithm || '').toLowerCase();
 
-    // Prefer argon2id (allow 'argon2' as synonym)
     if (alg === 'argon2id' || alg === 'argon2') {
       try {
         const storedHash = stored.password_hash;
@@ -192,8 +183,6 @@ export async function verifyPassword(
         return false;
       }
     }
-
-    // Support legacy bcrypt rows but warn and recommend migration
     if (alg === 'bcrypt' || alg === 'bcryptjs') {
         logger.warn('bcrypt used for password verification — consider migrating to argon2id', redact({
             username: stored.username,
@@ -201,10 +190,6 @@ export async function verifyPassword(
         try {
         const ok = await bcrypt.compare(suppliedPassword, stored.password_hash);
 
-        // If bcrypt verification succeeds, migrate this credential to argon2id.
-        // Store only the argon2 hash in the `password_hash` column (params go to the
-        // separate `params` JSONB column). Also update the users table password
-        // hash so both places use argon2.
         if (ok) {
           try {
             const newFullHash = await argon2.hash(suppliedPassword, DEFAULT_ARGON2_OPTIONS);
@@ -214,14 +199,12 @@ export async function verifyPassword(
               parallelism: DEFAULT_ARGON2_OPTIONS.parallelism,
             });
 
-            // Update credentials row (store full encoded form)
             await queryCredentialsPasswordColumn(
               (passwordColumn) =>
                 `UPDATE credentials SET ${passwordColumn} = $1, algorithm = $2, params = $3::jsonb, updated_at = NOW() WHERE username = $4`,
               [newFullHash, 'argon2id', params, stored.username],
             );
 
-            // Also update the users table password_hash if present (store full encoded form)
             await updateUsersPasswordByUsername(stored.username, newFullHash);
           } catch (e) {
             logger.error('failed to migrate bcrypt credential to argon2', redact({
@@ -242,7 +225,6 @@ export async function verifyPassword(
         }
     }
 
-    // Explicit refusal for insecure or unknown algorithms
     logger.warn('refusing to verify password using insecure or unknown algorithm', redact({
         username: stored.username,
         algorithm: stored.algorithm,
