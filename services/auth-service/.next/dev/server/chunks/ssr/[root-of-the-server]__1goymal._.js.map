@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 10, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/Administrator/Documents/Neueda-learningsystemgithub/Chennai-Capstone-SE6-Team2/services/auth-service/src/app/page.tsx"],"sourcesContent":["export default function HomePage() {\r\n  return (\r\n    <main style={{ fontFamily: 'Arial, sans-serif', margin: '2rem', lineHeight: 1.5 }}>\r\n      <h1>Auth Service</h1>\r\n      <p>Minimal Next.js + TypeScript setup is working.</p>\r\n    </main>\r\n  );\r\n}\r\n\r\n"],"names":["HomePage","style","fontFamily","margin","lineHeight"],"mappings":";;;;;;AAAe,SAASA;IACtB,qBACE,8OAAC;QAAKC,OAAO;YAAEC,YAAY;YAAqBC,QAAQ;YAAQC,YAAY;QAAI;;0BAC9E,8OAAC;0BAAG;;;;;;0BACJ,8OAAC;0BAAE;;;;;;;;;;;;AAGT"}}]
-}

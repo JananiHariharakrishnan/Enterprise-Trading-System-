@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/Administrator/Documents/Neueda-learningsystemgithub/Chennai-Capstone-SE6-Team2/services/auth-service/node_modules/next/src/server/route-modules/app-page/vendored/rsc/react-jsx-dev-runtime.ts"],"sourcesContent":["module.exports = (\n  require('../../module.compiled') as typeof import('../../module.compiled')\n).vendored['react-rsc']!.ReactJsxDevRuntime\n"],"names":["module","exports","require","vendored","ReactJsxDevRuntime"],"mappings":"AAAAA,OAAOC,OAAO,GACZC,QAAQ,4HACRC,QAAQ,CAAC,YAAY,CAAEC,kBAAkB","ignoreList":[0]}},
-    {"offset": {"line": 9, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/Administrator/Documents/Neueda-learningsystemgithub/Chennai-Capstone-SE6-Team2/services/auth-service/src/app/layout.tsx"],"sourcesContent":["import type { Metadata } from 'next';\r\nimport { ReactNode } from 'react';\r\n\r\nexport const metadata: Metadata = {\r\n  title: 'Auth Service',\r\n  description: 'Next.js scaffold for the trading platform auth service.'\r\n};\r\n\r\nexport default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {\r\n  return (\r\n    <html lang=\"en\">\r\n      <body>{children}</body>\r\n    </html>\r\n  );\r\n}\r\n\r\n"],"names":["metadata","title","description","RootLayout","children","lang"],"mappings":";;;;;;;;AAGO,MAAMA,WAAqB;IAChCC,OAAO;IACPC,aAAa;AACf;AAEe,SAASC,WAAW,EAAEC,QAAQ,EAAqC;IAChF,qBACE,8OAAC;QAAKC,MAAK;kBACT,cAAA,8OAAC;sBAAMD;;;;;;;;;;;AAGb"}}]
-}
