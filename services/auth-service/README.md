@@ -1,64 +1,82 @@
 # Auth Service
 
-Minimal Next.js setup for the auth service.
+NestJS auth service for the trading platform.
 
-## Requirements
+## Implemented routes
 
-- Node.js 20 or later
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `GET /auth/me`
 
-## Setup
+The contract lives in `../../contracts/auth-api.yaml`.
 
-Run the commands below from `services/auth-service`.
+## Structure
 
-```powershell
-npm ci
-npm run typecheck
+- `src/app/auth/` — controller, service, DTOs, guard, decorator, token helpers, repository
+- `src/app/common/` — database helper, logger, platform exception filter
+- `src/main.ts` — Nest bootstrap
+- `src/app.module.ts` — root Nest module
+
+## Database tables used
+
+- `users`
+- `credentials`
+- `refresh_tokens`
+
+These are created by:
+
+- `../../Database/migrations/001_create_trading_schema.sql`
+- `../../Database/migrations/002_load_seed_data.sql`
+
+## Security choices
+
+- Passwords are hashed with `argon2id`
+- Default Argon2 time cost is `12`
+- Refresh tokens are opaque values and only the secret hash is stored in `refresh_tokens`
+- Every successful refresh rotates the token pair and issues a brand new refresh token
+- Reusing an already exchanged refresh token returns `AUTH-401` and revokes the whole refresh-token session lineage
+- Access tokens are signed with `HS256` using `JWT_SECRET`
+- Access token claims are exactly: `sub`, `accountId`, `roles`, `iat`, `exp`, `iss`
+
+See `SECURITY_REVIEW.md` for the refresh-token revocation decision and residual-risk notes.
+
+## Environment variables
+
+Database:
+
+- `DATABASE_URL` or `DB_URL`
+- or `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+
+Auth:
+
+- `JWT_SECRET`
+- `ARGON2_TIME`
+- `ARGON2_MEMORY_KB`
+- `ARGON2_PARALLELISM`
+- `REFRESH_TOKEN_BCRYPT_COST`
+- `REFRESH_TOKEN_TTL_SECONDS`
+
+## Install
+
+```bash
+npm install
+```
+
+## Run
+
+```bash
+npm run start:dev
+npm run start:prod
+```
+
+Swagger is served at `/docs`.
+
+## Verify
+
+```bash
 npm run build
-npm run dev
+npm test
+npm run test:e2e
 ```
-
-For a production run:
-
-```powershell
-npm start
-```
-
-The app uses the standard Next.js app router under `src/app/`.
-
-By default, Next.js serves on port `3000`. You can override that with the standard `PORT` environment variable.
-
-## Commands for verification
-
-1. Start the auth-service with a known secret and issuer
-
-# set secret+issuer for this PowerShell session
-$env:JWT_SECRET="auth-service"
-$env:JWT_ISSUER="auth-service"
-
-Run :
-
-```bash
-npm run dev
-```
-
-2. Start the trade-api with the same known secret and issuer
-
-$env:JWT_SECRET="auth-service"
-$env:JWT_ISSUER="auth-service"
-
-Run :
-
-```bash
-mvn spring-boot:run
-```
-
-## Database environment variables
-
-The auth service can read either a connection string or individual Postgres fields:
-
-- `DATABASE_URL` (or legacy `DB_URL`)
-- `POSTGRES_HOST` / `POSTGRES_PORT` / `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD`
-- Legacy aliases are also accepted: `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD`
-
-If you do not provide a connection string, ensure user and password are set. Otherwise startup fails with a database configuration error.
 
