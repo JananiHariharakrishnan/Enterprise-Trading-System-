@@ -2,20 +2,24 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { UserRecord } from './store';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
-const ACCESS_TOKEN_LIFETIME = 15 * 60; // 15 minutes
+export const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+export const ACCESS_TOKEN_LIFETIME = 15 * 60; // 15 minutes (seconds)
 
-export function signAccessToken(user: UserRecord) {
-  const iat = Math.floor(Date.now() / 1000);
+export function signAccessToken(user: UserRecord): string {
+  // Use jsonwebtoken options so it emits `iat` and `exp` consistently.
+  // Put non-reserved fields in the payload, and pass `subject`, `issuer`
+  // and `expiresIn` as options to ensure `iat` and `exp` are present.
   const payload = {
-    sub: user.id,
     accountId: user.accountId,
     roles: user.roles,
-    iat,
-    exp: iat + ACCESS_TOKEN_LIFETIME,
-    iss: 'auth-service'
-  } as any;
-  return jwt.sign(payload, JWT_SECRET, { algorithm: 'HS256' });
+  } as const;
+
+  return jwt.sign(payload as any, JWT_SECRET, {
+    algorithm: 'HS256',
+    expiresIn: ACCESS_TOKEN_LIFETIME,
+    issuer: 'auth-service',
+    subject: user.id,
+  });
 }
 
 export function verifyAccessToken(token: string) {
@@ -30,4 +34,3 @@ export function verifyAccessToken(token: string) {
 export function makeRefreshToken() {
   return uuidv4().replace(/-/g, '');
 }
-

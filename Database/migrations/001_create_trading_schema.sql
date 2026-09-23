@@ -88,7 +88,7 @@ CREATE TABLE  IF NOT EXISTS users(
     last_name        VARCHAR(100) NOT NULL,
     email            VARCHAR(255) NOT NULL,
     phone_no         VARCHAR(30),
-    password_hash    VARCHAR(255) NOT NULL,
+    username         VARCHAR(64),
 
     CONSTRAINT pk_users PRIMARY KEY (account_id),
 

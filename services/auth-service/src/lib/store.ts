@@ -1,5 +1,6 @@
 import { db } from './db';
 import bcrypt from 'bcrypt';
+import { logger } from './logger';
 
 export type UserRecord = {
   id: string;
@@ -10,15 +11,7 @@ export type UserRecord = {
   createdOn: string;
 };
 
-/**
- * Check whether the trading account already exists.
- *
- * Registration must link the user to an existing account.
- * It must NOT create a trading account.
- */
-export async function accountExists(
-  accountId: number,
-): Promise<boolean> {
+export async function accountExists(accountId: number): Promise<boolean> {
   const result = await db.query(
     `
     SELECT 1
@@ -65,7 +58,7 @@ export async function findUserByUsername(
     SELECT
       id,
       username,
-      password_hash,
+      NULL::TEXT AS password_hash,
       account_id,
       roles,
       created_on
@@ -76,7 +69,7 @@ export async function findUserByUsername(
     [username],
   );
 
-  if (result.rows.length === 0) {
+  if (!result.rows || result.rows.length === 0) {
     return null;
   }
 
@@ -97,7 +90,7 @@ export async function findUserById(
     SELECT
       id,
       username,
-      password_hash,
+      NULL::TEXT AS password_hash,
       account_id,
       roles,
       created_on
@@ -108,7 +101,7 @@ export async function findUserById(
     [id],
   );
 
-  if (result.rows.length === 0) {
+  if (!result.rows || result.rows.length === 0) {
     return null;
   }
 
@@ -125,7 +118,7 @@ export async function findUserById(
  */
 export async function createUser(
   username: string,
-  passwordHash: string,
+  _passwordHash: string,
   accountId: number,
 ): Promise<UserRecord> {
   const result = await db.query(
@@ -133,7 +126,6 @@ export async function createUser(
     INSERT INTO users (
       id,
       username,
-      password_hash,
       account_id,
       roles,
       created_on
@@ -142,21 +134,19 @@ export async function createUser(
       gen_random_uuid(),
       $1,
       $2,
-      $3,
       ARRAY['CUSTOMER']::TEXT[],
       NOW()
     )
     RETURNING
       id,
       username,
-      password_hash,
+      NULL::TEXT AS password_hash,
       account_id,
       roles,
       created_on
     `,
     [
       username,
-      passwordHash,
       accountId,
     ],
   );
@@ -168,7 +158,7 @@ function mapUserRow(row: any): UserRecord {
   return {
     id: row.id,
     username: row.username,
-    passwordHash: row.password_hash,
+    passwordHash: row.password_hash ?? row.password,
     accountId: Number(row.account_id),
     roles: row.roles ?? ['CUSTOMER'],
     createdOn: new Date(row.created_on).toISOString(),
@@ -179,7 +169,13 @@ export async function verifyPassword(
   user: UserRecord,
   password: string,
 ): Promise<boolean> {
-  return password===(user.passwordHash);
+  try {
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    return ok;
+  } catch (_e) {
+    logger.error('verifyPassword failure', { username: user.username });
+    return false;
+  }
 }
 
 const refreshTokens = new Map<string, string>();

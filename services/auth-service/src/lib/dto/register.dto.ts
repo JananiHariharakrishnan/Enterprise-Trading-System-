@@ -6,6 +6,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class RegisterRequest {
   @IsString()
@@ -19,6 +20,7 @@ export class RegisterRequest {
   @MaxLength(128)
   password!: string;
 
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   accountId!: number;

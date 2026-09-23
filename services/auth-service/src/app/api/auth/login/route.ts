@@ -6,9 +6,10 @@ import { validate } from 'class-validator';
 import { LoginRequest } from '../../../../lib/dto/login.dto';
 import {
   findUserByUsername,
-  verifyPassword,
   saveRefreshToken,
 } from '../../../../lib/store';
+import { findCredentialByUsername, verifyPassword as verifyCredentialPassword } from '../../../../lib/credentialsStore';
+import { logger } from '../../../../lib/logger';
 
 import {
   signAccessToken,
@@ -36,10 +37,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = await findUserByUsername(dto.username);
+    // Use the credentials table for verification so plaintext passwords are
+    // never stored on the `users` table and argon2 is used.
+    const credential = await findCredentialByUsername(dto.username);
 
-    // Same response for unknown username and wrong password
-    if (!user) {
+    const passwordValid = await verifyCredentialPassword(credential, dto.password);
+
+    if (!passwordValid) {
+      // Keep response identical for unknown user vs wrong password
       return NextResponse.json(
         {
           errorCode: 'AUTH-401',
@@ -49,12 +54,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const passwordValid = await verifyPassword(
-      user,
-      dto.password,
-    );
-
-    if (!passwordValid) {
+    // Load the user record for token claims. If missing, fail safely.
+    const user = await findUserByUsername(dto.username);
+    if (!user) {
+      logger.error('credential exists without user', { username: dto.username });
       return NextResponse.json(
         {
           errorCode: 'AUTH-401',
@@ -79,7 +82,7 @@ export async function POST(req: Request) {
       { status: 200 },
     );
   } catch (err) {
-    console.error(err);
+    logger.error('login route error', { message: (err as Error)?.message });
 
     return NextResponse.json(
       {

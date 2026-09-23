@@ -11,6 +11,7 @@ import {
   findUserById,
   saveRefreshToken,
 } from '../../../../lib/store';
+import { logger } from '../../../../lib/logger';
 
 import {
   signAccessToken,
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
       { status: 200 },
     );
   } catch (err) {
-    console.error(err);
+    logger.error('refresh route error', { message: (err as Error)?.message });
 
     return NextResponse.json(
       {
