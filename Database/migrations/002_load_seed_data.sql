@@ -56,7 +56,7 @@ INSERT INTO users (
     last_name,
     email,
     phone_no,
-    password_hash
+    username
 )
 SELECT
     a.id,
@@ -67,12 +67,12 @@ SELECT
     v.password_hash
 FROM (
     VALUES
-        ('ETP-2201', 'Ananya',  'Iyer',       'ananya.iyer@example.com',  '+91-9000000001', 'seed-password-hash-2201'),
-        ('ETP-2202', 'Rohit',   'Deshpande', 'rohit.deshpande@example.com', '+91-9000000002', 'seed-password-hash-2202'),
-        ('ETP-2203', 'Meera',   'Krishnan',  'meera.krishnan@example.com', '+91-9000000003', 'seed-password-hash-2203'),
-        ('ETP-2204', 'Vikram',  'Nair',      'vikram.nair@example.com', '+91-9000000004', 'seed-password-hash-2204'),
-        ('ETP-2205', 'Sana',    'Qureshi',   'sana.qureshi@example.com', '+91-9000000005', 'seed-password-hash-2205'),
-        ('ETP-2206', 'Joseph',  'Mathew',    'joseph.mathew@example.com', '+91-9000000006', 'seed-password-hash-2206')
+        ('ETP-2201', 'Ananya',  'Iyer',       'ananya.iyer@example.com',  '+91-9000000001', 'ananya.iyer'),
+        ('ETP-2202', 'Rohit',   'Deshpande', 'rohit.deshpande@example.com', '+91-9000000002', 'rohit.deshpande'),
+        ('ETP-2203', 'Meera',   'Krishnan',  'meera.krishnan@example.com', '+91-9000000003', 'meera.krishnan'),
+        ('ETP-2204', 'Vikram',  'Nair',      'vikram.nair@example.com', '+91-9000000004', 'vikram.nair'),
+        ('ETP-2205', 'Sana',    'Qureshi',   'sana.qureshi@example.com', '+91-9000000005', 'sana.qureshi'),
+        ('ETP-2206', 'Joseph',  'Mathew',    'joseph.mathew@example.com', '+91-9000000006', 'joseph.mathew')
 ) AS v(
     account_reference,
     first_name,

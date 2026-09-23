@@ -1,0 +1,57 @@
+import { verifyAccessToken } from './jwt';
+
+export type AuthPayload = {
+  sub: string;
+  accountId: number;
+  roles: string[];
+  iat?: number;
+  exp?: number;
+  iss?: string;
+};
+
+export function parseAuthorizationHeader(authHeader: string | null): { ok: true; token: string } | { ok: false; error: string } {
+  if (!authHeader) return { ok: false, error: 'AUTH-401' };
+  if (!authHeader.toLowerCase().startsWith('bearer ')) return { ok: false, error: 'AUTH-401' };
+  const token = authHeader.slice(7).trim();
+  if (!token) return { ok: false, error: 'AUTH-401' };
+  return { ok: true, token };
+}
+
+export function verifyAuthorizationHeader(authHeader: string | null): { ok: true; payload: AuthPayload } | { ok: false; error: string } {
+  const parsed = parseAuthorizationHeader(authHeader);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+
+  // verifyAccessToken enforces signature and expiry via jsonwebtoken
+  const result = verifyAccessToken(parsed.token);
+  if (!result.valid) return { ok: false, error: 'AUTH-401' };
+
+  const payload = result.payload as any;
+
+  // Required claims check
+  if (!payload || !payload.sub || !payload.accountId || !payload.roles) {
+    return { ok: false, error: 'AUTH-401' };
+  }
+
+  return { ok: true, payload: payload as AuthPayload };
+}
+
+export class AuthError extends Error {
+  code = 'AUTH-401';
+  constructor(message = 'Unauthorised') {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+
+// Decorator-like helper for Next.js route handlers. It verifies the
+// authorization header and invokes the handler with the authenticated payload.
+export function withAuth(handler: (req: Request, payload: AuthPayload) => Promise<Response> | Response) {
+  return async function (req: Request) {
+    const verified = verifyAuthorizationHeader(req.headers.get('authorization'));
+    if (!verified.ok) {
+      return new Response(JSON.stringify({ errorCode: 'AUTH-401', message: 'Unauthorised' }), { status: 401, headers: { 'content-type': 'application/json' } });
+    }
+
+    return handler(req, verified.payload);
+  };
+}

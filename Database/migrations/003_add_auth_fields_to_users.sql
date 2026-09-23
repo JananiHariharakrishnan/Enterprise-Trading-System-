@@ -6,13 +6,7 @@
 --   roles      -> CUSTOMER / ADMIN
 --   created_on -> user creation timestamp
 --
--- Existing user fields are preserved:
---   account_id
---   first_name
---   last_name
---   email
---   phone_no
---   password_hash
+--   (password storage moved to credentials table)
 
 BEGIN;
 
@@ -29,16 +23,12 @@ ALTER TABLE users
 -- 1. Add contract-required columns
 -- ============================================================
 
+
 ALTER TABLE users
     ADD COLUMN IF NOT EXISTS id UUID,
     ADD COLUMN IF NOT EXISTS username VARCHAR(64),
-    ADD COLUMN IF NOT EXISTS roles TEXT[] DEFAULT ARRAY['CUSTOMER']::TEXT[],
-    ADD COLUMN IF NOT EXISTS created_on TIMESTAMPTZ DEFAULT NOW();
-
-
--- ============================================================
--- 2. Give existing users stable UUIDs
--- ============================================================
+    ADD COLUMN IF NOT EXISTS created_on TIMESTAMPTZ DEFAULT NOW(),
+    ADD COLUMN IF NOT EXISTS roles TEXT[] DEFAULT ARRAY['CUSTOMER']::TEXT[];
 
 UPDATE users
 SET id = gen_random_uuid()
@@ -133,6 +123,25 @@ ALTER TABLE users
         roles <@ ARRAY['CUSTOMER', 'ADMIN']::TEXT[]
     );
 
+
+-- ============================================================
+-- 10. Credentials table (merged from 004_create_credentials_table_and_seed.sql)
+-- ============================================================
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE IF NOT EXISTS credentials (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    username VARCHAR(255) NOT NULL,
+    password_hash TEXT NOT NULL,
+    algorithm VARCHAR(64) NOT NULL,
+    params JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+CREATE UNIQUE INDEX IF NOT EXISTS credentials_account_username_idx ON credentials (account_id, username);
 
 COMMIT;
 
