@@ -32,5 +32,5 @@ export function verifyAccessToken(token: string) {
 }
 
 export function makeRefreshToken() {
-  return uuidv4().replace(/-/g, '');
+  return uuidv4().replaceAll('-', '');
 }

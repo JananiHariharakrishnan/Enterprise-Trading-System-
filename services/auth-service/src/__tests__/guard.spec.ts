@@ -27,14 +27,11 @@ describe('auth guard', () => {
   });
 
   test('an expired token is refused', () => {
-    // Build a token with past expiry by signing with expiresIn negative value
     jest.resetModules();
     process.env.JWT_SECRET = SECRET;
     const jwtLib = require('jsonwebtoken');
-    const { signAccessToken } = require('../lib/jwt');
     const { verifyAuthorizationHeader } = require('../lib/guard');
 
-    // Use the same payload contract but set exp in the past via options
     const payload = { accountId: ACCOUNT_ID, roles: ROLES };
     const token = jwtLib.sign(payload, SECRET, { algorithm: 'HS256', expiresIn: -10, issuer: 'auth-service', subject: USER_ID });
 
@@ -45,13 +42,10 @@ describe('auth guard', () => {
   });
 
   test('a token with wrong signature is refused before any claim is read', () => {
-    // Sign a genuine, unexpired token with a different key
     const jwtLib = require('jsonwebtoken');
-    // create token with WRONG_SECRET
     const payload = { accountId: ACCOUNT_ID, roles: ROLES };
     const token = jwtLib.sign(payload, WRONG_SECRET, { algorithm: 'HS256', expiresIn: '1h', issuer: 'auth-service', subject: USER_ID });
 
-    // Ensure our env secret is the correct one
     jest.resetModules();
     process.env.JWT_SECRET = SECRET;
     const { verifyAuthorizationHeader } = require('../lib/guard');
@@ -85,7 +79,7 @@ describe('auth guard', () => {
   test('withAuth returns 401 Response with errorCode AUTH-401 when unauthorised', async () => {
     const { withAuth } = require('../lib/guard');
 
-    const handler = withAuth(async (req, payload) => {
+    const handler = withAuth(async (req: Request, payload: { sub: string; accountId: number; roles: string[] }) => {
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } });
     });
 

@@ -28,7 +28,13 @@ export function verifyAuthorizationHeader(authHeader: string | null): { ok: true
   const payload = result.payload as any;
 
   // Required claims check
-  if (!payload || !payload.sub || !payload.accountId || !payload.roles) {
+  if (
+    typeof payload?.sub !== 'string' ||
+    typeof payload?.accountId !== 'number' ||
+    !Array.isArray(payload?.roles) ||
+    payload.roles.length === 0 ||
+    !payload.roles.every((role: unknown) => typeof role === 'string')
+  ) {
     return { ok: false, error: 'AUTH-401' };
   }
 

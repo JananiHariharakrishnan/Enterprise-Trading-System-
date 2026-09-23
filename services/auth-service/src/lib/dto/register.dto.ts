@@ -1,5 +1,7 @@
 import {
   IsInt,
+  IsOptional,
+  IsEmail,
   IsString,
   Matches,
   MaxLength,
@@ -24,4 +26,23 @@ export class RegisterRequest {
   @IsInt()
   @Min(1)
   accountId!: number;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  first_name!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  last_name!: string;
+
+  @IsEmail()
+  @MaxLength(255)
+  email!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  phone_no?: string;
 }

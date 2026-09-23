@@ -10,6 +10,10 @@ describe('RegisterRequest DTO', () => {
       username: 'priya.menon',
       password: 'correct horse battery staple',
       accountId: '1',
+      first_name: 'Priya',
+      last_name: 'Menon',
+      email: 'priya.menon@example.com',
+      phone_no: '9876543210',
     });
 
     const errors = await validate(dto, {

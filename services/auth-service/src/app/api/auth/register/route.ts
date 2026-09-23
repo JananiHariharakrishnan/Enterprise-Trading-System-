@@ -14,15 +14,22 @@ import {
 import { createCredential } from '../../../../lib/credentialsStore';
 import { logger } from '../../../../lib/logger';
 
+function getTrimmedString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
 function getSafeErrorMessage(err: unknown): string {
   if (err instanceof Error) {
-    const msg = err.message?.trim();
-    if (msg) return msg;
+    return getTrimmedString(err.message) ?? 'Registration failed due to server configuration. Check database settings.';
   }
 
   if (typeof err === 'string') {
-    const msg = err.trim();
-    if (msg) return msg;
+    return getTrimmedString(err) ?? 'Registration failed due to server configuration. Check database settings.';
   }
 
   if (err && typeof err === 'object') {
@@ -33,21 +40,13 @@ function getSafeErrorMessage(err: unknown): string {
       name?: unknown;
     };
 
-    if (typeof maybeErr.message === 'string' && maybeErr.message.trim()) {
-      return maybeErr.message.trim();
-    }
-
-    if (typeof maybeErr.detail === 'string' && maybeErr.detail.trim()) {
-      return maybeErr.detail.trim();
-    }
-
-    if (typeof maybeErr.code === 'string' && maybeErr.code.trim()) {
-      return `Database error (${maybeErr.code.trim()})`;
-    }
-
-    if (typeof maybeErr.name === 'string' && maybeErr.name.trim()) {
-      return `${maybeErr.name.trim()} occurred`;
-    }
+    return (
+      getTrimmedString(maybeErr.message) ??
+      getTrimmedString(maybeErr.detail) ??
+      (getTrimmedString(maybeErr.code) ? `Database error (${getTrimmedString(maybeErr.code)})` : null) ??
+      (getTrimmedString(maybeErr.name) ? `${getTrimmedString(maybeErr.name)} occurred` : null) ??
+      'Registration failed due to server configuration. Check database settings.'
+    );
   }
 
   return 'Registration failed due to server configuration. Check database settings.';
@@ -171,6 +170,10 @@ export async function POST(req: Request) {
       dto.username,
       credential.password_hash,
       dto.accountId,
+      dto.first_name,
+      dto.last_name,
+      dto.email,
+      dto.phone_no,
     );
 
     // ------------------------------------------------------------

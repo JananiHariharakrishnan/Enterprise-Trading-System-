@@ -5,6 +5,10 @@ import { logger } from './logger';
 export type UserRecord = {
   id: string;
   username: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phoneNo: string | null;
   passwordHash: string;
   accountId: number;
   roles: string[];
@@ -58,6 +62,10 @@ export async function findUserByUsername(
     SELECT
       id,
       username,
+      first_name,
+      last_name,
+      email,
+      phone_no,
       NULL::TEXT AS password_hash,
       account_id,
       roles,
@@ -90,6 +98,10 @@ export async function findUserById(
     SELECT
       id,
       username,
+      first_name,
+      last_name,
+      email,
+      phone_no,
       NULL::TEXT AS password_hash,
       account_id,
       roles,
@@ -120,12 +132,20 @@ export async function createUser(
   username: string,
   _passwordHash: string,
   accountId: number,
+  firstName: string,
+  lastName: string,
+  email: string,
+  phoneNo?: string,
 ): Promise<UserRecord> {
   const result = await db.query(
     `
     INSERT INTO users (
       id,
       username,
+      first_name,
+      last_name,
+      email,
+      phone_no,
       account_id,
       roles,
       created_on
@@ -134,12 +154,20 @@ export async function createUser(
       gen_random_uuid(),
       $1,
       $2,
+      $3,
+      $4,
+      $5,
+      $6,
       ARRAY['CUSTOMER']::TEXT[],
       NOW()
     )
     RETURNING
       id,
       username,
+      first_name,
+      last_name,
+      email,
+      phone_no,
       NULL::TEXT AS password_hash,
       account_id,
       roles,
@@ -147,6 +175,10 @@ export async function createUser(
     `,
     [
       username,
+      firstName,
+      lastName,
+      email,
+      phoneNo ?? null,
       accountId,
     ],
   );
@@ -158,6 +190,10 @@ function mapUserRow(row: any): UserRecord {
   return {
     id: row.id,
     username: row.username,
+    firstName: row.first_name ?? null,
+    lastName: row.last_name ?? null,
+    email: row.email ?? null,
+    phoneNo: row.phone_no ?? null,
     passwordHash: row.password_hash ?? row.password,
     accountId: Number(row.account_id),
     roles: row.roles ?? ['CUSTOMER'],
@@ -173,6 +209,8 @@ export async function verifyPassword(
     const ok = await bcrypt.compare(password, user.passwordHash);
     return ok;
   } catch (_e) {
+    // bcrypt.compare can throw for malformed hashes or platform/runtime issues;
+    // returning false keeps authentication failures uniform and avoids leaking details.
     logger.error('verifyPassword failure', { username: user.username });
     return false;
   }

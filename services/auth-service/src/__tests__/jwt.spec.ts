@@ -31,7 +31,6 @@ describe('jwt signing and verification contract', () => {
         expect(verification.valid).toBe(true);
 
         const payload = verification.payload;
-        console.log('DEBUG jwt payload:', verification.payload, 'iat_type=', typeof verification.payload.iat, 'exp_type=', typeof verification.payload.exp, 'keys=', Object.keys(verification.payload));
         // Required claims present and correct types/values
         expect(payload.sub).toBe(USER_ID);
         expect(payload.accountId).toBe(ACCOUNT_ID);
