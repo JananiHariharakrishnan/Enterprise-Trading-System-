@@ -11,8 +11,8 @@ import {
   findUserByUsername,
   saveRefreshToken,
   verifyPassword,
-} from './auth.repository.js';
-import { ACCESS_TOKEN_LIFETIME_SECONDS, makeRefreshToken, signAccessToken } from './auth.tokens.js';
+} from './repository/auth.repository.js';
+import { ACCESS_TOKEN_LIFETIME_SECONDS, makeRefreshToken, signAccessToken } from './tokens/auth.tokens.js';
 import type { AuthPayload } from './interfaces/auth-payload.interface.js';
 import { LoginRequestDto } from './dto/login.dto.js';
 import { RefreshRequestDto } from './dto/refresh.dto.js';

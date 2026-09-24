@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import type { AuthPayload } from './interfaces/auth-payload.interface.js';
+import type { AuthPayload } from '../interfaces/auth-payload.interface.js';
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 export const ACCESS_TOKEN_LIFETIME_SECONDS = 15 * 60;

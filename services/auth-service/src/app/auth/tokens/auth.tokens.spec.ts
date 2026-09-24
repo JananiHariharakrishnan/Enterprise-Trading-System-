@@ -13,7 +13,7 @@ describe('jwt claims contract', () => {
   });
 
   it('a token is issued with the contract claims and expiry', async () => {
-    const { signAccessToken, verifyAccessToken, ACCESS_TOKEN_LIFETIME_SECONDS } = await import('./auth.tokens.js');
+    const { signAccessToken, verifyAccessToken, ACCESS_TOKEN_LIFETIME_SECONDS } = await import('../tokens/auth.tokens.js');
     const token = signAccessToken({ id: USER_ID, accountId: ACCOUNT_ID, roles: ROLES });
     const verification = verifyAccessToken(token);
 
@@ -30,22 +30,22 @@ describe('jwt claims contract', () => {
   });
 
   it('the token signature verifies with the service key', async () => {
-    const { signAccessToken } = await import('./auth.tokens.js');
+    const { signAccessToken } = await import('../tokens/auth.tokens.js');
     const token = signAccessToken({ id: USER_ID, accountId: ACCOUNT_ID, roles: ROLES });
 
     vi.resetModules();
     process.env.JWT_SECRET = SECRET;
-    const same = await import('./auth.tokens.js');
+    const same = await import('../tokens/auth.tokens.js');
     expect(same.verifyAccessToken(token).valid).toBe(true);
 
     vi.resetModules();
     process.env.JWT_SECRET = WRONG_SECRET;
-    const wrong = await import('./auth.tokens.js');
+    const wrong = await import('../tokens/auth.tokens.js');
     expect(wrong.verifyAccessToken(token).valid).toBe(false);
   });
 
   it('no claim outside the contract set is present', async () => {
-    const { signAccessToken, verifyAccessToken } = await import('./auth.tokens.js');
+    const { signAccessToken, verifyAccessToken } = await import('../tokens/auth.tokens.js');
     const token = signAccessToken({ id: USER_ID, accountId: ACCOUNT_ID, roles: ROLES });
     const verification = verifyAccessToken(token);
 

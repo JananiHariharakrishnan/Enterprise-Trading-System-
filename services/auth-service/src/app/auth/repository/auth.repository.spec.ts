@@ -36,7 +36,7 @@ describe('credential repository', () => {
 
   it('stores only a hash of the refresh token secret', async () => {
     const repo = await import('./auth.repository.js');
-    const { makeRefreshToken, parseRefreshToken } = await import('./auth.tokens.js');
+    const { makeRefreshToken, parseRefreshToken } = await import('../tokens/auth.tokens.js');
     const refreshToken = makeRefreshToken();
     const parsed = parseRefreshToken(refreshToken);
 
@@ -53,7 +53,7 @@ describe('credential repository', () => {
 
   it('revokes the whole refresh-token session when an exchanged token is replayed', async () => {
     const repo = await import('./auth.repository.js');
-    const { makeRefreshToken } = await import('./auth.tokens.js');
+    const { makeRefreshToken } = await import('../tokens/auth.tokens.js');
     const userId = '123e4567-e89b-12d3-a456-426614174000';
 
     const originalToken = makeRefreshToken();

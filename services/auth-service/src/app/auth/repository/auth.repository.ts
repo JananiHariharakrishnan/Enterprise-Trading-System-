@@ -1,8 +1,8 @@
 import argon2 from 'argon2';
 import bcrypt from 'bcrypt';
-import { db } from '../common/database.js';
-import { logger } from '../common/logger.js';
-import { parseRefreshToken } from './auth.tokens.js';
+import { db } from '../../common/database.js';
+import { logger } from '../../common/logger.js';
+import { parseRefreshToken } from '../tokens/auth.tokens.js';
 
 export type UserRecord = {
   id: string;

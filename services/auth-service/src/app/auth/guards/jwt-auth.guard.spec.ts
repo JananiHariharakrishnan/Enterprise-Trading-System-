@@ -14,7 +14,7 @@ describe('jwt auth guard helpers', () => {
   });
 
   it('a valid token is accepted', async () => {
-    const tokens = await import('./auth.tokens.js');
+    const tokens = await import('../tokens/auth.tokens.js');
     const token = tokens.signAccessToken({ id: USER_ID, accountId: ACCOUNT_ID, roles: ROLES });
     const result = tokens.verifyAuthorizationHeader(`Bearer ${token}`);
 
@@ -26,7 +26,7 @@ describe('jwt auth guard helpers', () => {
   });
 
   it('an expired token is refused', async () => {
-    const tokens = await import('./auth.tokens.js');
+    const tokens = await import('../tokens/auth.tokens.js');
     const token = jwt.sign({ accountId: ACCOUNT_ID, roles: ROLES }, SECRET, {
       algorithm: 'HS256',
       expiresIn: -10,
@@ -38,7 +38,7 @@ describe('jwt auth guard helpers', () => {
   });
 
   it('a token with a wrong signature is refused before any claim is read', async () => {
-    const tokens = await import('./auth.tokens.js');
+    const tokens = await import('../tokens/auth.tokens.js');
     const token = jwt.sign({ accountId: ACCOUNT_ID, roles: ROLES }, WRONG_SECRET, {
       algorithm: 'HS256',
       expiresIn: '1h',
@@ -50,7 +50,7 @@ describe('jwt auth guard helpers', () => {
   });
 
   it('a malformed header is refused', async () => {
-    const tokens = await import('./auth.tokens.js');
+    const tokens = await import('../tokens/auth.tokens.js');
 
     expect(tokens.verifyAuthorizationHeader(null)).toEqual({ ok: false, error: 'AUTH-401' });
     expect(tokens.verifyAuthorizationHeader('')).toEqual({ ok: false, error: 'AUTH-401' });
