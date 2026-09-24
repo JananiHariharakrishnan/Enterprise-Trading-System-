@@ -38,6 +38,7 @@ public class PlaceOrderRequest {
     private String idempotencyKey;
 
     public PlaceOrderRequest() {
+        // Empty Constructor
     }
 
     public Long getAccountId() {

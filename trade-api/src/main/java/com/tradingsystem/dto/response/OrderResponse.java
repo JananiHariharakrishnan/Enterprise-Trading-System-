@@ -17,6 +17,7 @@ public class OrderResponse {
     private BigDecimal price;
 
     public OrderResponse() {
+        // Empty Constructor
     }
 
     public String getOrderId() {

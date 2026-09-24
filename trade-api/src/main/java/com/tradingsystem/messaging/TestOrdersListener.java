@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 /**
  * Optional test-only listener for the `orders` topic.
  * Disabled by default. Enable with app.kafka.test-listener.enabled=true.
- *
  * This listener intentionally uses a separate group id so it cannot interfere
  * with `trade-executor`'s consumer group when enabled.
  */

@@ -11,7 +11,9 @@ public class BalanceResponse {
     private String currency;
     private OffsetDateTime asOf;
 
+    //default constructor
     public BalanceResponse() {
+        // Empty Constructor
     }
 
     public Long getAccountId() {

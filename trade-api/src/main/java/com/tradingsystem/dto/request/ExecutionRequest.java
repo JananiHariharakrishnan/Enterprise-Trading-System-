@@ -13,7 +13,9 @@ public class ExecutionRequest {
     private String reason; // optional
     private UUID eventId; // optional: Kafka event ID for idempotency tracking
 
-    public ExecutionRequest() {}
+    public ExecutionRequest() {
+        //Default constructor required by Jackson for JSON deserialization.
+    }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

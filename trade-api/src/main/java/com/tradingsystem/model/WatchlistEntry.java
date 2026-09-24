@@ -1,6 +1,7 @@
 package com.tradingsystem.model;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 public class WatchlistEntry {
 
@@ -34,7 +35,7 @@ public class WatchlistEntry {
 
     public boolean isRecentlyAddedHours(int hours) {
         if (this.addedOn == null) return false;
-        return this.addedOn.isAfter(LocalDateTime.now().minusHours(hours));
+        return this.addedOn.isAfter(LocalDateTime.now(ZoneId.of("UTC")).minusHours(hours));
     }
 
     public void validate() {

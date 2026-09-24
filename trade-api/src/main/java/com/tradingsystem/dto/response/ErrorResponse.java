@@ -7,6 +7,7 @@ public class ErrorResponse {
     private String message;
 
     public ErrorResponse() {
+        // Empty Constructor
     }
 
     public ErrorResponse(String errorCode, String message) {

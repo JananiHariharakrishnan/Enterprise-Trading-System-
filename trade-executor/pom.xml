@@ -15,6 +15,12 @@
 	<description>Trade Executor Service</description>
 	<properties>
 		<java.version>21</java.version>
+		<sonar.projectKey>trade-executor-quality-gate</sonar.projectKey>
+		<sonar.projectName>trade-executor quality gate</sonar.projectName>
+		<sonar.host.url>http://10.8.73.102:9000</sonar.host.url>
+		<sonar.coverage.jacoco.xmlReportPaths>
+			${project.build.directory}/site/jacoco/jacoco.xml
+		</sonar.coverage.jacoco.xmlReportPaths>
 	</properties>
 	<dependencies>
 		<!-- Kafka -->

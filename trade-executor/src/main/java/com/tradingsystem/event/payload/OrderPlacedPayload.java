@@ -19,6 +19,7 @@ public class OrderPlacedPayload {
     private String eventId; // Kafka event ID for idempotency tracking
 
     public OrderPlacedPayload() {
+        // Empty Constructor
     }
 
     public String getOrderId() {

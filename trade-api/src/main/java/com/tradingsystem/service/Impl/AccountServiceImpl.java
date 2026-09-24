@@ -96,7 +96,7 @@ public class AccountServiceImpl implements AccountService {
          * This deliberately verifies account existence BEFORE querying
          * positions.
          *
-         * Otherwise an unknown account could incorrectly return [] instead
+         * Otherwise, an unknown account could incorrectly return [] instead
          * of ACC-404.
          */
         Account account = getAuthorizedAccount(accountId);
@@ -133,7 +133,7 @@ public class AccountServiceImpl implements AccountService {
      * 1. Account does not exist -> ACC-404
      * 2. Account is inactive -> ACC-403
      * 3. Token does not reach account -> ACC-403
-     * 4. Otherwise return account
+     * 4. Otherwise, return account
      */
     private Account getAuthorizedAccount(Long accountId) {
 

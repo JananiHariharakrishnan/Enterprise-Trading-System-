@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tradingsystem.event.KafkaEvent;
 import com.tradingsystem.event.payload.OrderPlacedPayload;
 import com.tradingsystem.execution.ExecutionService;
-
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
@@ -19,16 +18,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-/**
- * Kafka consumer for ORDER_PLACED events.
- * 
- * Implements robust error handling with failure classification:
- * - PERMANENT FAILURES: malformed JSON, missing fields, order not found → send to DLT
- * - TRANSIENT FAILURES: DB connection issues, broker unavailable → nack (Kafka retries)
- * - SPECIAL CASE: Fauxnance unavailable → reject order, acknowledge (processed)
- */
 @Component
 public class OrderConsumer {
 
@@ -53,146 +45,319 @@ public class OrderConsumer {
             topics = "orders",
             groupId = "${spring.kafka.consumer.group-id}"
     )
-    public void consumeOrder(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
-        String message = record.value();
-        String key = record.key();
-        int partition = record.partition();
-        long offset = record.offset();
+    public void consumeOrder(
+            ConsumerRecord<String, String> consumerRecord,
+            Acknowledgment acknowledgment
+    ) {
+        String message = consumerRecord.value();
+        String key = consumerRecord.key();
+        int partition = consumerRecord.partition();
+        long offset = consumerRecord.offset();
 
         try {
-            // LEVEL 1: Validate JSON parsing
-            JsonNode root;
-            try {
-                root = objectMapper.readTree(message);
-            } catch (JsonProcessingException e) {
-                sendToDLT(record, "malformed_json", "JSON parsing failed: " + e.getMessage());
-                acknowledgment.acknowledge();
+            JsonNode root = parseJson(consumerRecord, message, acknowledgment);
+            if (root == null) {
                 return;
             }
 
-            // LEVEL 2: Extract and validate event
-            KafkaEvent<OrderPlacedPayload> event;
-            try {
-                if (root.has("payload")) {
-                    // message is envelope
-                    event = objectMapper.readValue(
-                            message,
-                            new TypeReference<KafkaEvent<OrderPlacedPayload>>() {}
-                    );
-                } else {
-                    // raw payload (legacy format)
-                    OrderPlacedPayload payload = objectMapper.readValue(message, OrderPlacedPayload.class);
-                    event = new KafkaEvent<>();
-                    event.setPayload(payload);
-                }
-            } catch (JsonProcessingException e) {
-                sendToDLT(record, "invalid_event_format", "Event deserialization failed: " + e.getMessage());
-                acknowledgment.acknowledge();
-                return;
-            }
+            KafkaEvent<OrderPlacedPayload> event =
+                    deserializeEvent(consumerRecord, message, root, acknowledgment);
 
             if (event == null || event.getPayload() == null) {
-                sendToDLT(record, "missing_payload", "Event or payload is null");
+                sendToDLT(
+                        consumerRecord,
+                        "missing_payload",
+                        "Event or payload is null"
+                );
                 acknowledgment.acknowledge();
                 return;
             }
 
-            // LEVEL 3: Validate orderId
             String orderId = event.getPayload().getOrderId();
-            if (orderId == null || orderId.isBlank()) {
-                sendToDLT(record, "missing_order_id", "orderId is null or blank");
-                acknowledgment.acknowledge();
+
+            if (!validateOrderId(
+                    consumerRecord,
+                    orderId,
+                    acknowledgment
+            )) {
                 return;
             }
 
-            // Validate orderId is UUID format
-            try {
-                UUID.fromString(orderId);
-            } catch (IllegalArgumentException e) {
-                sendToDLT(record, "invalid_order_id_format", "orderId is not a valid UUID: " + orderId);
-                acknowledgment.acknowledge();
+            if (!validateEventType(
+                    consumerRecord,
+                    event,
+                    acknowledgment
+            )) {
                 return;
             }
 
-            // LEVEL 4: Validate eventType
-            String eventType = event.getEventType();
-            if (eventType == null || !eventType.equals("ORDER_PLACED")) {
-                sendToDLT(record, "unexpected_event_type", 
-                    "Expected EVENT_TYPE=ORDER_PLACED, got: " + eventType);
-                acknowledgment.acknowledge();
-                return;
-            }
+            log.info(
+                    "ORDER_PLACED received: orderId={} key={} partition={} offset={}",
+                    orderId,
+                    key,
+                    partition,
+                    offset
+            );
 
-            log.info("ORDER_PLACED received: orderId={} key={} partition={} offset={}",
-                    orderId, key, partition, offset);
+            setEventId(event);
 
-            // Set eventId on payload for idempotency tracking
-            if (event.getEventId() != null) {
-                event.getPayload().setEventId(event.getEventId());
-            }
+            executeOrder(
+                    consumerRecord,
+                    event,
+                    orderId,
+                    acknowledgment
+            );
 
-            // LEVEL 5: Execute order (permanent and transient errors distinguished here)
-            try {
-                executionService.execute(event.getPayload());
-                // Success!
-                acknowledgment.acknowledge();
-                log.info("Order {} executed successfully", orderId);
-
-            } catch (org.springframework.dao.DataAccessException dae) {
-                // Database connection issue → transient failure
-                log.warn("Database connection error, will retry: {}", dae.getMessage());
-                throw dae; // Rethrow to trigger nack
-
-            } catch (RuntimeException re) {
-                String msg = buildExceptionMessage(re);
-
-                if (isPermanentExecutionFailure(re)) {
-                    sendToDLT(record, failureReasonFor(re), msg);
-                    acknowledgment.acknowledge();
-                } else if (isTransientFailure(msg)) {
-                    log.warn("Transient error detected, will retry: {}", msg);
-                    throw re; // Rethrow to trigger nack
-                } else {
-                    // Unknown error → treat as permanent
-                    sendToDLT(record, "unexpected_error", msg);
-                    acknowledgment.acknowledge();
-                }
-            }
-
-        } catch (Exception e) {
-            // Nack for transient failures (rethrown exceptions)
-            log.error("Order processing failed (will retry by Kafka broker): {}", e.getMessage(), e);
-            // Do NOT acknowledge; let Kafka retry
+        } catch (Exception exception) {
+            log.error(
+                    "Order processing failed (will retry by Kafka broker): {}",
+                    exception.getMessage(),
+                    exception
+            );
         }
     }
 
-    /**
-     * Send a message to the dead-letter topic for permanent failures.
-     * 
-     * The DLT message contains:
-     * - value: original message
-     * - headers: failure_reason, error_message, original_topic, timestamp
-     */
-    private void sendToDLT(ConsumerRecord<String, String> record, String reason, String errorMessage) {
+    private JsonNode parseJson(
+            ConsumerRecord<String, String> consumerRecord,
+            String message,
+            Acknowledgment acknowledgment
+    ) {
+        try {
+            return objectMapper.readTree(message);
+        } catch (JsonProcessingException exception) {
+            sendToDLT(
+                    consumerRecord,
+                    "malformed_json",
+                    "JSON parsing failed: " + exception.getMessage()
+            );
+            acknowledgment.acknowledge();
+            return null;
+        }
+    }
+
+    private KafkaEvent<OrderPlacedPayload> deserializeEvent(
+            ConsumerRecord<String, String> consumerRecord,
+            String message,
+            JsonNode root,
+            Acknowledgment acknowledgment
+    ) {
+        try {
+            if (root.has("payload")) {
+                return objectMapper.readValue(
+                        message,
+                        new TypeReference<KafkaEvent<OrderPlacedPayload>>() {
+                        }
+                );
+            }
+
+            OrderPlacedPayload payload =
+                    objectMapper.readValue(message, OrderPlacedPayload.class);
+
+            KafkaEvent<OrderPlacedPayload> event = new KafkaEvent<>();
+            event.setPayload(payload);
+
+            return event;
+
+        } catch (JsonProcessingException exception) {
+            sendToDLT(
+                    consumerRecord,
+                    "invalid_event_format",
+                    "Event deserialization failed: " + exception.getMessage()
+            );
+            acknowledgment.acknowledge();
+            return null;
+        }
+    }
+
+    private boolean validateOrderId(
+            ConsumerRecord<String, String> consumerRecord,
+            String orderId,
+            Acknowledgment acknowledgment
+    ) {
+        if (orderId == null || orderId.isBlank()) {
+            sendToDLT(
+                    consumerRecord,
+                    "missing_order_id",
+                    "orderId is null or blank"
+            );
+            acknowledgment.acknowledge();
+            return false;
+        }
+
+        try {
+            UUID.fromString(orderId);
+            return true;
+        } catch (IllegalArgumentException exception) {
+            sendToDLT(
+                    consumerRecord,
+                    "invalid_order_id_format",
+                    "orderId is not a valid UUID: " + orderId
+            );
+            acknowledgment.acknowledge();
+            return false;
+        }
+    }
+
+    private boolean validateEventType(
+            ConsumerRecord<String, String> consumerRecord,
+            KafkaEvent<OrderPlacedPayload> event,
+            Acknowledgment acknowledgment
+    ) {
+        String eventType = event.getEventType();
+
+        if (eventType == null || !eventType.equals("ORDER_PLACED")) {
+            sendToDLT(
+                    consumerRecord,
+                    "unexpected_event_type",
+                    "Expected EVENT_TYPE=ORDER_PLACED, got: " + eventType
+            );
+            acknowledgment.acknowledge();
+            return false;
+        }
+
+        return true;
+    }
+
+    private void setEventId(KafkaEvent<OrderPlacedPayload> event) {
+        if (event.getEventId() != null) {
+            event.getPayload().setEventId(event.getEventId());
+        }
+    }
+
+    private void executeOrder(
+            ConsumerRecord<String, String> consumerRecord,
+            KafkaEvent<OrderPlacedPayload> event,
+            String orderId,
+            Acknowledgment acknowledgment
+    ) {
+        try {
+            executionService.execute(event.getPayload());
+
+            acknowledgment.acknowledge();
+
+            log.info(
+                    "Order {} executed successfully",
+                    orderId
+            );
+
+        } catch (org.springframework.dao.DataAccessException exception) {
+            log.warn(
+                    "Database connection error, will retry: {}",
+                    exception.getMessage()
+            );
+            throw new RuntimeException(
+                    "Failed to execute order " + orderId + " because of a database error",
+                    exception
+            );
+
+        } catch (RuntimeException exception) {
+            handleExecutionFailure(
+                    consumerRecord,
+                    exception,
+                    acknowledgment
+            );
+        }
+    }
+
+    private void handleExecutionFailure(
+            ConsumerRecord<String, String> consumerRecord,
+            RuntimeException exception,
+            Acknowledgment acknowledgment
+    ) {
+        String message = buildExceptionMessage(exception);
+
+        if (isPermanentExecutionFailure(exception)) {
+            sendToDLT(
+                    consumerRecord,
+                    failureReasonFor(exception),
+                    message
+            );
+            acknowledgment.acknowledge();
+            return;
+        }
+
+        if (isTransientFailure(message)) {
+            log.warn(
+                    "Transient error detected, will retry: {}",
+                    message
+            );
+            throw exception;
+        }
+
+        sendToDLT(
+                consumerRecord,
+                "unexpected_error",
+                message
+        );
+        acknowledgment.acknowledge();
+    }
+
+    private void sendToDLT(
+            ConsumerRecord<String, String> consumerRecord,
+            String reason,
+            String errorMessage
+    ) {
         try {
             Headers headers = new RecordHeaders();
-            headers.add("failure_reason", reason.getBytes());
-            headers.add("error_message", errorMessage.getBytes());
-            headers.add("original_topic", "orders".getBytes());
-            headers.add("timestamp", String.valueOf(System.currentTimeMillis()).getBytes());
 
-            kafkaTemplate.send(DLT_TOPIC, record.key(), record.value()).get();
+            headers.add(
+                    "failure_reason",
+                    reason.getBytes(StandardCharsets.UTF_8)
+            );
+            headers.add(
+                    "error_message",
+                    errorMessage.getBytes(StandardCharsets.UTF_8)
+            );
+            headers.add(
+                    "original_topic",
+                    "orders".getBytes(StandardCharsets.UTF_8)
+            );
+            headers.add(
+                    "timestamp",
+                    String.valueOf(System.currentTimeMillis())
+                            .getBytes(StandardCharsets.UTF_8)
+            );
 
-            log.error("Message sent to DLT: topic={}, reason={}, error={}; message={}", 
-                DLT_TOPIC, reason, errorMessage, record.value());
+            kafkaTemplate
+                    .send(
+                            DLT_TOPIC,
+                            consumerRecord.key(),
+                            consumerRecord.value()
+                    )
+                    .get();
 
-        } catch (Exception e) {
-            log.error("Failed to send message to DLT: {}", e.getMessage(), e);
+            log.error(
+                    "Message sent to DLT: topic={}, reason={}, error={}; message={}",
+                    DLT_TOPIC,
+                    reason,
+                    errorMessage,
+                    consumerRecord.value()
+            );
+
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+
+            log.error(
+                    "Thread interrupted while sending message to DLT: reason={}, error={}",
+                    reason,
+                    errorMessage,
+                    exception
+            );
+
+        } catch (Exception exception) {
+            log.error(
+                    "Failed to send message to DLT: topic={}, reason={}, error={}",
+                    DLT_TOPIC,
+                    reason,
+                    errorMessage,
+                    exception
+            );
         }
     }
 
     private boolean isPermanentExecutionFailure(RuntimeException exception) {
         String message = buildExceptionMessage(exception).toLowerCase();
+
         return message.contains("order not found")
                 || message.contains("not found in database")
                 || message.contains("malformed execution")
@@ -201,23 +366,32 @@ public class OrderConsumer {
                 || message.contains("cannot sell without existing position")
                 || message.contains("insufficient holdings")
                 || message.contains("failed to update position after 3 retries")
-                || message.contains("concurrent updates may be blocking this transaction");
+                || message.contains(
+                "concurrent updates may be blocking this transaction"
+        );
     }
 
     private String failureReasonFor(RuntimeException exception) {
         String message = buildExceptionMessage(exception).toLowerCase();
-        if (message.contains("order not found") || message.contains("not found in database")) {
+
+        if (message.contains("order not found")
+                || message.contains("not found in database")) {
             return "order_not_found";
         }
+
         if (message.contains("failed to update position after 3 retries")
-                || message.contains("concurrent updates may be blocking this transaction")) {
+                || message.contains(
+                "concurrent updates may be blocking this transaction"
+        )) {
             return "exhausted_lock_budget";
         }
+
         return "malformed_execution";
     }
 
     private boolean isTransientFailure(String message) {
         String normalizedMessage = message.toLowerCase();
+
         return normalizedMessage.contains("connection")
                 || normalizedMessage.contains("timeout")
                 || normalizedMessage.contains("unavailable")
@@ -229,12 +403,20 @@ public class OrderConsumer {
     private String buildExceptionMessage(Throwable throwable) {
         String currentMessage = throwable.getMessage();
         Throwable cause = throwable.getCause();
-        if (cause != null && cause.getMessage() != null && !cause.getMessage().isBlank()) {
+
+        if (cause != null
+                && cause.getMessage() != null
+                && !cause.getMessage().isBlank()) {
+
             if (currentMessage == null || currentMessage.isBlank()) {
                 return cause.getMessage();
             }
+
             return currentMessage + ": " + cause.getMessage();
         }
-        return currentMessage != null ? currentMessage : throwable.getClass().getSimpleName();
+
+        return currentMessage != null
+                ? currentMessage
+                : throwable.getClass().getSimpleName();
     }
 }

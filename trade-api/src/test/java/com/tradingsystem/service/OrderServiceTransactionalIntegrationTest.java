@@ -100,14 +100,14 @@ class OrderServiceTransactionalIntegrationTest {
                 response.getMessage()
         );
 
-
-        assertEquals(
-                new BigDecimal("99050.00"),
+        // Balance is NOT updated at placement - only at execution
+         assertEquals(
+                new BigDecimal("100000.00"),
                 cashBalance(1001L)
         );
 
-
-        assertEquals(
+        // Position and account state remain unchanged at placement
+         assertEquals(
                 15,
                 positionQuantity(
                         1001L,
@@ -124,9 +124,9 @@ class OrderServiceTransactionalIntegrationTest {
                 )
         );
 
-
-        assertEquals(
-                2,
+        // Account version should NOT increment at placement
+         assertEquals(
+                1,
                 accountVersion(1001L)
         );
 

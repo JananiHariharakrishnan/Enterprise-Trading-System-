@@ -23,6 +23,8 @@ public class GlobalExceptionHandler {
     private static final Logger log =
             LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    private static final String VALIDATION_ERROR_CODE = "VAL-422";
+    private static final String INVALID_INPUT_MESSAGE = "Invalid input";
 
     // =========================================================
     // ACCOUNT EXCEPTIONS
@@ -44,7 +46,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-
     @ExceptionHandler(AccountNotActiveException.class)
     public ResponseEntity<ErrorResponse> handleAccountNotActive(
             AccountNotActiveException ex) {
@@ -60,7 +61,6 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
     }
-
 
     // =========================================================
     // INSTRUMENT EXCEPTIONS
@@ -82,7 +82,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-
     // =========================================================
     // ORDER BUSINESS EXCEPTIONS
     // =========================================================
@@ -102,7 +101,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-
     @ExceptionHandler(InsufficientHoldingsException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientHoldings(
             InsufficientHoldingsException ex) {
@@ -118,7 +116,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-
     @ExceptionHandler(DuplicateOrderException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateOrder(
             DuplicateOrderException ex) {
@@ -133,7 +130,6 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
     }
-
 
     @ExceptionHandler(OrderStateConflictException.class)
     public ResponseEntity<ErrorResponse> handleOrderStateConflict(
@@ -151,7 +147,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-
     @ExceptionHandler(OrderNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleOrderNotFound(
             OrderNotFoundException ex) {
@@ -168,7 +163,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-
     @ExceptionHandler(InvalidOrderException.class)
     public ResponseEntity<ErrorResponse> handleInvalidOrder(
             InvalidOrderException ex) {
@@ -184,7 +178,6 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
     }
-
 
     // =========================================================
     // AUTHENTICATION
@@ -206,7 +199,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-
     // =========================================================
     // BEAN VALIDATION
     // =========================================================
@@ -221,11 +213,10 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.UNPROCESSABLE_ENTITY,
-                "VAL-422",
-                "Invalid input"
+                VALIDATION_ERROR_CODE,
+                INVALID_INPUT_MESSAGE
         );
     }
-
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolation(
@@ -237,11 +228,10 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.UNPROCESSABLE_ENTITY,
-                "VAL-422",
-                "Invalid input"
+                VALIDATION_ERROR_CODE,
+                INVALID_INPUT_MESSAGE
         );
     }
-
 
     // =========================================================
     // INVALID / MALFORMED REQUEST BODY
@@ -258,11 +248,10 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.UNPROCESSABLE_ENTITY,
-                "VAL-422",
-                "Invalid input"
+                VALIDATION_ERROR_CODE,
+                INVALID_INPUT_MESSAGE
         );
     }
-
 
     // =========================================================
     // ILLEGAL ARGUMENT
@@ -279,11 +268,10 @@ public class GlobalExceptionHandler {
 
         return error(
                 HttpStatus.UNPROCESSABLE_ENTITY,
-                "VAL-422",
-                "Invalid input"
+                VALIDATION_ERROR_CODE,
+                INVALID_INPUT_MESSAGE
         );
     }
-
 
     // =========================================================
     // ILLEGAL STATE
@@ -305,7 +293,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-
     // =========================================================
     // DATABASE CONSTRAINT VIOLATIONS
     // =========================================================
@@ -325,7 +312,6 @@ public class GlobalExceptionHandler {
                 "Order already exists or violates a database constraint"
         );
     }
-
 
     // =========================================================
     // TRADING DOMAIN EXCEPTION
@@ -347,7 +333,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-
     // =========================================================
     // GENERIC FALLBACK
     // =========================================================
@@ -367,7 +352,6 @@ public class GlobalExceptionHandler {
                 "Internal server error"
         );
     }
-
 
     // =========================================================
     // COMMON ERROR RESPONSE

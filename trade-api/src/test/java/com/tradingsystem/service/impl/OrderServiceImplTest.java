@@ -1,6 +1,5 @@
 package com.tradingsystem.service.impl;
 
-import com.tradingsystem.exception.AccountNotActiveException;
 import com.tradingsystem.exception.TradingAuthenticationException;
 import com.tradingsystem.exception.AccountNotFoundException;
 import com.tradingsystem.mapper.AccountDataMapper;
