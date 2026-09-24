@@ -39,6 +39,20 @@ These are created by:
 - Access tokens are signed with `HS256` using `JWT_SECRET`
 - Access token claims are exactly: `sub`, `accountId`, `roles`, `iat`, `exp`, `iss`
 
+### Login Security
+
+**Timing Attack Prevention:**
+- Unknown usernames and wrong passwords return identical status (401 AUTH-401), identical error body, and comparable response timing
+- When a username is not found, the service still verifies the supplied password against a fixed dummy hash (same argon2 algorithm and parameters)
+- This prevents attackers from using response times to enumerate valid usernames
+
+**Login Attempt Throttle:**
+- Limit: **5 failed login attempts**
+- Cooldown: **60 seconds**
+- Applies per IP address (or caller)
+- After exceeding the limit, the endpoint returns `429 Too Many Requests` until the cooldown expires
+- Note: A throttle limits how fast an attacker can use an oracle; it does not close the vulnerability. Strong passwords and real-time monitoring are also necessary
+
 See `SECURITY_REVIEW.md` for the refresh-token revocation decision and residual-risk notes.
 
 ## Environment variables
@@ -70,7 +84,14 @@ npm run start:dev
 npm run start:prod
 ```
 
-Swagger is served at `/docs`.
+### OpenAPI Documentation
+
+The service publishes its OpenAPI document automatically, generated from the controller and DTO decorators:
+
+- **Human-readable page (Swagger UI)**: `http://localhost:3000/docs`
+- **JSON specification**: `http://localhost:3000/docs-json`
+
+This document describes all four routes and their request/response schemas.
 
 ## Verify
 
