@@ -52,19 +52,19 @@ INSERT INTO accounts (
 
 INSERT INTO users (
     account_id,
+    username,
     first_name,
     last_name,
     email,
-    phone_no,
-    username
+    phone_no
 )
 SELECT
     a.id,
+    v.username,
     v.first_name,
     v.last_name,
     v.email,
-    v.phone_no,
-    v.password_hash
+    v.phone_no
 FROM (
     VALUES
         ('ETP-2201', 'Ananya',  'Iyer',       'ananya.iyer@example.com',  '+91-9000000001', 'ananya.iyer'),
@@ -79,7 +79,7 @@ FROM (
     last_name,
     email,
     phone_no,
-    password_hash
+    username
 )
 JOIN accounts a
     ON a.account_reference = v.account_reference;

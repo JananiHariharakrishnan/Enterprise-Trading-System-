@@ -50,12 +50,15 @@ CREATE TABLE orders (
 );
 
 CREATE TABLE users (
-    account_id BIGINT PRIMARY KEY,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) NOT NULL,
+    id UUID PRIMARY KEY,
+    account_id BIGINT NOT NULL UNIQUE,
+    username VARCHAR(64) NOT NULL UNIQUE,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    email VARCHAR(255),
     phone_no VARCHAR(30),
-    password_hash VARCHAR(255) NOT NULL,
+    roles VARCHAR ARRAY NOT NULL,
+    created_on TIMESTAMP NOT NULL,
     CONSTRAINT fk_users_account
         FOREIGN KEY (account_id)
         REFERENCES accounts (id)
