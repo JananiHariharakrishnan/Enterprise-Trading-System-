@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class JwtTokenVerifierTest {
 
     private static final String SECRET = "development-only-shared-secret-change-me";
-    private static final String ISSUER = "auth-stub";
+    private static final String ISSUER = "auth-service";
 
     private final JwtTokenVerifier verifier = new JwtTokenVerifier(
             SECRET,
