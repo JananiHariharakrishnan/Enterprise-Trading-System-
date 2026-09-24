@@ -67,6 +67,10 @@ describe('auth contract (e2e)', () => {
         id: registration.body.id,
         username: 'priya.menon',
         accountId: 1,
+        firstName: null,
+        lastName: null,
+        email: null,
+        phoneNo: null,
         roles: ['CUSTOMER'],
         createdOn: registration.body.createdOn,
       });

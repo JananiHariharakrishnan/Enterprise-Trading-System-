@@ -10,6 +10,7 @@ import {
   findUserById,
   findUserByUsername,
   saveRefreshToken,
+  updateUserProfile,
   verifyPassword,
 } from './repository/auth.repository.js';
 import { ACCESS_TOKEN_LIFETIME_SECONDS, makeRefreshToken, signAccessToken } from './tokens/auth.tokens.js';
@@ -17,6 +18,7 @@ import type { AuthPayload } from './interfaces/auth-payload.interface.js';
 import { LoginRequestDto } from './dto/login.dto.js';
 import { RefreshRequestDto } from './dto/refresh.dto.js';
 import { RegisterRequestDto } from './dto/register.dto.js';
+import { UpdateUserProfileDto } from './dto/update-profile.dto.js';
 
 @Injectable()
 export class AuthService {
@@ -108,8 +110,38 @@ export class AuthService {
       id: current.id,
       username: current.username,
       accountId: current.accountId,
+      firstName: current.firstName,
+      lastName: current.lastName,
+      email: current.email,
+      phoneNo: current.phoneNo,
       roles: current.roles,
       createdOn: current.createdOn,
+    };
+  }
+
+  async updateProfile(userId: string, dto: UpdateUserProfileDto) {
+    const current = await findUserById(userId);
+    if (!current) {
+      throw new UnauthorizedException();
+    }
+
+    const updated = await updateUserProfile(userId, {
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      phoneNo: dto.phoneNo,
+    });
+
+    return {
+      id: updated.id,
+      username: updated.username,
+      accountId: updated.accountId,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      email: updated.email,
+      phoneNo: updated.phoneNo,
+      roles: updated.roles,
+      createdOn: updated.createdOn,
     };
   }
 }

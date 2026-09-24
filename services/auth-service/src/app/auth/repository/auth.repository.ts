@@ -8,6 +8,10 @@ export type UserRecord = {
   id: string;
   username: string;
   accountId: number;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNo?: string;
   roles: string[];
   createdOn: string;
 };
@@ -63,7 +67,7 @@ export async function accountExists(accountId: number): Promise<boolean> {
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const result = await db.query(
     `
-    SELECT id, username, account_id, roles, created_on
+    SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
     FROM users
     WHERE username = $1
     LIMIT 1
@@ -77,7 +81,7 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
 export async function findUserById(id: string): Promise<UserRecord | null> {
   const result = await db.query(
     `
-    SELECT id, username, account_id, roles, created_on
+    SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
     FROM users
     WHERE id = $1
     LIMIT 1
@@ -91,7 +95,7 @@ export async function findUserById(id: string): Promise<UserRecord | null> {
 export async function findUserByAccountId(accountId: number): Promise<UserRecord | null> {
   const result = await db.query(
     `
-    SELECT id, username, account_id, roles, created_on
+    SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
     FROM users
     WHERE account_id = $1
     LIMIT 1
@@ -100,6 +104,68 @@ export async function findUserByAccountId(accountId: number): Promise<UserRecord
   );
 
   return result.rows[0] ? mapUserRow(result.rows[0]) : null;
+}
+
+export async function updateUserProfile(
+  userId: string,
+  updates: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phoneNo?: string;
+  },
+): Promise<UserRecord> {
+  // First, verify the user exists
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const updateFields = [];
+  const params: any[] = [userId];
+  let paramCount = 2;
+
+  if (updates.firstName !== undefined) {
+    updateFields.push(`first_name = $${paramCount}`);
+    params.push(updates.firstName);
+    paramCount++;
+  }
+  if (updates.lastName !== undefined) {
+    updateFields.push(`last_name = $${paramCount}`);
+    params.push(updates.lastName);
+    paramCount++;
+  }
+  if (updates.email !== undefined) {
+    updateFields.push(`email = $${paramCount}`);
+    params.push(updates.email);
+    paramCount++;
+  }
+  if (updates.phoneNo !== undefined) {
+    updateFields.push(`phone_no = $${paramCount}`);
+    params.push(updates.phoneNo);
+    paramCount++;
+  }
+
+  // If no fields to update, just return the current user
+  if (updateFields.length === 0) {
+    return user;
+  }
+
+  const query = `
+    UPDATE users
+    SET ${updateFields.join(', ')}
+    WHERE id = $1
+    RETURNING id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
+  `;
+
+  const result = await db.query(query, params);
+
+  if (result.rowCount === 0) {
+    // This shouldn't happen since we verified the user exists, but return the user just in case
+    return user;
+  }
+
+  return mapUserRow(result.rows[0]);
 }
 
 export async function createUser(username: string, accountId: number, roles: string[] = ['CUSTOMER']): Promise<UserRecord> {
@@ -118,7 +184,7 @@ export async function createUser(username: string, accountId: number, roles: str
       $3,
       NOW()
     )
-    RETURNING id, username, account_id, roles, created_on
+    RETURNING id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
     `,
     [username, accountId, roles],
   );
@@ -339,6 +405,10 @@ function mapUserRow(row: any): UserRecord {
     id: row.id,
     username: row.username,
     accountId: Number(row.account_id),
+    firstName: row.first_name,
+    lastName: row.last_name,
+    email: row.email,
+    phoneNo: row.phone_no,
     roles: row.roles ?? ['CUSTOMER'],
     createdOn: new Date(row.created_on).toISOString(),
   };
