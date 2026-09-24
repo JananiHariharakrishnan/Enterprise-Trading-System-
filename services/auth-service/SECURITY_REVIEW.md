@@ -38,3 +38,46 @@ The implemented replay handling closes that gap:
 - A second presentation of an already exchanged refresh token returns `AUTH-401`.
 - The implemented policy is: **rotate on every refresh, revoke the full session lineage on replay**.
 
+---
+
+# Security review: JWT_SECRET and issuer pin management
+
+## Decision
+
+The service **keeps the published development fixture `JWT_SECRET` unchanged** in `.env.example` and repository-root `.env` for local integration testing. This is a **deliberate development practice**, not a production secret.
+
+The platform **pins the issuer claim** to `"auth-service"` at the Trade API to prevent acceptance of tokens from other issuers (e.g., the old `auth-stub` test fixture or an attacker-controlled service).
+
+## Rationale
+
+- **Development convenience**: The published `development-only-shared-secret-change-me` allows all local services to start with a working configuration without manual secret exchange. The comment in `.env.example` makes the fixture status explicit.
+- **Issuer pinning prevents issuer substitution**: Even if an attacker can forge a token with the shared secret, the Trade API rejects it if the `iss` claim is not `"auth-service"`. This prevents:
+  - Accidental acceptance of tokens from the old Sprint 6 `auth-stub` test fixture
+  - Cross-service token confusion
+  - Issuer substitution attacks in shared-secret scenarios
+- **Token contract is issuer + signature**: The Trade API verifies both the HMAC-SHA256 signature (via `JWT_SECRET`) and the issuer claim (via `JWT_ISSUER`). Both must match; either alone is insufficient.
+
+## Implementation details
+
+- Auth service signs all access tokens with `issuer: "auth-service"` in the payload.
+- Trade API's `JwtTokenVerifier` is instantiated with the expected issuer and validates the `iss` claim before accepting the token.
+- Trade API's `TemporarySecurityConfig` reads `JWT_ISSUER` from the environment, defaulting to `"auth-stub"` only for backward compatibility with existing test code. It must be set to `"auth-service"` in production or integration test configurations.
+- All integration tests explicitly set `JWT_ISSUER=auth-service`.
+
+## Production considerations
+
+In production:
+
+1. Generate a new, strong `JWT_SECRET` (e.g., via `openssl rand -hex 32`) and store it in a secrets manager (not in `.env.example`).
+2. Rotate the `JWT_SECRET` if it is ever compromised or exposed (e.g., via logs, version control history, or accidental commits).
+3. The issuer claim `"auth-service"` is a logical identifier and does not need to be rotated; it is a service name, not a secret.
+4. The `.env.example` placeholder `development-only-shared-secret-change-me` must be replaced before deploying to any shared environment.
+
+## Acceptance-criteria mapping
+
+- ✓ Trade REST API reads the same `JWT_SECRET` the auth service signs with, passed from root `.env` through docker-compose.
+- ✓ Trade REST API's issuer setting points to `"auth-service"` via the `JWT_ISSUER` environment variable.
+- ✓ A token signed with an untrusted key (e.g., `UNTRUSTED_SECRET`) is refused (signature verification fails).
+- ✓ A token signed with the correct key but a wrong issuer (e.g., `"auth-stub"` or `"attacker"`) is refused (issuer claim validation fails).
+- ✓ Integration test confirms refusal with no token, with an invalid token, with a token from a wrong issuer, and with a token signed by an untrusted key.
+
