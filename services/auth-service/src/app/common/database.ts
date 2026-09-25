@@ -26,7 +26,7 @@ if (!isTest) {
 
 type QueryResult = { rows: any[]; rowCount: number };
 
-function createInMemoryDb() {
+export function createInMemoryDb() {
   const accounts = [{ id: 1, account_reference: 'AUTH-TEST-001', cash_balance: 10000, buying_power: 10000, status: 'ACTIVE' }];
   const users: any[] = [];
   const credentials: any[] = [];

@@ -15,7 +15,7 @@ type PostgresLikeError = {
   message: string;
 };
 
-function envelope(status: number, exception?: unknown): ErrorEnvelope {
+export function envelope(status: number, exception?: unknown): ErrorEnvelope {
   if (status === HttpStatus.UNPROCESSABLE_ENTITY || status === HttpStatus.BAD_REQUEST) {
     return {
       errorCode: 'VAL-422',
@@ -44,7 +44,7 @@ function envelope(status: number, exception?: unknown): ErrorEnvelope {
   return { errorCode: 'SRV-500', message: formatUnexpectedMessage(exception) };
 }
 
-function formatValidationMessage(exception?: HttpException): string {
+export function formatValidationMessage(exception?: HttpException): string {
   if (!exception) {
     return 'Invalid input';
   }
@@ -75,7 +75,7 @@ function formatValidationMessage(exception?: HttpException): string {
   return 'Invalid input';
 }
 
-function formatConflictMessage(exception?: unknown): string {
+export function formatConflictMessage(exception?: unknown): string {
   if (isPostgresLikeError(exception) && process.env.NODE_ENV !== 'production') {
     return `Registration failed: ${formatPostgresMessage(exception)}`;
   }
@@ -83,7 +83,7 @@ function formatConflictMessage(exception?: unknown): string {
   return 'Registration failed';
 }
 
-function formatUnexpectedMessage(exception?: unknown): string {
+export function formatUnexpectedMessage(exception?: unknown): string {
   if (process.env.NODE_ENV === 'production') {
     return 'Unexpected server error';
   }
@@ -103,18 +103,18 @@ function formatUnexpectedMessage(exception?: unknown): string {
   return 'Unexpected server error';
 }
 
-function isDatabasePasswordConfigError(exception: unknown): exception is Error {
+export function isDatabasePasswordConfigError(exception: unknown): exception is Error {
   return (
     exception instanceof Error &&
     exception.message.includes('SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string')
   );
 }
 
-function hasMessage(exception: unknown): exception is { message: string } {
+export function hasMessage(exception: unknown): exception is { message: string } {
   return Boolean(exception && typeof exception === 'object' && 'message' in exception && typeof exception.message === 'string');
 }
 
-function isPostgresLikeError(exception: unknown): exception is PostgresLikeError {
+export function isPostgresLikeError(exception: unknown): exception is PostgresLikeError {
   return Boolean(
     exception &&
       typeof exception === 'object' &&
@@ -124,7 +124,7 @@ function isPostgresLikeError(exception: unknown): exception is PostgresLikeError
   );
 }
 
-function formatPostgresMessage(exception: PostgresLikeError): string {
+export function formatPostgresMessage(exception: PostgresLikeError): string {
   const parts = [
     exception.code ? `[${exception.code}]` : null,
     exception.message?.trim() || null,
@@ -137,7 +137,7 @@ function formatPostgresMessage(exception: PostgresLikeError): string {
   return parts.length > 0 ? parts.join(' | ') : 'Database operation failed';
 }
 
-function databaseStatus(exception: PostgresLikeError): number {
+export function databaseStatus(exception: PostgresLikeError): number {
   if (exception.code === '23505') {
     return HttpStatus.CONFLICT;
   }
