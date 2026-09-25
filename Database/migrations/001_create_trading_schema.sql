@@ -13,6 +13,8 @@
 
 BEGIN;
 
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- -----------------------------------------------------------------------------
 -- INSTRUMENTS
 -- A non-tradable instrument remains in the database so historical orders,
@@ -79,24 +81,98 @@ CREATE TABLE  IF NOT EXISTS accounts(
 -- -----------------------------------------------------------------------------
 -- USERS
 -- One user/holder record per trading account.
--- account_id is both PK and FK, enforcing the 1:1 relationship.
+-- `id` is the stable auth identity used as JWT `sub` and by refresh tokens.
+-- `account_id` remains unique, preserving the 1:1 relationship with accounts.
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE  IF NOT EXISTS users(
+    id               UUID         NOT NULL DEFAULT gen_random_uuid(),
     account_id       BIGINT       NOT NULL,
-    first_name       VARCHAR(100) NOT NULL,
-    last_name        VARCHAR(100) NOT NULL,
-    email            VARCHAR(255) NOT NULL,
+    username         VARCHAR(64)  NOT NULL,
+    first_name       VARCHAR(100),
+    last_name        VARCHAR(100),
+    email            VARCHAR(255),
     phone_no         VARCHAR(30),
-    password_hash    VARCHAR(255) NOT NULL,
+    roles            TEXT[]       NOT NULL DEFAULT ARRAY['CUSTOMER']::TEXT[],
+    created_on       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT pk_users PRIMARY KEY (account_id),
+    CONSTRAINT pk_users PRIMARY KEY (id),
+
+    CONSTRAINT uq_users_account_id UNIQUE (account_id),
+
+    CONSTRAINT uq_users_username UNIQUE (username),
 
     CONSTRAINT fk_users_account
         FOREIGN KEY (account_id)
         REFERENCES accounts (id),
 
-    CONSTRAINT uq_users_email UNIQUE (email)
+    CONSTRAINT uq_users_email UNIQUE (email),
+
+    CONSTRAINT chk_users_username_format
+        CHECK (username ~ '^[a-zA-Z0-9._-]+$'),
+
+    CONSTRAINT chk_users_roles_non_empty
+        CHECK (array_length(roles, 1) >= 1),
+
+    CONSTRAINT chk_users_roles_valid
+        CHECK (roles <@ ARRAY['CUSTOMER', 'ADMIN']::TEXT[])
+);
+
+-- -----------------------------------------------------------------------------
+-- CREDENTIALS
+-- Passwords are stored separately from user profile fields.
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS credentials(
+    id            UUID         NOT NULL DEFAULT gen_random_uuid(),
+    account_id    BIGINT       NOT NULL,
+    username      VARCHAR(64)  NOT NULL,
+    password_hash TEXT         NOT NULL,
+    params        JSONB        NOT NULL DEFAULT '{}'::JSONB,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT pk_credentials PRIMARY KEY (id),
+
+    CONSTRAINT uq_credentials_account_id UNIQUE (account_id),
+
+    CONSTRAINT uq_credentials_username UNIQUE (username),
+
+    CONSTRAINT fk_credentials_account
+        FOREIGN KEY (account_id)
+        REFERENCES accounts (id)
+        ON DELETE CASCADE
+);
+
+-- -----------------------------------------------------------------------------
+-- REFRESH TOKENS
+-- Stores only a hash of the opaque refresh-token secret.
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS refresh_tokens(
+    id            UUID         NOT NULL,
+    session_id    UUID         NOT NULL,
+    user_id       UUID         NOT NULL,
+    token_hash    TEXT         NOT NULL,
+    algorithm     VARCHAR(32)  NOT NULL DEFAULT 'bcrypt',
+    expires_at    TIMESTAMPTZ  NOT NULL,
+    consumed_at   TIMESTAMPTZ,
+    revoked_at    TIMESTAMPTZ,
+    replaced_by   UUID,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT pk_refresh_tokens PRIMARY KEY (id),
+
+    CONSTRAINT fk_refresh_tokens_user
+        FOREIGN KEY (user_id)
+        REFERENCES users (id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_refresh_tokens_replaced_by
+        FOREIGN KEY (replaced_by)
+        REFERENCES refresh_tokens (id)
+        ON DELETE SET NULL
 );
 
 -- -----------------------------------------------------------------------------
@@ -339,6 +415,15 @@ CREATE INDEX ix_balance_history_order
 
 CREATE INDEX ix_watchlist_symbol
     ON watchlist (symbol);
+
+CREATE INDEX ix_refresh_tokens_user_id
+    ON refresh_tokens (user_id);
+
+CREATE INDEX ix_refresh_tokens_session_id
+    ON refresh_tokens (session_id);
+
+CREATE INDEX ix_refresh_tokens_expires_at
+    ON refresh_tokens (expires_at);
 
 COMMENT ON COLUMN executions.event_id IS
     'Kafka event UUID for idempotency: if same event_id exists, execution already applied';

@@ -97,3 +97,6 @@ replay_pid*.log
 *.swo
 .~*
 *.orig
+
+#Node modules
+node_modules/

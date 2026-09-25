@@ -32,21 +32,25 @@ INSERT INTO positions (account_id, symbol, qty, avg_cost, version)
 VALUES (1001, 'SPY', 0, 500.00, 0);
 
 INSERT INTO users (
-    account_id, first_name, last_name, email, phone_no, password_hash
+    id, account_id, username, first_name, last_name, email, phone_no, roles, created_on
 )
 VALUES (
-    1001, 'Ananya', 'Iyer',
+    '11111111-1111-1111-1111-111111111001',
+    1001, 'ananya.iyer', 'Ananya', 'Iyer',
     'ananya.iyer@example.com',
     '+91-9000000001',
-    'test-password'
+    ARRAY['CUSTOMER'],
+    TIMESTAMP '2026-09-01 10:05:00'
 );
 
 INSERT INTO users (
-    account_id, first_name, last_name, email, phone_no, password_hash
+    id, account_id, username, first_name, last_name, email, phone_no, roles, created_on
 )
 VALUES (
-    2002, 'Rohit', 'Deshpande',
+    '11111111-1111-1111-1111-111111112002',
+    2002, 'rohit.deshpande', 'Rohit', 'Deshpande',
     'rohit@example.com',
     '+91-9000000002',
-    'test-password'
+    ARRAY['CUSTOMER'],
+    TIMESTAMP '2026-09-01 11:05:00'
 );

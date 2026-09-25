@@ -43,7 +43,11 @@ INSERT INTO accounts (
     ('ETP-2203', 3200.00, 3200.00, 'ACTIVE'),
     ('ETP-2204', 95000.00, 95000.00, 'ACTIVE'),
     ('ETP-2205', 220000.00, 220000.00, 'SUSPENDED'),
-    ('ETP-2206', 610000.00, 610000.00, 'CLOSED');
+    ('ETP-2206', 610000.00, 610000.00, 'CLOSED'),
+    ('ETP-2207',1000000.00,1000000.00,'ACTIVE'),
+    ('ETP-2208',100000.00,100000.00,'ACTIVE'),
+    ('ETP-2209',9000000.00,9000000.00,'ACTIVE'),
+    ('ETP-22010',900000.00,900000.00,'ACTIVE');
 
 -- -----------------------------------------------------------------------------
 -- USERS
@@ -52,34 +56,34 @@ INSERT INTO accounts (
 
 INSERT INTO users (
     account_id,
+    username,
     first_name,
     last_name,
     email,
-    phone_no,
-    password_hash
+    phone_no
 )
 SELECT
     a.id,
+    v.username,
     v.first_name,
     v.last_name,
     v.email,
-    v.phone_no,
-    v.password_hash
+    v.phone_no
 FROM (
     VALUES
-        ('ETP-2201', 'Ananya',  'Iyer',       'ananya.iyer@example.com',  '+91-9000000001', 'seed-password-hash-2201'),
-        ('ETP-2202', 'Rohit',   'Deshpande', 'rohit.deshpande@example.com', '+91-9000000002', 'seed-password-hash-2202'),
-        ('ETP-2203', 'Meera',   'Krishnan',  'meera.krishnan@example.com', '+91-9000000003', 'seed-password-hash-2203'),
-        ('ETP-2204', 'Vikram',  'Nair',      'vikram.nair@example.com', '+91-9000000004', 'seed-password-hash-2204'),
-        ('ETP-2205', 'Sana',    'Qureshi',   'sana.qureshi@example.com', '+91-9000000005', 'seed-password-hash-2205'),
-        ('ETP-2206', 'Joseph',  'Mathew',    'joseph.mathew@example.com', '+91-9000000006', 'seed-password-hash-2206')
+        ('ETP-2201', 'Ananya',  'Iyer',       'ananya.iyer@example.com',  '+91-9000000001', 'ananya.iyer'),
+        ('ETP-2202', 'Rohit',   'Deshpande', 'rohit.deshpande@example.com', '+91-9000000002', 'rohit.deshpande'),
+        ('ETP-2203', 'Meera',   'Krishnan',  'meera.krishnan@example.com', '+91-9000000003', 'meera.krishnan'),
+        ('ETP-2204', 'Vikram',  'Nair',      'vikram.nair@example.com', '+91-9000000004', 'vikram.nair'),
+        ('ETP-2205', 'Sana',    'Qureshi',   'sana.qureshi@example.com', '+91-9000000005', 'sana.qureshi'),
+        ('ETP-2206', 'Joseph',  'Mathew',    'joseph.mathew@example.com', '+91-9000000006', 'joseph.mathew')
 ) AS v(
     account_reference,
     first_name,
     last_name,
     email,
     phone_no,
-    password_hash
+    username
 )
 JOIN accounts a
     ON a.account_reference = v.account_reference;
