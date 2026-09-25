@@ -62,6 +62,19 @@ These are created by:
 
 See `SECURITY_REVIEW.md` for the refresh-token revocation decision and residual-risk notes.
 
+## Security Review
+
+A comprehensive security review covering OWASP categories is documented in:
+- `SECURITY_REVIEW_CHECKLIST.md` — Matrix of findings and dispositions for:
+  - Broken Authentication
+  - Broken Access Control
+  - Token Leakage
+  - Replay Attacks
+  - Weak Secrets
+  - Refresh Token Revocation
+
+Each category includes a **Finding** (what was checked and how), a **Disposition** (accepted with rationale), and **Residual Risk** (acknowledged gaps). This document is reviewed and approved before each deployment.
+
 ## Environment variables
 
 Database:
