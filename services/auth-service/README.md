@@ -32,18 +32,25 @@ These are created by:
 ## Security choices
 
 - Passwords are hashed with `argon2id`
-- Default Argon2 time cost is `12`
+- Default Argon2 parameters are `time=3`, `memory=32768KB`, `parallelism=1`
 - Refresh tokens are opaque values and only the secret hash is stored in `refresh_tokens`
 - Every successful refresh rotates the token pair and issues a brand new refresh token
 - Reusing an already exchanged refresh token returns `AUTH-401` and revokes the whole refresh-token session lineage
 - Access tokens are signed with `HS256` using `JWT_SECRET`
 - Access token claims are exactly: `sub`, `accountId`, `roles`, `iat`, `exp`, `iss`
 
+### Logging policy
+
+- Use only the shared `src/app/common/logger.ts` logger for app logs.
+- Never pass an entire request body (for example `body`, `req.body`, or `request.body`) directly to `logger.info`, `logger.warn`, or `logger.error`.
+- If request data must be logged, log explicit fields only, or call `redact(...)` first.
+- `npm run check:log-safety` enforces this policy and is safe to run in CI or pre-commit hooks.
+
 ### Login Security
 
 **Timing Attack Prevention:**
 - Unknown usernames and wrong passwords return identical status (401 AUTH-401), identical error body, and comparable response timing
-- When a username is not found, the service still verifies the supplied password against a fixed dummy hash (same argon2 algorithm and parameters)
+- When a username is not found, the service still verifies the supplied password against a fixed dummy hash (same argon2 parameters)
 - This prevents attackers from using response times to enumerate valid usernames
 
 **Login Attempt Throttle:**
@@ -99,5 +106,6 @@ This document describes all four routes and their request/response schemas.
 npm run build
 npm test
 npm run test:e2e
+npm run check:log-safety
 ```
 

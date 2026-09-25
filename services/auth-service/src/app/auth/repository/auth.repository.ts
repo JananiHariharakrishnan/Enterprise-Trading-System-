@@ -21,7 +21,6 @@ export type CredentialRecord = {
   accountId: number;
   username: string;
   passwordHash: string;
-  algorithm: string;
   params: Record<string, unknown>;
   createdAt: string;
 };
@@ -42,13 +41,13 @@ export type RefreshTokenRecord = {
 
 const PASSWORD_HASH_OPTIONS = {
   type: argon2.argon2id,
-  timeCost: Number(process.env.ARGON2_TIME ?? 12),
+  timeCost: Number(process.env.ARGON2_TIME ?? 3),
   memoryCost: Number(process.env.ARGON2_MEMORY_KB ?? 32768),
   parallelism: Number(process.env.ARGON2_PARALLELISM ?? 1),
 };
 const REFRESH_TOKEN_BCRYPT_COST = Number(process.env.REFRESH_TOKEN_BCRYPT_COST ?? 12);
 const REFRESH_TOKEN_TTL_SECONDS = Number(process.env.REFRESH_TOKEN_TTL_SECONDS ?? 60 * 60 * 24 * 7);
-const DUMMY_ARGON_HASH = '$argon2id$v=19$m=65536,t=3,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+const DUMMY_ARGON_HASH = '$argon2id$v=19$m=32768,t=3,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
 export async function accountExists(accountId: number): Promise<boolean> {
   const result = await db.query(
@@ -207,7 +206,6 @@ export async function createCredential(accountId: number, username: string, plai
       account_id,
       username,
       password_hash,
-      algorithm,
       params,
       created_at,
       updated_at
@@ -216,14 +214,13 @@ export async function createCredential(accountId: number, username: string, plai
       $1,
       $2,
       $3,
-      $4,
-      $5::jsonb,
+      $4::jsonb,
       NOW(),
       NOW()
     )
     RETURNING *
     `,
-    [accountId, username, passwordHash, 'argon2id', JSON.stringify(params)],
+    [accountId, username, passwordHash, JSON.stringify(params)],
   );
 
   return mapCredentialRow(result.rows[0]);
@@ -249,7 +246,6 @@ export async function verifyPassword(stored: CredentialRecord | null, suppliedPa
   } catch (error) {
     logger.warn('password verification failed', {
       username: stored.username,
-      algorithm: stored.algorithm,
       error: error instanceof Error ? error.message : 'unknown',
     });
     return false;
@@ -420,7 +416,6 @@ function mapCredentialRow(row: any): CredentialRecord {
     accountId: Number(row.account_id),
     username: row.username,
     passwordHash: row.password_hash,
-    algorithm: row.algorithm,
     params: row.params ?? {},
     createdAt: new Date(row.created_at).toISOString(),
   };

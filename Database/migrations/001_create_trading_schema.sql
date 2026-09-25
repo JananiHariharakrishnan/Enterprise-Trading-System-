@@ -128,7 +128,6 @@ CREATE TABLE IF NOT EXISTS credentials(
     account_id    BIGINT       NOT NULL,
     username      VARCHAR(64)  NOT NULL,
     password_hash TEXT         NOT NULL,
-    algorithm     VARCHAR(64)  NOT NULL,
     params        JSONB        NOT NULL DEFAULT '{}'::JSONB,
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),

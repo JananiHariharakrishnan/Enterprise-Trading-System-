@@ -79,8 +79,7 @@ function createInMemoryDb() {
           account_id: Number(params[0]),
           username: params[1],
           password_hash: params[2],
-          algorithm: params[3],
-          params: JSON.parse(params[4]),
+          params: JSON.parse(params[3]),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };

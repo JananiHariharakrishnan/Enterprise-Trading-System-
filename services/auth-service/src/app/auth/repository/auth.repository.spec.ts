@@ -30,7 +30,6 @@ describe('credential repository', () => {
     await repo.createCredential(1, `${USERNAME}_hash`, PASSWORD);
     const stored = await repo.findCredentialByUsername(`${USERNAME}_hash`);
 
-    expect(stored?.algorithm).toBe('argon2id');
     expect(stored?.passwordHash.startsWith('$argon2id$')).toBe(true);
   });
 

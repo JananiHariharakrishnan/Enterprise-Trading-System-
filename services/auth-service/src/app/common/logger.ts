@@ -28,6 +28,22 @@ export function redact(input: unknown): unknown {
     return input.map((value) => redact(value));
   }
 
+  if (input instanceof Error) {
+    const errorView: Record<string, unknown> = {
+      name: input.name,
+      message: input.message,
+      stack: input.stack,
+    };
+
+    for (const [key, value] of Object.entries(input)) {
+      if (!(key in errorView)) {
+        errorView[key] = value;
+      }
+    }
+
+    return redact(errorView);
+  }
+
   const output: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(input)) {
