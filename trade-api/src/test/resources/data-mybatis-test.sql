@@ -1,4 +1,4 @@
-INSERT INTO accounts (
+INSERT INTO tradingsystem.accounts (
     id, account_reference, cash_balance, buying_power,
     status, version, last_updated
 )
@@ -7,7 +7,7 @@ VALUES (
     'ACTIVE', 1, TIMESTAMP '2026-09-01 10:00:00'
 );
 
-INSERT INTO accounts (
+INSERT INTO tradingsystem.accounts (
     id, account_reference, cash_balance, buying_power,
     status, version, last_updated
 )
@@ -16,22 +16,22 @@ VALUES (
     'ACTIVE', 1, TIMESTAMP '2026-09-01 11:00:00'
 );
 
-INSERT INTO instruments (symbol, name, asset_class, currency, tradable)
+INSERT INTO tradingsystem.instruments (symbol, name, asset_class, currency, tradable)
 VALUES ('AAPL', 'Apple Inc', 'EQUITY', 'USD', TRUE);
 
-INSERT INTO instruments (symbol, name, asset_class, currency, tradable)
+INSERT INTO tradingsystem.instruments (symbol, name, asset_class, currency, tradable)
 VALUES ('SPY', 'SPDR S&P 500 ETF Trust', 'ETF', 'USD', TRUE);
 
-INSERT INTO positions (account_id, symbol, qty, avg_cost, version)
+INSERT INTO tradingsystem.positions (account_id, symbol, qty, avg_cost, version)
 VALUES (1001, 'AAPL', 15, 171.50, 0);
 
-INSERT INTO positions (account_id, symbol, qty, avg_cost, version)
+INSERT INTO tradingsystem.positions (account_id, symbol, qty, avg_cost, version)
 VALUES (2002, 'AAPL', 20, 170.00, 0);
 
-INSERT INTO positions (account_id, symbol, qty, avg_cost, version)
+INSERT INTO tradingsystem.positions (account_id, symbol, qty, avg_cost, version)
 VALUES (1001, 'SPY', 0, 500.00, 0);
 
-INSERT INTO users (
+INSERT INTO tradingsystem.users (
     id, account_id, username, first_name, last_name, email, phone_no, roles, created_on
 )
 VALUES (
@@ -43,7 +43,7 @@ VALUES (
     TIMESTAMP '2026-09-01 10:05:00'
 );
 
-INSERT INTO users (
+INSERT INTO tradingsystem.users (
     id, account_id, username, first_name, last_name, email, phone_no, roles, created_on
 )
 VALUES (

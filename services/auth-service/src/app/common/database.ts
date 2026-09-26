@@ -34,7 +34,14 @@ export function createInMemoryDb() {
 
   return {
     async query(sql: string, params: any[] = []): Promise<QueryResult> {
-      const normalized = sql.replace(/\s+/g, ' ').trim().toUpperCase();
+      // Normalize whitespace, case, and strip schema prefixes (TRADINGSYSTEM., AUTHENTICATION.)
+      // so queries work both with and without explicit schema qualification.
+      const normalized = sql
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toUpperCase()
+        .replace(/\bTRADINGSYSTEM\./g, '')
+        .replace(/\bAUTHENTICATION\./g, '');
 
       if (normalized.includes('FROM ACCOUNTS') && normalized.includes('WHERE ID = $1')) {
         const found = accounts.find((row) => Number(row.id) === Number(params[0]));
@@ -71,6 +78,12 @@ export function createInMemoryDb() {
         };
         users.push(row);
         return { rows: [row], rowCount: 1 };
+      }
+
+      if (normalized.startsWith('UPDATE USERS')) {
+        const found = users.find((row) => row.id === params[0]);
+        if (!found) return { rows: [], rowCount: 0 };
+        return { rows: [found], rowCount: 1 };
       }
 
       if (normalized.startsWith('INSERT INTO CREDENTIALS')) {
@@ -159,4 +172,3 @@ export const db = isTest
         ? { connectionString: databaseUrl.startsWith('jdbc:') ? databaseUrl.replace(/^jdbc:/, '') : databaseUrl }
         : { host, port, database, user, password },
     );
-

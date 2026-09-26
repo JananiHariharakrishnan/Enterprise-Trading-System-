@@ -1,9 +1,15 @@
-DROP TABLE IF EXISTS orders;
-DROP TABLE IF EXISTS positions;
-DROP TABLE IF EXISTS instruments;
-DROP TABLE IF EXISTS accounts;
+-- Test schema for order-service integration tests.
+-- Uses H2-compatible SQL (no PostgreSQL-specific extensions).
+-- Tables are created in the tradingsystem schema to mirror production.
 
-CREATE TABLE accounts (
+CREATE SCHEMA IF NOT EXISTS tradingsystem;
+
+DROP TABLE IF EXISTS tradingsystem.orders;
+DROP TABLE IF EXISTS tradingsystem.positions;
+DROP TABLE IF EXISTS tradingsystem.instruments;
+DROP TABLE IF EXISTS tradingsystem.accounts;
+
+CREATE TABLE tradingsystem.accounts (
     id BIGINT PRIMARY KEY,
     account_reference VARCHAR(64) NOT NULL UNIQUE,
     cash_balance NUMERIC(18,2) NOT NULL,
@@ -13,7 +19,7 @@ CREATE TABLE accounts (
     last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE instruments (
+CREATE TABLE tradingsystem.instruments (
     symbol VARCHAR(20) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     asset_class VARCHAR(20) NOT NULL,
@@ -21,18 +27,18 @@ CREATE TABLE instruments (
     tradable BOOLEAN NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE positions (
+CREATE TABLE tradingsystem.positions (
     account_id BIGINT NOT NULL,
     symbol VARCHAR(20) NOT NULL,
     qty INT NOT NULL,
     avg_cost NUMERIC(18,2) NOT NULL,
     version INT NOT NULL DEFAULT 0,
     PRIMARY KEY (account_id, symbol),
-    CONSTRAINT fk_positions_account FOREIGN KEY (account_id) REFERENCES accounts (id),
-    CONSTRAINT fk_positions_instrument FOREIGN KEY (symbol) REFERENCES instruments (symbol)
+    CONSTRAINT fk_positions_account FOREIGN KEY (account_id) REFERENCES tradingsystem.accounts (id),
+    CONSTRAINT fk_positions_instrument FOREIGN KEY (symbol) REFERENCES tradingsystem.instruments (symbol)
 );
 
-CREATE TABLE orders (
+CREATE TABLE tradingsystem.orders (
     id UUID PRIMARY KEY,
     account_id BIGINT NOT NULL,
     symbol VARCHAR(20) NOT NULL,
@@ -43,7 +49,12 @@ CREATE TABLE orders (
     status VARCHAR(20) NOT NULL,
     idempotency_key VARCHAR(100) NOT NULL UNIQUE,
     created_on TIMESTAMP NOT NULL,
-    CONSTRAINT fk_orders_account FOREIGN KEY (account_id) REFERENCES accounts (id),
-    CONSTRAINT fk_orders_instrument FOREIGN KEY (symbol) REFERENCES instruments (symbol)
+    CONSTRAINT fk_orders_account FOREIGN KEY (account_id) REFERENCES tradingsystem.accounts (id),
+    CONSTRAINT fk_orders_instrument FOREIGN KEY (symbol) REFERENCES tradingsystem.instruments (symbol)
 );
 
+-- Synonyms in PUBLIC schema so unqualified queries (e.g. FROM accounts) resolve seamlessly in H2
+CREATE SYNONYM IF NOT EXISTS accounts FOR tradingsystem.accounts;
+CREATE SYNONYM IF NOT EXISTS instruments FOR tradingsystem.instruments;
+CREATE SYNONYM IF NOT EXISTS positions FOR tradingsystem.positions;
+CREATE SYNONYM IF NOT EXISTS orders FOR tradingsystem.orders;
