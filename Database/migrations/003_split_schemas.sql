@@ -47,7 +47,7 @@ BEGIN
     IF EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'fk_refresh_tokens_user'
-          AND conrelid = 'public.refresh_tokens'::regclass
+          AND conrelid = to_regclass('public.refresh_tokens')
     ) THEN
         ALTER TABLE public.refresh_tokens
             DROP CONSTRAINT fk_refresh_tokens_user;
@@ -62,7 +62,7 @@ BEGIN
     IF EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'fk_refresh_tokens_replaced_by'
-          AND conrelid = 'public.refresh_tokens'::regclass
+          AND conrelid = to_regclass('public.refresh_tokens')
     ) THEN
         ALTER TABLE public.refresh_tokens
             DROP CONSTRAINT fk_refresh_tokens_replaced_by;
@@ -137,7 +137,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'fk_refresh_tokens_user'
-          AND conrelid = 'authentication.refresh_tokens'::regclass
+          AND conrelid = to_regclass('authentication.refresh_tokens')
     ) THEN
         ALTER TABLE authentication.refresh_tokens
             ADD CONSTRAINT fk_refresh_tokens_user
@@ -154,7 +154,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'fk_refresh_tokens_replaced_by'
-          AND conrelid = 'authentication.refresh_tokens'::regclass
+          AND conrelid = to_regclass('authentication.refresh_tokens')
     ) THEN
         ALTER TABLE authentication.refresh_tokens
             ADD CONSTRAINT fk_refresh_tokens_replaced_by
@@ -189,7 +189,7 @@ BEGIN
     IF EXISTS (
         SELECT 1 FROM pg_trigger
         WHERE tgname = 'trg_accounts_prevent_closed_reactivation'
-          AND tgrelid = 'tradingsystem.accounts'::regclass
+          AND tgrelid = to_regclass('tradingsystem.accounts')
     ) THEN
         DROP TRIGGER trg_accounts_prevent_closed_reactivation
             ON tradingsystem.accounts;
