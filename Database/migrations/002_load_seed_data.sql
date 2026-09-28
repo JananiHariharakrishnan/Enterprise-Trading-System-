@@ -10,7 +10,7 @@ BEGIN;
 -- INSTRUMENTS
 -- -----------------------------------------------------------------------------
 
-INSERT INTO instruments (
+INSERT INTO tradingsystem.instruments (
     symbol,
     name,
     asset_class,
@@ -32,7 +32,7 @@ INSERT INTO instruments (
 -- account_reference is the stable business/customer reference.
 -- -----------------------------------------------------------------------------
 
-INSERT INTO accounts (
+INSERT INTO tradingsystem.accounts (
     account_reference,
     cash_balance,
     buying_power,
@@ -54,7 +54,7 @@ INSERT INTO accounts (
 -- account_id is resolved from account_reference.
 -- -----------------------------------------------------------------------------
 
-INSERT INTO users (
+INSERT INTO tradingsystem.users (
     account_id,
     username,
     first_name,
@@ -85,14 +85,14 @@ FROM (
     phone_no,
     username
 )
-JOIN accounts a
+JOIN tradingsystem.accounts a
     ON a.account_reference = v.account_reference;
 
 -- -----------------------------------------------------------------------------
 -- POSITIONS
 -- -----------------------------------------------------------------------------
 
-INSERT INTO positions (
+INSERT INTO tradingsystem.positions (
     account_id,
     symbol,
     qty,
@@ -115,7 +115,7 @@ FROM (
         ('ETP-2203', 'TATASTEEL.BO',  15,  163.00),
         ('ETP-2204', 'HDFCBANK.NS',   30, 1672.00)
 ) AS v(account_reference, symbol, qty, avg_cost)
-JOIN accounts a
+JOIN tradingsystem.accounts a
     ON a.account_reference = v.account_reference;
 
 -- -----------------------------------------------------------------------------
@@ -124,7 +124,7 @@ JOIN accounts a
 -- idempotency_key is unique by database constraint.
 -- -----------------------------------------------------------------------------
 
-INSERT INTO orders (
+INSERT INTO tradingsystem.orders (
     id,
     account_id,
     symbol,
@@ -182,7 +182,7 @@ FROM (
     idempotency_key,
     created_on
 )
-JOIN accounts a
+JOIN tradingsystem.accounts a
     ON a.account_reference = v.account_reference;
 
 -- -----------------------------------------------------------------------------
@@ -190,7 +190,7 @@ JOIN accounts a
 -- Only FILLED orders receive executions.
 -- -----------------------------------------------------------------------------
 
-INSERT INTO executions (
+INSERT INTO tradingsystem.executions (
     order_id,
     quantity,
     price,
@@ -217,7 +217,7 @@ FROM (
         ('1f0c8c10-7a41-4c01-9001-000000000013', 15,   163.00, '2026-06-17 12:06:02', 'f0c8c100-0000-0013-0000-000000000013'),
         ('1f0c8c10-7a41-4c01-9001-000000000016', 30,  1672.00, '2026-06-23 11:20:10', 'f0c8c100-0000-0016-0000-000000000016')
 ) AS v(order_id, quantity, price, executed_at, event_id)
-JOIN orders o
+JOIN tradingsystem.orders o
     ON o.id = v.order_id::UUID;
 
 

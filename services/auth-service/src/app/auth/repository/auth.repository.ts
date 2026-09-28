@@ -53,7 +53,7 @@ export async function accountExists(accountId: number): Promise<boolean> {
   const result = await db.query(
     `
     SELECT 1
-    FROM accounts
+    FROM tradingsystem.accounts
     WHERE id = $1
     LIMIT 1
     `,
@@ -67,7 +67,7 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
   const result = await db.query(
     `
     SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
-    FROM users
+    FROM tradingsystem.users
     WHERE username = $1
     LIMIT 1
     `,
@@ -81,7 +81,7 @@ export async function findUserById(id: string): Promise<UserRecord | null> {
   const result = await db.query(
     `
     SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
-    FROM users
+    FROM tradingsystem.users
     WHERE id = $1
     LIMIT 1
     `,
@@ -95,7 +95,7 @@ export async function findUserByAccountId(accountId: number): Promise<UserRecord
   const result = await db.query(
     `
     SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
-    FROM users
+    FROM tradingsystem.users
     WHERE account_id = $1
     LIMIT 1
     `,
@@ -151,7 +151,7 @@ export async function updateUserProfile(
   }
 
   const query = `
-    UPDATE users
+    UPDATE tradingsystem.users
     SET ${updateFields.join(', ')}
     WHERE id = $1
     RETURNING id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
@@ -170,7 +170,7 @@ export async function updateUserProfile(
 export async function createUser(username: string, accountId: number, roles: string[] = ['CUSTOMER']): Promise<UserRecord> {
   const result = await db.query(
     `
-    INSERT INTO users (
+    INSERT INTO tradingsystem.users (
       id,
       username,
       account_id,
@@ -201,7 +201,7 @@ export async function createCredential(accountId: number, username: string, plai
 
   const result = await db.query(
     `
-    INSERT INTO credentials (
+    INSERT INTO authentication.credentials (
       id,
       account_id,
       username,
@@ -227,7 +227,7 @@ export async function createCredential(accountId: number, username: string, plai
 }
 
 export async function findCredentialByUsername(username: string): Promise<CredentialRecord | null> {
-  const result = await db.query('SELECT * FROM credentials WHERE username = $1 LIMIT 1', [username]);
+  const result = await db.query('SELECT * FROM authentication.credentials WHERE username = $1 LIMIT 1', [username]);
   return result.rows[0] ? mapCredentialRow(result.rows[0]) : null;
 }
 
@@ -264,7 +264,7 @@ export async function saveRefreshToken(refreshToken: string, userId: string, ses
 
   const result = await db.query(
     `
-    INSERT INTO refresh_tokens (
+    INSERT INTO authentication.refresh_tokens (
       id,
       session_id,
       user_id,
@@ -297,7 +297,7 @@ export async function saveRefreshToken(refreshToken: string, userId: string, ses
   if (replacesTokenId) {
     await db.query(
       `
-      UPDATE refresh_tokens
+      UPDATE authentication.refresh_tokens
       SET replaced_by = $1, updated_at = NOW()
       WHERE id = $2
       `,
@@ -336,7 +336,7 @@ export async function consumeRefreshToken(refreshToken: string): Promise<Refresh
 
   const updated = await db.query(
     `
-    UPDATE refresh_tokens
+    UPDATE authentication.refresh_tokens
     SET consumed_at = NOW(), updated_at = NOW()
     WHERE id = $1
       AND consumed_at IS NULL
@@ -361,7 +361,7 @@ export async function consumeRefreshToken(refreshToken: string): Promise<Refresh
 export async function revokeRefreshTokenSession(sessionId: string): Promise<void> {
   await db.query(
     `
-    UPDATE refresh_tokens
+    UPDATE authentication.refresh_tokens
     SET revoked_at = NOW(), updated_at = NOW()
     WHERE session_id = $1
       AND revoked_at IS NULL
@@ -374,7 +374,7 @@ async function getRefreshTokenById(tokenId: string): Promise<RefreshTokenRecord 
   const result = await db.query(
     `
     SELECT id, session_id, user_id, token_hash, algorithm, expires_at, consumed_at, revoked_at, replaced_by, created_at, updated_at
-    FROM refresh_tokens
+    FROM authentication.refresh_tokens
     WHERE id = $1
     LIMIT 1
     `,
@@ -436,4 +436,3 @@ function mapRefreshTokenRow(row: any): RefreshTokenRecord {
     updatedAt: new Date(row.updated_at).toISOString(),
   };
 }
-

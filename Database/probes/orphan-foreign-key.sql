@@ -1,12 +1,12 @@
 -- Probe: an order must not reference an account that does not exist.
 --
 -- The account_id below is deliberately chosen to be absent from the seeded
--- accounts table.
+-- tradingsystem.accounts table.
 --
 -- Expected result:
 --   SQLSTATE 23503 (foreign key violation)
 
-INSERT INTO orders (
+INSERT INTO tradingsystem.orders (
     id,
     account_id,
     symbol,

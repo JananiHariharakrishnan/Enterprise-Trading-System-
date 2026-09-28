@@ -8,7 +8,7 @@
 --   First INSERT  -> succeeds
 --   Second INSERT -> SQLSTATE 23505 (unique violation)
 
-INSERT INTO orders (
+INSERT INTO tradingsystem.orders (
     id,
     account_id,
     symbol,
@@ -29,11 +29,11 @@ SELECT
     1500.00,
     'NEW',
     'probe-idempotency-001'
-FROM accounts a
+FROM tradingsystem.accounts a
 WHERE a.account_reference = 'ETP-2201';
 
 
-INSERT INTO orders (
+INSERT INTO tradingsystem.orders (
     id,
     account_id,
     symbol,
@@ -54,5 +54,5 @@ SELECT
     1510.00,
     'NEW',
     'probe-idempotency-001'
-FROM accounts a
+FROM tradingsystem.accounts a
 WHERE a.account_reference = 'ETP-2201';

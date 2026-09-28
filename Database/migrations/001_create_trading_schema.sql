@@ -16,12 +16,23 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- -----------------------------------------------------------------------------
+-- SCHEMAS
+-- -----------------------------------------------------------------------------
+
+CREATE SCHEMA IF NOT EXISTS tradingsystem;
+CREATE SCHEMA IF NOT EXISTS authentication;
+
+-- Set search_path for the duration of this session so FK resolution works
+-- without fully-qualified names inside this script.
+SET search_path TO tradingsystem, authentication, public;
+
+-- -----------------------------------------------------------------------------
 -- INSTRUMENTS
 -- A non-tradable instrument remains in the database so historical orders,
 -- executions, positions and watchlists can still resolve the symbol.
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS instruments(
+CREATE TABLE IF NOT EXISTS tradingsystem.instruments(
     symbol          VARCHAR(20) NOT NULL,
     name            VARCHAR(255) NOT NULL,
     asset_class     VARCHAR(20) NOT NULL,
@@ -51,7 +62,7 @@ CREATE TABLE IF NOT EXISTS instruments(
 -- SUSPENDED accounts may be returned to ACTIVE.
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE  IF NOT EXISTS accounts(
+CREATE TABLE IF NOT EXISTS tradingsystem.accounts(
     id                BIGINT GENERATED ALWAYS AS IDENTITY,
     account_reference VARCHAR(64)  NOT NULL,
     cash_balance      NUMERIC(18,2) NOT NULL,
@@ -85,7 +96,7 @@ CREATE TABLE  IF NOT EXISTS accounts(
 -- `account_id` remains unique, preserving the 1:1 relationship with accounts.
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE  IF NOT EXISTS users(
+CREATE TABLE IF NOT EXISTS tradingsystem.users(
     id               UUID         NOT NULL DEFAULT gen_random_uuid(),
     account_id       BIGINT       NOT NULL,
     username         VARCHAR(64)  NOT NULL,
@@ -104,7 +115,7 @@ CREATE TABLE  IF NOT EXISTS users(
 
     CONSTRAINT fk_users_account
         FOREIGN KEY (account_id)
-        REFERENCES accounts (id),
+        REFERENCES tradingsystem.accounts (id),
 
     CONSTRAINT uq_users_email UNIQUE (email),
 
@@ -121,9 +132,11 @@ CREATE TABLE  IF NOT EXISTS users(
 -- -----------------------------------------------------------------------------
 -- CREDENTIALS
 -- Passwords are stored separately from user profile fields.
+-- Lives in the authentication schema so that access can be restricted
+-- independently from the trading data.
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS credentials(
+CREATE TABLE IF NOT EXISTS authentication.credentials(
     id            UUID         NOT NULL DEFAULT gen_random_uuid(),
     account_id    BIGINT       NOT NULL,
     username      VARCHAR(64)  NOT NULL,
@@ -140,16 +153,18 @@ CREATE TABLE IF NOT EXISTS credentials(
 
     CONSTRAINT fk_credentials_account
         FOREIGN KEY (account_id)
-        REFERENCES accounts (id)
+        REFERENCES tradingsystem.accounts (id)
         ON DELETE CASCADE
 );
 
 -- -----------------------------------------------------------------------------
 -- REFRESH TOKENS
 -- Stores only a hash of the opaque refresh-token secret.
+-- Lives in the authentication schema alongside credentials.
+-- user_id is a cross-schema FK into tradingsystem.users.
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS refresh_tokens(
+CREATE TABLE IF NOT EXISTS authentication.refresh_tokens(
     id            UUID         NOT NULL,
     session_id    UUID         NOT NULL,
     user_id       UUID         NOT NULL,
@@ -166,12 +181,12 @@ CREATE TABLE IF NOT EXISTS refresh_tokens(
 
     CONSTRAINT fk_refresh_tokens_user
         FOREIGN KEY (user_id)
-        REFERENCES users (id)
+        REFERENCES tradingsystem.users (id)
         ON DELETE CASCADE,
 
     CONSTRAINT fk_refresh_tokens_replaced_by
         FOREIGN KEY (replaced_by)
-        REFERENCES refresh_tokens (id)
+        REFERENCES authentication.refresh_tokens (id)
         ON DELETE SET NULL
 );
 
@@ -186,7 +201,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens(
 -- duplicate-order guarantee: do not replace it with SELECT-then-INSERT logic.
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE  IF NOT EXISTS orders(
+CREATE TABLE IF NOT EXISTS tradingsystem.orders(
     id               UUID          NOT NULL,
     account_id       BIGINT        NOT NULL,
     symbol           VARCHAR(20)   NOT NULL,
@@ -202,11 +217,11 @@ CREATE TABLE  IF NOT EXISTS orders(
 
     CONSTRAINT fk_orders_account
         FOREIGN KEY (account_id)
-        REFERENCES accounts (id),
+        REFERENCES tradingsystem.accounts (id),
 
     CONSTRAINT fk_orders_instrument
         FOREIGN KEY (symbol)
-        REFERENCES instruments (symbol),
+        REFERENCES tradingsystem.instruments (symbol),
 
     CONSTRAINT uq_orders_idempotency_key
         UNIQUE (idempotency_key),
@@ -233,7 +248,7 @@ CREATE TABLE  IF NOT EXISTS orders(
 -- Each execution records the actual quantity, price and time.
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE  IF NOT EXISTS executions(
+CREATE TABLE IF NOT EXISTS tradingsystem.executions(
     id            BIGINT GENERATED ALWAYS AS IDENTITY,
     order_id      UUID          NOT NULL,
     quantity      INT           NOT NULL,
@@ -246,7 +261,7 @@ CREATE TABLE  IF NOT EXISTS executions(
 
     CONSTRAINT fk_executions_order
         FOREIGN KEY (order_id)
-        REFERENCES orders (id),
+        REFERENCES tradingsystem.orders (id),
 
     CONSTRAINT uq_executions_event_id
         UNIQUE (event_id),
@@ -264,7 +279,7 @@ CREATE TABLE  IF NOT EXISTS executions(
 -- Short selling is out of scope, so quantity cannot be negative.
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE  IF NOT EXISTS positions(
+CREATE TABLE IF NOT EXISTS tradingsystem.positions(
     account_id   BIGINT        NOT NULL,
     symbol       VARCHAR(20)   NOT NULL,
     qty          INT           NOT NULL,
@@ -275,11 +290,11 @@ CREATE TABLE  IF NOT EXISTS positions(
 
     CONSTRAINT fk_positions_account
         FOREIGN KEY (account_id)
-        REFERENCES accounts (id),
+        REFERENCES tradingsystem.accounts (id),
 
     CONSTRAINT fk_positions_instrument
         FOREIGN KEY (symbol)
-        REFERENCES instruments (symbol),
+        REFERENCES tradingsystem.instruments (symbol),
 
     CONSTRAINT ck_positions_qty_non_negative
         CHECK (qty >= 0),
@@ -304,7 +319,7 @@ CREATE TABLE  IF NOT EXISTS positions(
 -- an order.
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE  IF NOT EXISTS balance_history(
+CREATE TABLE IF NOT EXISTS tradingsystem.balance_history(
     id                BIGINT GENERATED ALWAYS AS IDENTITY,
     account_id        BIGINT        NOT NULL,
     type              VARCHAR(20)   NOT NULL,
@@ -315,11 +330,11 @@ CREATE TABLE  IF NOT EXISTS balance_history(
 
     CONSTRAINT fk_balance_history_account
         FOREIGN KEY (account_id)
-        REFERENCES accounts (id),
+        REFERENCES tradingsystem.accounts (id),
 
     CONSTRAINT fk_balance_history_order
         FOREIGN KEY (related_order_id)
-        REFERENCES orders (id),
+        REFERENCES tradingsystem.orders (id),
 
     CONSTRAINT ck_balance_history_type
         CHECK (type IN ('TRADE', 'DEPOSIT', 'WITHDRAWAL', 'FEE')),
@@ -334,7 +349,7 @@ CREATE TABLE  IF NOT EXISTS balance_history(
 -- Composite PK prevents the same account from adding the same symbol twice.
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE  IF NOT EXISTS watchlist(
+CREATE TABLE IF NOT EXISTS tradingsystem.watchlist(
     account_id   BIGINT       NOT NULL,
     symbol       VARCHAR(20)  NOT NULL,
     added_on     TIMESTAMP    NOT NULL DEFAULT NOW(),
@@ -343,11 +358,11 @@ CREATE TABLE  IF NOT EXISTS watchlist(
 
     CONSTRAINT fk_watchlist_account
         FOREIGN KEY (account_id)
-        REFERENCES accounts (id),
+        REFERENCES tradingsystem.accounts (id),
 
     CONSTRAINT fk_watchlist_instrument
         FOREIGN KEY (symbol)
-        REFERENCES instruments (symbol)
+        REFERENCES tradingsystem.instruments (symbol)
 );
 
 -- -----------------------------------------------------------------------------
@@ -362,7 +377,7 @@ CREATE TABLE  IF NOT EXISTS watchlist(
 -- reversible suspension.
 -- -----------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION prevent_closed_account_reactivation()
+CREATE OR REPLACE FUNCTION tradingsystem.prevent_closed_account_reactivation()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
@@ -376,62 +391,65 @@ END;
 $$;
 
 CREATE TRIGGER trg_accounts_prevent_closed_reactivation
-BEFORE UPDATE OF status ON accounts
+BEFORE UPDATE OF status ON tradingsystem.accounts
 FOR EACH ROW
-EXECUTE FUNCTION prevent_closed_account_reactivation();
+EXECUTE FUNCTION tradingsystem.prevent_closed_account_reactivation();
 
 -- -----------------------------------------------------------------------------
 -- INDEXES
 -- Foreign-key indexes are added for common account/instrument/order lookups.
 -- -----------------------------------------------------------------------------
 
-CREATE INDEX ix_orders_account_created
-    ON orders (account_id, created_on DESC);
+CREATE INDEX IF NOT EXISTS ix_orders_account_created
+    ON tradingsystem.orders (account_id, created_on DESC);
 
-CREATE INDEX ix_orders_status_new
-    ON orders (status)
+CREATE INDEX IF NOT EXISTS ix_orders_status_new
+    ON tradingsystem.orders (status)
     WHERE status = 'NEW';
 
-CREATE INDEX ix_orders_symbol_created
-    ON orders (symbol, created_on DESC);
+CREATE INDEX IF NOT EXISTS ix_orders_symbol_created
+    ON tradingsystem.orders (symbol, created_on DESC);
 
-CREATE INDEX ix_executions_order
-    ON executions (order_id);
+CREATE INDEX IF NOT EXISTS ix_executions_order
+    ON tradingsystem.executions (order_id);
 
-CREATE INDEX ix_executions_event_id
-    ON executions (event_id);
+CREATE INDEX IF NOT EXISTS ix_executions_event_id
+    ON tradingsystem.executions (event_id);
 
-CREATE INDEX ix_positions_symbol
-    ON positions (symbol);
+CREATE INDEX IF NOT EXISTS ix_positions_symbol
+    ON tradingsystem.positions (symbol);
 
-CREATE INDEX ix_positions_account_symbol_version
-    ON positions (account_id, symbol, version);
+CREATE INDEX IF NOT EXISTS ix_positions_account_symbol_version
+    ON tradingsystem.positions (account_id, symbol, version);
 
-CREATE INDEX ix_balance_history_account
-    ON balance_history (account_id);
+CREATE INDEX IF NOT EXISTS ix_balance_history_account
+    ON tradingsystem.balance_history (account_id);
 
-CREATE INDEX ix_balance_history_order
-    ON balance_history (related_order_id);
+CREATE INDEX IF NOT EXISTS ix_balance_history_order
+    ON tradingsystem.balance_history (related_order_id);
 
-CREATE INDEX ix_watchlist_symbol
-    ON watchlist (symbol);
+CREATE INDEX IF NOT EXISTS ix_watchlist_symbol
+    ON tradingsystem.watchlist (symbol);
 
-CREATE INDEX ix_refresh_tokens_user_id
-    ON refresh_tokens (user_id);
+CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id
+    ON authentication.refresh_tokens (user_id);
 
-CREATE INDEX ix_refresh_tokens_session_id
-    ON refresh_tokens (session_id);
+CREATE INDEX IF NOT EXISTS ix_refresh_tokens_session_id
+    ON authentication.refresh_tokens (session_id);
 
-CREATE INDEX ix_refresh_tokens_expires_at
-    ON refresh_tokens (expires_at);
+CREATE INDEX IF NOT EXISTS ix_refresh_tokens_expires_at
+    ON authentication.refresh_tokens (expires_at);
 
-COMMENT ON COLUMN executions.event_id IS
+COMMENT ON COLUMN tradingsystem.executions.event_id IS
     'Kafka event UUID for idempotency: if same event_id exists, execution already applied';
 
-COMMENT ON COLUMN executions.created_at IS
+COMMENT ON COLUMN tradingsystem.executions.created_at IS
     'Timestamp when execution was recorded, separate from executed_at (market time)';
 
-COMMENT ON COLUMN positions.version IS
+COMMENT ON COLUMN tradingsystem.positions.version IS
     'Optimistic lock version: incremented on each successful update. Used to detect concurrent modifications.';
+
+-- Set the database-level search_path so all connections default to the right schemas
+ALTER DATABASE trading SET search_path TO tradingsystem, authentication, public;
 
 COMMIT;
