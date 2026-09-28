@@ -1,0 +1,46 @@
+name: Verify generated API clients
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify-generated:
+    name: Check generated clients are up-to-date
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java (required by openapi generator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install npm deps
+        run: npm ci
+        working-directory: trade-ui
+
+      - name: Generate clients
+        run: npm run generate:contracts
+        working-directory: trade-ui
+
+      - name: Fail if generated output changed
+        run: |
+          # compare working tree with HEAD for the generated tree
+          if ! git diff --quiet -- src/app/generated; then
+            echo "Generated clients are stale. Regenerate and commit changes:"
+            echo "  cd trade-ui && npm run generate:contracts"
+            echo
+            git --no-pager diff -- src/app/generated || true
+            exit 1
+          fi

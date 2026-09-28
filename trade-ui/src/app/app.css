@@ -1,0 +1,16 @@
+:host {
+	display: block;
+	min-height: 100dvh;
+	background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+	color: #0f172a;
+}
+
+.app-shell {
+	min-height: 100dvh;
+}
+
+.app-main {
+	margin: 0 auto;
+	max-width: 56rem;
+	padding: 2rem 1rem;
+}

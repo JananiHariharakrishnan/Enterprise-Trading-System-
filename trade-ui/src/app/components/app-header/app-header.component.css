@@ -1,0 +1,27 @@
+.top-header {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.header-content {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 auto;
+  max-width: 56rem;
+  padding: 0.9rem 1rem;
+}
+
+.brand {
+  font-weight: 700;
+}
+
+button {
+  background: #f8fafc;
+  border: none;
+  border-radius: 8px;
+  color: #0f172a;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.45rem 0.75rem;
+}

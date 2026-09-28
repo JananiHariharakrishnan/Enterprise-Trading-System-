@@ -21,19 +21,21 @@ export class AuthController {
   }
 
   @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(200)
   login(@Body() body: LoginRequestDto) {
     return this.authService.login(body);
   }
 
   @Post('refresh')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @HttpCode(200)
   refresh(@Body() body: RefreshRequestDto) {
     return this.authService.refresh(body);
   }
 
   @Get('me')
+  @Throttle({ default: { limit: 120, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   me(@CurrentUser() user: AuthPayload) {

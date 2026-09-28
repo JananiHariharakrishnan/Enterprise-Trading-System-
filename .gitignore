@@ -177,3 +177,7 @@ dist/
 # ==========================
 
 Commands.md
+
+# Generated OpenAPI clients are intentionally committed (do not ignore this tree)
+!trade-ui/src/app/generated/
+!trade-ui/src/app/generated/**

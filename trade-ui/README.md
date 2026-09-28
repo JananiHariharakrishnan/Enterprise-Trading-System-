@@ -44,15 +44,35 @@ To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use th
 ng test
 ```
 
+## Authentication flow
+
+The app now includes a sign-in page at `/login` and a guarded dashboard at `/dashboard`.
+
+- Access and refresh tokens are stored in `sessionStorage`.
+- Sign-out is available from the top header and clears session state.
+- Stable test identifiers are provided for the auth journey (`username-input`, `password-input`, `sign-in-button`, `sign-out-button`).
+
 ## Running end-to-end tests
 
-For end-to-end (e2e) testing, run:
+Playwright tests are configured in this project and can boot both the UI and Auth service.
+
+Install browser binaries once:
 
 ```bash
-ng e2e
+npx playwright install chromium
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Run e2e tests:
+
+```bash
+npm run e2e
+```
+
+Run headed mode:
+
+```bash
+npm run e2e:headed
+```
 
 ## Additional Resources
 

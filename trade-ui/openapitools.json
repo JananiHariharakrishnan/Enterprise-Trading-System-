@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "generator-cli": {
+    "version": "7.8.0",
+    "generators": {
+      "auth-client": {
+        "generatorName": "typescript-fetch",
+        "inputSpec": "../contracts/auth-api.yaml",
+        "output": "src/app/generated/auth",
+        "skipValidateSpec": true,
+        "additionalProperties": {
+          "supportsES6": true,
+          "withInterfaces": true,
+          "modelPropertyNaming": "original"
+        }
+      },
+      "trade-client": {
+        "generatorName": "typescript-fetch",
+        "inputSpec": "../trade-api/src/main/resources/trade-api.yaml",
+        "output": "src/app/generated/trade",
+        "skipValidateSpec": true,
+        "additionalProperties": {
+          "supportsES6": true,
+          "withInterfaces": true,
+          "modelPropertyNaming": "original"
+        }
+      }
+    }
+  }
+}
