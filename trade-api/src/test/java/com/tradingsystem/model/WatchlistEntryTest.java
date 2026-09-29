@@ -2,7 +2,8 @@ package com.tradingsystem.model;
 
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -11,9 +12,9 @@ class WatchlistEntryTest {
     @Test
     void isRecentlyAdded_and_validate() {
         WatchlistEntry w = new WatchlistEntry();
-        w.setAccountId(5L);
+        w.setWatchlistId(5L);
         w.setSymbol("ABC");
-        w.setAddedOn(LocalDateTime.now());
+        w.setAddedOn(OffsetDateTime.now(ZoneOffset.UTC));
 
         assertTrue(w.isRecentlyAddedHours(1));
         w.validate();
@@ -23,9 +24,9 @@ class WatchlistEntryTest {
     @Test
     void isRecentlyAdded_falseForOld() {
         WatchlistEntry w = new WatchlistEntry();
-        w.setAccountId(5L);
+        w.setWatchlistId(5L);
         w.setSymbol("ABC");
-        w.setAddedOn(LocalDateTime.now().minusDays(2));
+        w.setAddedOn(OffsetDateTime.now(ZoneOffset.UTC).minusDays(2));
 
         assertFalse(w.isRecentlyAddedHours(1));
     }
@@ -33,7 +34,7 @@ class WatchlistEntryTest {
     @Test
     void validate_throwsForMissing() {
         WatchlistEntry w = new WatchlistEntry();
-        w.setAccountId(null);
+        w.setWatchlistId(null);
         w.setSymbol("");
         assertThrows(IllegalArgumentException.class, w::validate);
     }
