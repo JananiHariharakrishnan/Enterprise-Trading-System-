@@ -73,6 +73,8 @@ tags:
     description: Placing and cancelling orders.
   - name: Accounts
     description: Account details, cash balance, holdings and order history.
+  - name: Watchlists
+    description: Named account watchlists and their instrument memberships.
 
 security:
   - bearerAuth: []
@@ -365,6 +367,244 @@ paths:
         '404':
           $ref: '#/components/responses/AccountNotFound'
 
+  /api/v1/accounts/{id}/watchlists:
+    post:
+      tags: [Watchlists]
+      operationId: createWatchlist
+      summary: Create a watchlist
+      description: |
+        Creates a named watchlist for the authenticated account. The effective account is derived from
+        the bearer token. The `{id}` path parameter is validated against that identity and is never
+        trusted on its own.
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWatchlistRequest'
+      responses:
+        '201':
+          description: Watchlist created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchlistSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/AccountNotActive'
+        '404':
+          $ref: '#/components/responses/AccountNotFound'
+        '409':
+          description: A watchlist with that name already exists for the account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicateWatchlist:
+                  value:
+                    errorCode: WAT-409
+                    message: Watchlist already exists
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+    get:
+      tags: [Watchlists]
+      operationId: listWatchlists
+      summary: List watchlists
+      description: |
+        Returns all named watchlists for the authenticated account, newest first. The account is
+        derived from the security context and checked against the `{id}` path parameter.
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+      responses:
+        '200':
+          description: Watchlists for the account.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WatchlistSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/AccountNotActive'
+        '404':
+          $ref: '#/components/responses/AccountNotFound'
+
+  /api/v1/accounts/{id}/watchlists/{watchlistId}:
+    get:
+      tags: [Watchlists]
+      operationId: getWatchlist
+      summary: Get a watchlist
+      description: |
+        Returns one watchlist with every instrument in it, including the latest known market price
+        snapshot when available. Prices come from the existing `latest_market_prices` projection and
+        may be absent when no quote has been ingested yet.
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+        - $ref: '#/components/parameters/WatchlistIdPath'
+      responses:
+        '200':
+          description: Watchlist detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchlistDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/AccountNotActive'
+        '404':
+          description: The account or watchlist does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accountMissing:
+                  value:
+                    errorCode: ACC-404
+                    message: Account not found
+                watchlistMissing:
+                  value:
+                    errorCode: WAT-404
+                    message: Watchlist not found
+    delete:
+      tags: [Watchlists]
+      operationId: deleteWatchlist
+      summary: Delete a watchlist
+      description: |
+        Deletes the watchlist for the authenticated account. Membership rows are removed by the
+        existing database cascade.
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+        - $ref: '#/components/parameters/WatchlistIdPath'
+      responses:
+        '204':
+          description: Watchlist deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/AccountNotActive'
+        '404':
+          description: The account or watchlist does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accountMissing:
+                  value:
+                    errorCode: ACC-404
+                    message: Account not found
+                watchlistMissing:
+                  value:
+                    errorCode: WAT-404
+                    message: Watchlist not found
+
+  /api/v1/accounts/{id}/watchlists/{watchlistId}/instruments:
+    post:
+      tags: [Watchlists]
+      operationId: addWatchlistInstrument
+      summary: Add an instrument to a watchlist
+      description: |
+        Adds an existing instrument to the specified watchlist owned by the authenticated account.
+        The response includes the latest known price snapshot when one exists.
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+        - $ref: '#/components/parameters/WatchlistIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddWatchlistInstrumentRequest'
+      responses:
+        '201':
+          description: Instrument added to the watchlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchlistInstrumentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/AccountNotActive'
+        '404':
+          description: The account, watchlist or instrument does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accountMissing:
+                  value:
+                    errorCode: ACC-404
+                    message: Account not found
+                watchlistMissing:
+                  value:
+                    errorCode: WAT-404
+                    message: Watchlist not found
+                instrumentMissing:
+                  value:
+                    errorCode: INS-404
+                    message: Instrument not found
+        '409':
+          description: The instrument is already present in the watchlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicateInstrument:
+                  value:
+                    errorCode: WAT-409
+                    message: Instrument already in watchlist
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+
+  /api/v1/accounts/{id}/watchlists/{watchlistId}/instruments/{symbol}:
+    delete:
+      tags: [Watchlists]
+      operationId: removeWatchlistInstrument
+      summary: Remove an instrument from a watchlist
+      description: |
+        Removes one instrument from the specified watchlist owned by the authenticated account.
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+        - $ref: '#/components/parameters/WatchlistIdPath'
+        - $ref: '#/components/parameters/InstrumentSymbolPath'
+      responses:
+        '204':
+          description: Instrument removed from the watchlist.
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/AccountNotActive'
+        '404':
+          description: The account, watchlist or watchlist instrument does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accountMissing:
+                  value:
+                    errorCode: ACC-404
+                    message: Account not found
+                watchlistMissing:
+                  value:
+                    errorCode: WAT-404
+                    message: Watchlist not found
+                entryMissing:
+                  value:
+                    errorCode: WAT-404
+                    message: Watchlist instrument not found
+
 components:
 
   securitySchemes:
@@ -386,6 +626,26 @@ components:
         format: int64
         minimum: 1
       example: 1
+    WatchlistIdPath:
+      name: watchlistId
+      in: path
+      required: true
+      description: The numeric watchlist key, `WATCHLISTS.id`.
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+      example: 10
+    InstrumentSymbolPath:
+      name: symbol
+      in: path
+      required: true
+      description: Instrument symbol in the existing source-of-truth instrument reference.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 20
+      example: INFY.NS
 
   responses:
     Unauthorised:
@@ -421,6 +681,28 @@ components:
               value:
                 errorCode: ACC-403
                 message: Account not active
+    WatchlistNotFound:
+      description: No watchlist exists with that key for the authenticated account.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              value:
+                errorCode: WAT-404
+                message: Watchlist not found
+    WatchlistConflict:
+      description: The watchlist request violates a uniqueness rule.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            conflict:
+              value:
+                errorCode: WAT-409
+                message: Watchlist already exists
     InsufficientFunds:
       description: A buy order costs more than the available cash balance.
       content:
@@ -463,6 +745,11 @@ components:
       type: string
       enum: [ACTIVE, SUSPENDED, CLOSED]
       description: Only an ACTIVE account may place or cancel orders.
+
+    MarketState:
+      type: string
+      enum: [OPEN, CLOSED, PRE, POST, UNKNOWN]
+      description: State of the market session for the latest known quote.
 
     PlaceOrderRequest:
       type: object
@@ -669,6 +956,139 @@ components:
             leaves it unchanged, which is what makes realised profit and loss computable later.
           example: 25.50
 
+    CreateWatchlistRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Unique watchlist name within the authenticated account.
+          example: Tech
+
+    AddWatchlistInstrumentRequest:
+      type: object
+      additionalProperties: false
+      required: [symbol]
+      properties:
+        symbol:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Existing instrument symbol to add to the watchlist.
+          example: AAPL
+
+    LatestPriceResponse:
+      type: object
+      additionalProperties: false
+      required: [price, currency, marketState, stale, quoteAsOf]
+      properties:
+        price:
+          type: number
+          format: double
+          example: 232.71
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          example: USD
+        change:
+          type: [number, 'null']
+          format: double
+          example: 1.25
+        changePercent:
+          type: [number, 'null']
+          format: double
+          example: 0.54
+        previousClose:
+          type: [number, 'null']
+          format: double
+          example: 231.46
+        marketState:
+          $ref: '#/components/schemas/MarketState'
+        stale:
+          type: boolean
+          example: false
+        quoteAsOf:
+          type: string
+          format: date-time
+          example: '2026-09-29T10:20:00Z'
+
+    WatchlistInstrumentResponse:
+      type: object
+      additionalProperties: false
+      required: [symbol, addedOn]
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        addedOn:
+          type: string
+          format: date-time
+          example: '2026-09-29T10:15:30Z'
+        latestPrice:
+          oneOf:
+            - $ref: '#/components/schemas/LatestPriceResponse'
+            - type: 'null'
+
+    WatchlistSummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [id, name, entryCount, createdOn, updatedOn]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 10
+        name:
+          type: string
+          example: Tech
+        entryCount:
+          type: integer
+          format: int32
+          minimum: 0
+          example: 2
+        createdOn:
+          type: string
+          format: date-time
+          example: '2026-09-29T10:00:00Z'
+        updatedOn:
+          type: string
+          format: date-time
+          example: '2026-09-29T10:30:00Z'
+
+    WatchlistDetailResponse:
+      type: object
+      additionalProperties: false
+      required: [id, name, entryCount, createdOn, updatedOn, instruments]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 10
+        name:
+          type: string
+          example: Tech
+        entryCount:
+          type: integer
+          format: int32
+          minimum: 0
+          example: 2
+        createdOn:
+          type: string
+          format: date-time
+          example: '2026-09-29T10:00:00Z'
+        updatedOn:
+          type: string
+          format: date-time
+          example: '2026-09-29T10:30:00Z'
+        instruments:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchlistInstrumentResponse'
+
     ErrorResponse:
       type: object
       additionalProperties: false
@@ -679,7 +1099,7 @@ components:
       properties:
         errorCode:
           type: string
-          enum: [ACC-404, ACC-403, INS-404, ORD-400, ORD-409, VAL-422, AUTH-401]
+          enum: [ACC-404, ACC-403, INS-404, ORD-400, ORD-409, WAT-404, WAT-409, VAL-422, AUTH-401]
           description: |
             | Code | HTTP | Meaning |
             |---|---|---|
@@ -688,6 +1108,8 @@ components:
             | `INS-404` | 404 | Instrument not found or not tradable |
             | `ORD-400` | 400 | Insufficient funds |
             | `ORD-409` | 409 | Insufficient holdings, duplicate order, or order not cancellable |
+            | `WAT-404` | 404 | Watchlist or watchlist instrument not found |
+            | `WAT-409` | 409 | Duplicate watchlist name or duplicate watchlist instrument |
             | `VAL-422` | 422 | Invalid input |
             | `AUTH-401` | 401 | Unauthorised or invalid token |
           example: ORD-409
