@@ -1,5 +1,16 @@
 <section class="home-page" data-testid="home-page">
   <header class="home-header">
+    <button
+      type="button"
+      class="btn-theme-home"
+      (click)="toggleTheme()"
+      [title]="themeService.currentTheme() === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+      data-testid="home-theme-toggle-button"
+      aria-label="Toggle theme"
+    >
+      <span class="theme-icon" *ngIf="themeService.currentTheme() === 'dark'">☀️</span>
+      <span class="theme-icon" *ngIf="themeService.currentTheme() === 'light'">🌙</span>
+    </button>
     <div class="hero">
       <h1>Trading Platform</h1>
       <p>Manage your portfolio and place trades with confidence</p>
@@ -64,6 +75,14 @@
       <article class="feature">
         <h3>Market Data</h3>
         <p>Access current market data and historical information.</p>
+      </article>
+      <article class="feature">
+        <h3>Customized Trade Advice</h3>
+        <p>You are provided with BUY/SELL/HOLD guidance based on market trend.</p>
+      </article>
+      <article class="feature">
+        <h3>Cusotmer Notification</h3>
+        <p>Receive proactive real-time notifications.</p>
       </article>
     </div>
   </section>

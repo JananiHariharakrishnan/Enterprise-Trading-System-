@@ -1,13 +1,26 @@
 <header class="top-header">
   <div class="header-content">
     <span class="brand">Trade Platform</span>
-    <button
-      *ngIf="authSession.isAuthenticated()"
-      type="button"
-      (click)="onSignOut()"
-      data-testid="sign-out-button"
-    >
-      Sign out
-    </button>
+    <div class="header-actions">
+      <button
+        type="button"
+        class="btn-theme"
+        (click)="toggleTheme()"
+        [title]="themeService.currentTheme() === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+        data-testid="theme-toggle-button"
+        aria-label="Toggle theme"
+      >
+        <span class="theme-icon" *ngIf="themeService.currentTheme() === 'dark'">☀️</span>
+        <span class="theme-icon" *ngIf="themeService.currentTheme() === 'light'">🌙</span>
+      </button>
+      <button
+        *ngIf="authSession.isAuthenticated()"
+        type="button"
+        (click)="onSignOut()"
+        data-testid="sign-out-button"
+      >
+        Sign out
+      </button>
+    </div>
   </div>
 </header>

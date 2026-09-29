@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthSessionService } from '../../services/auth-session.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-home',
@@ -12,6 +13,7 @@ import { AuthSessionService } from '../../services/auth-session.service';
 })
 export class HomeComponent {
   readonly authSession = inject(AuthSessionService);
+  readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
 
   async navigateToDashboard(): Promise<void> {
@@ -24,5 +26,9 @@ export class HomeComponent {
 
   async navigateToRegister(): Promise<void> {
     await this.router.navigate(['/register']);
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 }

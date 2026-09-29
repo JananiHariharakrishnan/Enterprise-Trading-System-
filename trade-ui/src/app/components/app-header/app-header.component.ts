@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthSessionService } from '../../services/auth-session.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-app-header',
@@ -11,8 +12,13 @@ import { AuthSessionService } from '../../services/auth-session.service';
 })
 export class AppHeaderComponent {
   readonly authSession = inject(AuthSessionService);
+  readonly themeService = inject(ThemeService);
 
   async onSignOut(): Promise<void> {
     await this.authSession.logout();
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 }
