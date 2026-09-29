@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tradingsystem.mapper.WatchlistDataMapper">
+
+    <resultMap id="watchlistResultMap" type="com.tradingsystem.model.Watchlist">
+        <id property="id" column="id"/>
+        <result property="accountId" column="account_id"/>
+        <result property="name" column="name"/>
+        <result property="createdOn" column="created_on"/>
+        <result property="updatedOn" column="updated_on"/>
+        <result property="entryCount" column="entry_count"/>
+    </resultMap>
+
+    <resultMap id="watchlistEntryResultMap" type="com.tradingsystem.model.WatchlistEntry">
+        <id property="watchlistId" column="watchlist_id"/>
+        <id property="symbol" column="symbol"/>
+        <result property="addedOn" column="added_on"/>
+    </resultMap>
+
+    <resultMap id="instrumentResultMap" type="com.tradingsystem.model.Instrument">
+        <id property="symbol" column="symbol"/>
+        <result property="name" column="name"/>
+        <result property="assetClass" column="asset_class"/>
+        <result property="currency" column="currency"/>
+        <result property="tradable" column="tradable"/>
+    </resultMap>
+
+    <insert id="insertWatchlist" parameterType="com.tradingsystem.model.Watchlist"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO watchlists (
+            account_id,
+            name,
+            created_on,
+            updated_on
+        ) VALUES (
+            #{accountId},
+            #{name},
+            COALESCE(#{createdOn}, CURRENT_TIMESTAMP),
+            COALESCE(#{updatedOn}, CURRENT_TIMESTAMP)
+        )
+    </insert>
+
+    <select id="findWatchlistsByAccountId" resultMap="watchlistResultMap">
+        SELECT
+            w.id,
+            w.account_id,
+            w.name,
+            w.created_on,
+            w.updated_on,
+            COUNT(e.symbol) AS entry_count
+        FROM watchlists w
+        LEFT JOIN watchlist_entries e
+            ON e.watchlist_id = w.id
+        WHERE w.account_id = #{accountId}
+        GROUP BY
+            w.id,
+            w.account_id,
+            w.name,
+            w.created_on,
+            w.updated_on
+        ORDER BY w.created_on DESC, w.id DESC
+    </select>
+
+    <select id="findWatchlistById" resultMap="watchlistResultMap">
+        SELECT
+            w.id,
+            w.account_id,
+            w.name,
+            w.created_on,
+            w.updated_on,
+            COUNT(e.symbol) AS entry_count
+        FROM watchlists w
+        LEFT JOIN watchlist_entries e
+            ON e.watchlist_id = w.id
+        WHERE w.id = #{watchlistId}
+        GROUP BY
+            w.id,
+            w.account_id,
+            w.name,
+            w.created_on,
+            w.updated_on
+    </select>
+
+    <select id="findWatchlistByAccountIdAndId" resultMap="watchlistResultMap">
+        SELECT
+            w.id,
+            w.account_id,
+            w.name,
+            w.created_on,
+            w.updated_on,
+            COUNT(e.symbol) AS entry_count
+        FROM watchlists w
+        LEFT JOIN watchlist_entries e
+            ON e.watchlist_id = w.id
+        WHERE w.account_id = #{accountId}
+          AND w.id = #{watchlistId}
+        GROUP BY
+            w.id,
+            w.account_id,
+            w.name,
+            w.created_on,
+            w.updated_on
+    </select>
+
+    <update id="updateWatchlistName">
+        UPDATE watchlists
+        SET
+            name = #{name},
+            updated_on = CURRENT_TIMESTAMP
+        WHERE account_id = #{accountId}
+          AND id = #{watchlistId}
+    </update>
+
+    <delete id="deleteWatchlist">
+        DELETE FROM watchlists
+        WHERE account_id = #{accountId}
+          AND id = #{watchlistId}
+    </delete>
+
+    <select id="findInstrumentBySymbol" resultMap="instrumentResultMap">
+        SELECT
+            symbol,
+            name,
+            asset_class,
+            currency,
+            tradable
+        FROM instruments
+        WHERE symbol = #{symbol}
+    </select>
+
+    <insert id="insertWatchlistEntry" parameterType="com.tradingsystem.model.WatchlistEntry">
+        INSERT INTO watchlist_entries (
+            watchlist_id,
+            symbol,
+            added_on
+        ) VALUES (
+            #{watchlistId},
+            #{symbol},
+            COALESCE(#{addedOn}, CURRENT_TIMESTAMP)
+        )
+    </insert>
+
+    <delete id="deleteWatchlistEntry">
+        DELETE FROM watchlist_entries
+        WHERE watchlist_id = #{watchlistId}
+          AND symbol = #{symbol}
+    </delete>
+
+    <select id="findEntriesByWatchlistId" resultMap="watchlistEntryResultMap">
+        SELECT
+            watchlist_id,
+            symbol,
+            added_on
+        FROM watchlist_entries
+        WHERE watchlist_id = #{watchlistId}
+        ORDER BY added_on ASC, symbol ASC
+    </select>
+
+    <select id="existsSymbolInWatchlist" resultType="boolean">
+        SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+        FROM watchlist_entries
+        WHERE watchlist_id = #{watchlistId}
+          AND symbol = #{symbol}
+    </select>
+
+</mapper>
+
