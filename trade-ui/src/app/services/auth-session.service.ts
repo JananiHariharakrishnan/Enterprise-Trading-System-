@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { LoginRequest, ResponseError, UserResponse } from '../generated/auth';
+import { LoginRequest, RegisterRequest, ResponseError, UserResponse } from '../generated/auth';
 import { AuthApiClientService } from './auth-api-client.service';
 import { TokenStorageService } from './token-storage.service';
 
@@ -28,6 +28,18 @@ export class AuthSessionService {
       this.isAuthenticatedSignal.set(true);
       // Best effort profile load; successful token issuance should still allow navigation.
       await this.loadCurrentUser(false);
+    } catch (error) {
+      throw new Error(await this.toReadableError(error));
+    }
+  }
+
+  async register(username: string, password: string, accountId: number): Promise<void> {
+    const payload: RegisterRequest = { username, password, accountId };
+
+    try {
+      await this.authApi.client.authRegisterPost({ registerRequest: payload });
+      // After successful registration, automatically log in
+      await this.login(username, password);
     } catch (error) {
       throw new Error(await this.toReadableError(error));
     }
@@ -73,6 +85,10 @@ export class AuthSessionService {
     this.currentUserSignal.set(null);
     this.isAuthenticatedSignal.set(false);
     await this.router.navigate(['/login']);
+  }
+
+  clearCurrentUserCache(): void {
+    this.currentUserSignal.set(null);
   }
 
   getAccessToken(): string | null {

@@ -1,8 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { AppHeaderComponent } from './app-header.component';
 
 class AuthSessionServiceStub {
+  isAuthenticated = vi.fn(() => true);
   logout = vi.fn().mockResolvedValue(undefined);
 }
 

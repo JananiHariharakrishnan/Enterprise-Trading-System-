@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router } from '@angular/router';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DashboardComponent } from './dashboard.component';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
@@ -79,6 +81,14 @@ describe('DashboardComponent', () => {
         {
           provide: TradeApiClientService,
           useValue: tradeApi
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { params: {} }
+        },
+        {
+          provide: Router,
+          useValue: { navigate: vi.fn() }
         }
       ]
     }).compileComponents();

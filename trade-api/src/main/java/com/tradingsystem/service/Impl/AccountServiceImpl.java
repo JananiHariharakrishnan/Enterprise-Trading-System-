@@ -45,6 +45,7 @@ public class AccountServiceImpl implements AccountService {
         response.setAccountId(account.getAccountReference());
         response.setHolderName(holderName);
         response.setCashBalance(account.getCashBalance());
+        response.setBuyingPower(account.getBuyingPower());
 
         if (account.getStatus() != null) {
             response.setStatus(account.getStatus().name());

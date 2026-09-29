@@ -1,5 +1,6 @@
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AccountResponse, BalanceResponse, OrderHistoryEntry, PositionResponse } from '../../generated/trade';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
@@ -7,11 +8,11 @@ import { TradeApiClientService } from '../../services/trade-api-client.service';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, CurrencyPipe, DatePipe, RouterLink],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   readonly authSession = inject(AuthSessionService);
   private readonly tradeApi = inject(TradeApiClientService);
 
@@ -22,12 +23,16 @@ export class DashboardComponent {
   readonly positions = signal<PositionResponse[]>([]);
   readonly orders = signal<OrderHistoryEntry[]>([]);
 
-  constructor() {
-    void this.loadDashboard();
+  ngOnInit(): void {
+    this.loadDashboard();
   }
 
   async refresh(): Promise<void> {
     await this.loadDashboard();
+  }
+
+  logout(): void {
+    void this.authSession.logout();
   }
 
   private async loadDashboard(): Promise<void> {

@@ -55,6 +55,12 @@ export interface AccountResponse {
      */
     cashBalance: number;
     /**
+     * Amount available for placing new orders, to two decimal places.
+     * @type {number}
+     * @memberof AccountResponse
+     */
+    buyingPower: number;
+    /**
      * 
      * @type {AccountStatus}
      * @memberof AccountResponse
@@ -84,6 +90,7 @@ export function instanceOfAccountResponse(value: object): value is AccountRespon
     if (!('accountId' in value) || value['accountId'] === undefined) return false;
     if (!('holderName' in value) || value['holderName'] === undefined) return false;
     if (!('cashBalance' in value) || value['cashBalance'] === undefined) return false;
+    if (!('buyingPower' in value) || value['buyingPower'] === undefined) return false;
     if (!('status' in value) || value['status'] === undefined) return false;
     if (!('version' in value) || value['version'] === undefined) return false;
     if (!('lastUpdated' in value) || value['lastUpdated'] === undefined) return false;
@@ -105,6 +112,7 @@ export function AccountResponseFromJSONTyped(json: any, ignoreDiscriminator: boo
         'accountId': json['accountId'],
         'holderName': json['holderName'],
         'cashBalance': json['cashBalance'],
+        'buyingPower': json['buyingPower'],
         'status': AccountStatusFromJSON(json['status']),
         'version': json['version'],
         'lastUpdated': (new Date(json['lastUpdated'])),
@@ -122,6 +130,7 @@ export function AccountResponseToJSON(value?: AccountResponse | null): any {
         'accountId': value['accountId'],
         'holderName': value['holderName'],
         'cashBalance': value['cashBalance'],
+        'buyingPower': value['buyingPower'],
         'status': AccountStatusToJSON(value['status']),
         'version': value['version'],
         'lastUpdated': ((value['lastUpdated']).toISOString()),

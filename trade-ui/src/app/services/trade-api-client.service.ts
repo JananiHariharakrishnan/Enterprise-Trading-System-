@@ -12,7 +12,7 @@ export class TradeApiClientService {
 
   constructor(@Inject(PLATFORM_AUTH_MIDDLEWARE) platformAuthMiddleware: Middleware) {
     const configuration = new Configuration({
-      basePath: 'http://localhost:8080',
+      basePath: 'http://localhost:8888',
       middleware: [platformAuthMiddleware]
     });
 

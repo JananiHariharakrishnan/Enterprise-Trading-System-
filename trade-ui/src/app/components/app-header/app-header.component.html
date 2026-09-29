@@ -2,6 +2,7 @@
   <div class="header-content">
     <span class="brand">Trade Platform</span>
     <button
+      *ngIf="authSession.isAuthenticated()"
       type="button"
       (click)="onSignOut()"
       data-testid="sign-out-button"

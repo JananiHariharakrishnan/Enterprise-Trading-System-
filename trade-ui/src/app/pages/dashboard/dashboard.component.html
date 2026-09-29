@@ -6,7 +6,11 @@
         Signed in as <strong>{{ user.username }}</strong>.
       </p>
     </div>
-    <button type="button" class="secondary" (click)="refresh()" data-testid="refresh-dashboard-button">Refresh</button>
+    <div class="header-actions">
+      <button type="button" class="secondary" routerLink="/profile" data-testid="profile-link-button">My Profile</button>
+      <button type="button" class="secondary" (click)="refresh()" data-testid="refresh-dashboard-button">Refresh</button>
+      <button type="button" class="secondary danger" (click)="logout()" data-testid="logout-button">Sign Out</button>
+    </div>
   </header>
 
   <p *ngIf="isLoading()" class="status" data-testid="dashboard-loading">Loading your account data...</p>
@@ -26,7 +30,7 @@
         </div>
         <div>
           <span class="label">Holder</span>
-          <strong>{{ account.holderName }}</strong>
+          <strong>{{ account.holderName || 'N/A' }}</strong>
         </div>
         <div>
           <span class="label">Status</span>
@@ -35,6 +39,10 @@
         <div *ngIf="balance() as balance">
           <span class="label">Cash Balance</span>
           <strong>{{ balance.cashBalance | currency:balance.currency:'symbol':'1.2-2' }}</strong>
+        </div>
+        <div *ngIf="account['buyingPower'] !== undefined && account['buyingPower'] !== null">
+          <span class="label">Buying Power</span>
+          <strong>{{ account['buyingPower'] | currency }}</strong>
         </div>
       </div>
     </section>

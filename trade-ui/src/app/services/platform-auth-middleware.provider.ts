@@ -9,7 +9,7 @@ export function createPlatformAuthMiddleware(tokenStorage: TokenStorageService):
   const baseHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
   return {
     pre: createTokenInterceptor(tokenStorage, {
-      allowedOrigins: [`http://${baseHost}:8080`, `http://${baseHost}:3000`],
+      allowedOrigins: [`http://${baseHost}:8888`, `http://${baseHost}:3000`],
       unauthenticatedPaths: ['/auth/login', '/auth/register', '/auth/refresh']
     })
   };

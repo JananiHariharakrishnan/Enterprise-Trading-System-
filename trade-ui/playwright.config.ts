@@ -5,6 +5,10 @@ export default defineConfig({
   timeout: 45_000,
   fullyParallel: false,
   retries: 0,
+  reporter: [
+    ['html', { outputFolder: 'playwright-report' }],
+    ['list']
+  ],
   use: {
     baseURL: 'http://localhost:4200',
     trace: 'on-first-retry'
