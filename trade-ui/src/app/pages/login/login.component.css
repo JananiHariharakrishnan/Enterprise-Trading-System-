@@ -1,0 +1,81 @@
+:host {
+  display: block;
+}
+
+.signin-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+  margin: 3rem auto;
+  max-width: 28rem;
+  padding: 1.5rem;
+}
+
+h1 {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+p {
+  color: #475569;
+  margin-top: 0.4rem;
+}
+
+form {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1.2rem;
+}
+
+label {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+input {
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  font-size: 1rem;
+  padding: 0.62rem 0.74rem;
+}
+
+input:focus {
+  border-color: #0369a1;
+  box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.15);
+  outline: none;
+}
+
+button {
+  background: #0f172a;
+  border: none;
+  border-radius: 8px;
+  color: #f8fafc;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  padding: 0.72rem 0.9rem;
+}
+
+button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.validation-error,
+.api-error {
+  border-radius: 8px;
+  margin: 0;
+  padding: 0.6rem 0.7rem;
+}
+
+.validation-error {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.api-error {
+  background: #fef2f2;
+  color: #991b1b;
+}

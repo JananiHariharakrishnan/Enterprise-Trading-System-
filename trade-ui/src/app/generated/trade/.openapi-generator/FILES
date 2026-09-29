@@ -1,0 +1,17 @@
+.openapi-generator-ignore
+apis/AccountsApi.ts
+apis/OrdersApi.ts
+apis/index.ts
+index.ts
+models/AccountResponse.ts
+models/AccountStatus.ts
+models/BalanceResponse.ts
+models/ErrorResponse.ts
+models/OrderHistoryEntry.ts
+models/OrderResponse.ts
+models/OrderSide.ts
+models/OrderStatus.ts
+models/PlaceOrderRequest.ts
+models/PositionResponse.ts
+models/index.ts
+runtime.ts
