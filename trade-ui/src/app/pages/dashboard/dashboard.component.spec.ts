@@ -1,9 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { ActivatedRoute, Router } from '@angular/router';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DashboardComponent } from './dashboard.component';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
+// Removed raw template/style imports; rely on TestBed to compile component resources.
 
 class AuthSessionServiceStub {
   currentUser = vi.fn(() => ({
@@ -70,6 +73,8 @@ describe('DashboardComponent', () => {
   beforeEach(async () => {
     authSession = new AuthSessionServiceStub();
     tradeApi = new TradeApiClientServiceStub();
+
+    // Component resources are provided centrally in src/test-setup.ts
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],

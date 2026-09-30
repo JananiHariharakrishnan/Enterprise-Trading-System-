@@ -1,11 +1,44 @@
 import { defineConfig } from 'vitest/config';
-import vue from '@vitejs/plugin-vue';
+import angular from '@analogjs/vite-plugin-angular';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default defineConfig({
+  plugins: [
+    angular(),
+  ],
+
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['src/**/*.spec.ts'],
-    exclude: ['e2e/**', 'node_modules/**']
-  }
+
+    setupFiles: [
+      resolve(__dirname, 'src/test-setup.ts'),
+    ],
+
+    include: [
+      'src/**/*.spec.ts',
+    ],
+
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/e2e/**',
+    ],
+
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/e2e/**',
+        '**/*.spec.ts',
+        '**/generated/**',
+      ],
+    },
+  },
 });

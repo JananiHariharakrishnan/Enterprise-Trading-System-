@@ -27,17 +27,16 @@ describe('authGuard', () => {
   it('redirects to login when token is missing', async () => {
     authSession.isAuthenticated.mockReturnValue(false);
 
-    const result = await TestBed.runInInjectionContext(() => authGuard({} as any, {} as any));
+    const result = await TestBed.runInInjectionContext(() => authGuard({} as any, { url: '/orders' } as any));
 
-    expect(result).toEqual(router.createUrlTree(['/login']));
+    expect(result).toEqual(router.createUrlTree(['/login'], { queryParams: { returnUrl: '/orders' } }));
   });
 
   it('redirects to login when profile verification fails', async () => {
     authSession.loadCurrentUser.mockResolvedValue(null);
+    const result = await TestBed.runInInjectionContext(() => authGuard({} as any, { url: '/positions' } as any));
 
-    const result = await TestBed.runInInjectionContext(() => authGuard({} as any, {} as any));
-
-    expect(result).toEqual(router.createUrlTree(['/login']));
+    expect(result).toEqual(router.createUrlTree(['/login'], { queryParams: { returnUrl: '/positions' } }));
   });
 
   it('allows dashboard route when session and profile are valid', async () => {

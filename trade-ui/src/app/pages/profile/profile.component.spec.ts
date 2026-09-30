@@ -1,10 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ProfileComponent } from './profile.component';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { AuthApiClientService } from '../../services/auth-api-client.service';
+// Removed raw template/style imports; rely on TestBed to compile component resources.
 
 describe('ProfileComponent', () => {
   let component: ProfileComponent;
@@ -28,6 +31,8 @@ describe('ProfileComponent', () => {
     mockRouter = {
       navigate: vi.fn()
     } as unknown as Router;
+
+    // Component resources are provided centrally in src/test-setup.ts
 
     await TestBed.configureTestingModule({
       imports: [ProfileComponent, ReactiveFormsModule],

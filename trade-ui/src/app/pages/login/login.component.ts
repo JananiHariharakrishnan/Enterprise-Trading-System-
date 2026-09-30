@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthSessionService } from '../../services/auth-session.service';
 
 @Component({
@@ -14,6 +14,7 @@ export class LoginComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly authSession = inject(AuthSessionService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly isSubmitting = signal(false);
   readonly submitError = signal<string | null>(null);
@@ -36,7 +37,16 @@ export class LoginComponent {
     try {
       const { username, password } = this.form.getRawValue();
       await this.authSession.login(username, password);
-      await this.router.navigate(['/dashboard']);
+
+      // Honour a returnUrl only if it is a same-origin path (starts with '/').
+      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || undefined;
+      const safeReturn = returnUrl && returnUrl.startsWith('/') ? returnUrl : undefined;
+
+      if (safeReturn) {
+        await this.router.navigateByUrl(safeReturn);
+      } else {
+        await this.router.navigate(['/dashboard']);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to sign in right now. Please try again.';
       this.submitError.set(message);

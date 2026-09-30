@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { Router } from '@angular/router';
 import { provideRouter } from '@angular/router';
 import { routes } from '../../app.routes';
@@ -6,6 +8,7 @@ import { AuthSessionService } from '../../services/auth-session.service';
 import { HomeComponent } from './home.component';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { signal } from '@angular/core';
+// Removed raw template/style imports; rely on TestBed to compile component resources.
 
 class AuthSessionServiceStub {
   isAuthenticated = signal(false);
@@ -19,6 +22,8 @@ describe('HomeComponent', () => {
   let router: Router;
 
   beforeEach(async () => {
+    // Component resources are provided centrally in src/test-setup.ts
+
     await TestBed.configureTestingModule({
       imports: [HomeComponent],
       providers: [
