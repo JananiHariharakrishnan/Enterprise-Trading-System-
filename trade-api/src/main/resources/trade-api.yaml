@@ -871,7 +871,7 @@ components:
     AccountResponse:
       type: object
       additionalProperties: false
-      required: [id, accountId, holderName, cashBalance, status, version, lastUpdated]
+      required: [id, accountId, holderName, cashBalance, buyingPower, status, version, lastUpdated]
       properties:
         id:
           type: integer
@@ -893,6 +893,11 @@ components:
           type: number
           format: double
           description: Available cash, to two decimal places.
+          example: 24500.75
+        buyingPower:
+          type: number
+          format: double
+          description: Amount available for placing new orders, to two decimal places.
           example: 24500.75
         status:
           $ref: '#/components/schemas/AccountStatus'

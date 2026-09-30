@@ -57,5 +57,5 @@ describe('jwt auth guard helpers', () => {
     expect(tokens.verifyAuthorizationHeader('Bearer')).toEqual({ ok: false, error: 'AUTH-401' });
     expect(tokens.verifyAuthorizationHeader('NotBearer token')).toEqual({ ok: false, error: 'AUTH-401' });
   });
-});
+});``
 

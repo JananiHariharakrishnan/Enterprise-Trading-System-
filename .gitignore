@@ -64,6 +64,7 @@ target/
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache
 
 # Virtual environments
 venv/
@@ -177,3 +178,7 @@ dist/
 # ==========================
 
 Commands.md
+
+# Generated OpenAPI clients are intentionally committed (do not ignore this tree)
+!trade-ui/src/app/generated/
+!trade-ui/src/app/generated/**

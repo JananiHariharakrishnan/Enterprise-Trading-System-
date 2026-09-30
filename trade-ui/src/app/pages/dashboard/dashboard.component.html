@@ -1,0 +1,100 @@
+<section class="dashboard" data-testid="dashboard-home">
+  <header class="dashboard-header">
+    <div>
+      <h1>Trading Dashboard</h1>
+      <p *ngIf="authSession.currentUser() as user">
+        Signed in as <strong>{{ user.username }}</strong>.
+      </p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="secondary" routerLink="/profile" data-testid="profile-link-button">My Profile</button>
+      <button type="button" class="secondary" (click)="refresh()" data-testid="refresh-dashboard-button">Refresh</button>
+      <button type="button" class="secondary danger" (click)="logout()" data-testid="logout-button">Sign Out</button>
+    </div>
+  </header>
+
+  <p *ngIf="isLoading()" class="status" data-testid="dashboard-loading">Loading your account data...</p>
+
+  <div *ngIf="loadError() as error" class="status status-error" data-testid="dashboard-error">
+    <p>{{ error }}</p>
+    <button type="button" class="secondary" (click)="refresh()">Retry</button>
+  </div>
+
+  <ng-container *ngIf="!isLoading() && !loadError()">
+    <section class="dashboard-card" *ngIf="account() as account" data-testid="account-summary">
+      <h2>Account Summary</h2>
+      <div class="summary-grid">
+        <div>
+          <span class="label">Account ID</span>
+          <strong>{{ account.accountId }}</strong>
+        </div>
+        <div>
+          <span class="label">Holder</span>
+          <strong>{{ account.holderName || 'N/A' }}</strong>
+        </div>
+        <div>
+          <span class="label">Status</span>
+          <strong>{{ account.status }}</strong>
+        </div>
+        <div *ngIf="balance() as balance">
+          <span class="label">Cash Balance</span>
+          <strong>{{ balance.cashBalance | currency:balance.currency:'symbol':'1.2-2' }}</strong>
+        </div>
+        <div *ngIf="account['buyingPower'] !== undefined && account['buyingPower'] !== null">
+          <span class="label">Buying Power</span>
+          <strong>{{ account['buyingPower'] | currency }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="dashboard-card" data-testid="positions-list">
+      <h2>Positions</h2>
+      <p *ngIf="positions().length === 0" class="status">No open positions.</p>
+      <table *ngIf="positions().length > 0">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Quantity</th>
+            <th>Average Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let position of positions()">
+            <td>{{ position.symbol }}</td>
+            <td>{{ position.quantity }}</td>
+            <td>{{ position.averageCost | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="dashboard-card" data-testid="orders-list">
+      <h2>Recent Orders</h2>
+      <p *ngIf="orders().length === 0" class="status">No orders found.</p>
+      <table *ngIf="orders().length > 0">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Symbol</th>
+            <th>Side</th>
+            <th>Status</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let order of orders()">
+            <td>{{ order.orderId }}</td>
+            <td>{{ order.symbol }}</td>
+            <td>{{ order.side }}</td>
+            <td>{{ order.status }}</td>
+            <td>{{ order.quantity }}</td>
+            <td>{{ order.price | number:'1.2-2' }}</td>
+            <td>{{ order.createdOn | date:'short' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </ng-container>
+</section>

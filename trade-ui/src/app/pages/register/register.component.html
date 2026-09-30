@@ -1,0 +1,101 @@
+<section class="register-card">
+  <h1>Create Account</h1>
+  <p>Register to start trading on the platform.</p>
+
+  <form
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
+    data-testid="register-form"
+    novalidate
+  >
+    <label for="username">Username</label>
+    <input
+      id="username"
+      type="text"
+      formControlName="username"
+      autocomplete="username"
+      data-testid="register-username-input"
+    />
+    <p
+      class="field-error"
+      *ngIf="form.get('username')?.invalid && form.get('username')?.touched"
+      data-testid="register-username-error"
+    >
+      {{ getUsernameErrorMessage() }}
+    </p>
+
+    <label for="account-id">Account ID</label>
+    <input
+      id="account-id"
+      type="number"
+      formControlName="accountId"
+      data-testid="register-account-input"
+    />
+    <p
+      class="field-error"
+      *ngIf="form.get('accountId')?.invalid && form.get('accountId')?.touched"
+      data-testid="register-account-error"
+    >
+      Account ID is required and must be greater than zero.
+    </p>
+
+    <label for="password">Password</label>
+    <input
+      id="password"
+      type="password"
+      formControlName="password"
+      autocomplete="new-password"
+      data-testid="register-password-input"
+    />
+    <p
+      class="field-error"
+      *ngIf="form.get('password')?.invalid && form.get('password')?.touched"
+      data-testid="register-password-error"
+    >
+      {{ getPasswordErrorMessage() }}
+    </p>
+
+    <label for="confirm-password">Confirm Password</label>
+    <input
+      id="confirm-password"
+      type="password"
+      formControlName="confirmPassword"
+      autocomplete="new-password"
+      data-testid="register-confirm-password-input"
+    />
+    <p
+      class="field-error"
+      *ngIf="form.get('confirmPassword')?.invalid && form.get('confirmPassword')?.touched"
+      data-testid="register-confirm-password-error"
+    >
+      {{ form.get('confirmPassword')?.hasError('required') ? 'Please confirm your password.' : '' }}
+    </p>
+    <p
+      class="field-error"
+      *ngIf="form.hasError('passwordMismatch') && form.touched"
+      data-testid="register-password-mismatch-error"
+    >
+      Passwords do not match.
+    </p>
+
+    <p
+      class="api-error"
+      *ngIf="submitError()"
+      data-testid="register-error"
+    >
+      {{ submitError() }}
+    </p>
+
+    <button
+      type="submit"
+      [disabled]="isSubmitting() || form.invalid"
+      data-testid="register-button"
+    >
+      {{ isSubmitting() ? 'Creating account...' : 'Create Account' }}
+    </button>
+  </form>
+
+  <p class="footer-link">
+    Already have an account? <a routerLink="/login" data-testid="link-to-login">Sign in</a>
+  </p>
+</section>

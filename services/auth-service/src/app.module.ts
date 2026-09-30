@@ -8,7 +8,7 @@ import { AuthModule } from './app/auth/auth.module.js';
       {
         name: 'global',
         ttl: 60000, // 60 seconds
-        limit: 5, // 5 attempts
+        limit: 60, // 60 requests per minute for regular authenticated traffic
       },
     ]),
     AuthModule,

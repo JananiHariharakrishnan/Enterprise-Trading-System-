@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Patch, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service.js';
@@ -21,26 +21,28 @@ export class AuthController {
   }
 
   @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(200)
   login(@Body() body: LoginRequestDto) {
     return this.authService.login(body);
   }
 
   @Post('refresh')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @HttpCode(200)
   refresh(@Body() body: RefreshRequestDto) {
     return this.authService.refresh(body);
   }
 
   @Get('me')
+  @Throttle({ default: { limit: 120, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   me(@CurrentUser() user: AuthPayload) {
     return this.authService.me(user);
   }
 
-  @Put('profile')
+  @Patch('profile')
   @Throttle({ default: { limit: 100, ttl: 3600000 } }) // 100 updates per hour (very permissive)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
