@@ -4,9 +4,11 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   AccountResponse,
   BalanceResponse,
+  LatestPriceResponse,
   OrderHistoryEntry,
   PositionResponse,
   WatchlistDetailResponse,
+  WatchlistInstrumentResponse,
   WatchlistSummaryResponse,
 } from '../../generated/trade';
 import { AuthSessionService } from '../../services/auth-session.service';
@@ -34,6 +36,7 @@ export class DashboardComponent implements OnInit {
   readonly orders = signal<OrderHistoryEntry[]>([]);
   readonly watchlists = signal<WatchlistSummaryResponse[]>([]);
   readonly selectedWatchlist = signal<WatchlistDetailResponse | null>(null);
+  readonly selectedInstrument = signal<WatchlistInstrumentResponse | null>(null);
   readonly watchlistMessage = signal<string | null>(null);
   readonly watchlistError = signal<string | null>(null);
   readonly isLoadingWatchlist = signal(false);
@@ -176,6 +179,7 @@ export class DashboardComponent implements OnInit {
 
       if (this.selectedWatchlist()?.id === watchlistId) {
         this.selectedWatchlist.set(null);
+        this.selectedInstrument.set(null);
       }
 
       this.watchlistMessage.set('Watchlist deleted.');
@@ -184,6 +188,22 @@ export class DashboardComponent implements OnInit {
     } finally {
       this.isSavingWatchlist.set(false);
     }
+  }
+
+  openInstrumentDetails(instrument: WatchlistInstrumentResponse): void {
+    this.selectedInstrument.set(instrument);
+  }
+
+  closeInstrumentDetails(): void {
+    this.selectedInstrument.set(null);
+  }
+
+  latestPriceSummary(latestPrice: LatestPriceResponse | null | undefined): string {
+    if (!latestPrice) {
+      return 'No quote yet';
+    }
+
+    return `${latestPrice.currency} ${latestPrice.price.toFixed(2)}`;
   }
 
   private async loadDashboard(): Promise<void> {

@@ -180,7 +180,16 @@
           </thead>
           <tbody>
             <tr *ngFor="let instrument of watchlist.instruments">
-              <td>{{ instrument.symbol }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="watchlist-symbol-button"
+                  (click)="openInstrumentDetails(instrument)"
+                  data-testid="watchlist-symbol-button"
+                >
+                  {{ instrument.symbol }}
+                </button>
+              </td>
               <td>{{ instrument.addedOn | date:'short' }}</td>
               <td>{{ instrument.latestPrice?.price ?? 'No quote yet' }}</td>
               <td>
@@ -199,5 +208,53 @@
         </table>
       </section>
     </section>
+
+    <div
+      *ngIf="selectedInstrument() as instrument"
+      class="watchlist-modal-backdrop"
+      (click)="closeInstrumentDetails()"
+      data-testid="watchlist-instrument-modal"
+    >
+      <section class="watchlist-modal" (click)="$event.stopPropagation()">
+        <div class="watchlist-modal-header">
+          <div>
+            <h3>{{ instrument.symbol }}</h3>
+            <p>Added {{ instrument.addedOn | date:'medium' }}</p>
+          </div>
+          <button type="button" class="btn-secondary" (click)="closeInstrumentDetails()">Close</button>
+        </div>
+
+        <div class="summary-grid">
+          <div>
+            <span class="label">Latest Price</span>
+            <strong>{{ latestPriceSummary(instrument.latestPrice) }}</strong>
+          </div>
+          <div>
+            <span class="label">Market State</span>
+            <strong>{{ instrument.latestPrice?.marketState ?? 'Unknown' }}</strong>
+          </div>
+          <div>
+            <span class="label">Change</span>
+            <strong>{{ instrument.latestPrice?.change ?? 'N/A' }}</strong>
+          </div>
+          <div>
+            <span class="label">Change %</span>
+            <strong>{{ instrument.latestPrice?.changePercent ?? 'N/A' }}</strong>
+          </div>
+          <div>
+            <span class="label">Previous Close</span>
+            <strong>{{ instrument.latestPrice?.previousClose ?? 'N/A' }}</strong>
+          </div>
+          <div>
+            <span class="label">Quoted At</span>
+            <strong>{{ instrument.latestPrice?.quoteAsOf ? (instrument.latestPrice?.quoteAsOf | date:'medium') : 'No quote yet' }}</strong>
+          </div>
+          <div>
+            <span class="label">Stale</span>
+            <strong>{{ instrument.latestPrice?.stale === true ? 'Yes' : instrument.latestPrice?.stale === false ? 'No' : 'Unknown' }}</strong>
+          </div>
+        </div>
+      </section>
+    </div>
   </ng-container>
 </section>

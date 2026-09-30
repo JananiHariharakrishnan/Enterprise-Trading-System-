@@ -260,4 +260,33 @@ describe('DashboardComponent', () => {
       symbol: 'AAPL'
     });
   });
+
+  it('opens and closes a symbol details popup for a watchlist instrument', async () => {
+    fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const component = fixture.componentInstance;
+    await component.openWatchlist(11);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const symbolButton = host.querySelector('[data-testid="watchlist-symbol-button"]') as HTMLButtonElement;
+    symbolButton.click();
+    fixture.detectChanges();
+
+    expect(component.selectedInstrument()?.symbol).toBe('AAPL');
+    expect(host.querySelector('[data-testid="watchlist-instrument-modal"]')).toBeTruthy();
+    expect(host.textContent).toContain('Market State');
+
+    component.closeInstrumentDetails();
+    fixture.detectChanges();
+
+    expect(component.selectedInstrument()).toBeNull();
+  });
 });

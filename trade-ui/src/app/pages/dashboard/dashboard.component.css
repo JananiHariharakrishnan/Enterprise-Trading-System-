@@ -267,6 +267,20 @@ tbody tr:hover {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.watchlist-symbol-button {
+  background: transparent;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+}
+
+.watchlist-symbol-button:hover {
+  text-decoration: underline;
+}
+
 .watchlist-detail {
   margin-top: var(--space-5);
   padding-top: var(--space-5);
@@ -280,6 +294,45 @@ tbody tr:hover {
 
 .watchlist-success {
   color: var(--color-primary);
+}
+
+.watchlist-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 17, 13, 0.68);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  z-index: 50;
+}
+
+.watchlist-modal {
+  width: min(680px, 100%);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.watchlist-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.watchlist-modal-header h3 {
+  margin: 0 0 var(--space-2) 0;
+  color: var(--color-text);
+}
+
+.watchlist-modal-header p {
+  margin: 0;
 }
 
 @media (max-width: 900px) {
@@ -309,5 +362,9 @@ tbody tr:hover {
 
   .watchlist-summary-item {
     align-items: stretch;
+  }
+
+  .watchlist-modal-header {
+    flex-direction: column;
   }
 }
