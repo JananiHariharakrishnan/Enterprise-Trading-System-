@@ -97,12 +97,107 @@
 
     <section class="dashboard-card" data-testid="watchlists-list">
       <h2>Watchlists</h2>
+      <form class="watchlist-form" [formGroup]="createWatchlistForm" (ngSubmit)="createWatchlist()">
+        <input
+          type="text"
+          formControlName="name"
+          placeholder="Create a watchlist"
+          data-testid="create-watchlist-input"
+        />
+        <button
+          type="submit"
+          class="btn-secondary"
+          [disabled]="createWatchlistForm.invalid || isSavingWatchlist()"
+          data-testid="create-watchlist-button"
+        >
+          Create
+        </button>
+      </form>
+
+      <p *ngIf="watchlistMessage() as message" class="status watchlist-success" data-testid="watchlist-success">{{ message }}</p>
+      <p *ngIf="watchlistError() as error" class="status status-error" data-testid="watchlist-error">{{ error }}</p>
+
       <p *ngIf="watchlists().length === 0" class="status">No watchlists found.</p>
-      <ul *ngIf="watchlists().length > 0">
-        <li *ngFor="let wl of watchlists()">
-          <strong>{{ wl.name }}</strong> — {{ wl.entryCount }} instruments
+      <ul *ngIf="watchlists().length > 0" class="watchlist-summary-list">
+        <li *ngFor="let wl of watchlists()" class="watchlist-summary-item">
+          <button
+            type="button"
+            class="watchlist-open-button"
+            (click)="openWatchlist(wl.id)"
+            data-testid="watchlist-open-button"
+          >
+            <strong>{{ wl.name }}</strong> — {{ wl.entryCount }} instruments
+          </button>
+          <button
+            type="button"
+            class="btn-secondary danger"
+            (click)="deleteWatchlist(wl.id)"
+            [disabled]="isSavingWatchlist()"
+            data-testid="watchlist-delete-button"
+          >
+            Delete
+          </button>
         </li>
       </ul>
+
+      <div *ngIf="isLoadingWatchlist()" class="status">Loading watchlist details...</div>
+
+      <section *ngIf="selectedWatchlist() as watchlist" class="watchlist-detail" data-testid="watchlist-detail">
+        <div class="watchlist-detail-header">
+          <div>
+            <h3>{{ watchlist.name }}</h3>
+            <p>{{ watchlist.entryCount }} instruments</p>
+          </div>
+        </div>
+
+        <form class="watchlist-form" [formGroup]="addInstrumentForm" (ngSubmit)="addInstrument()">
+          <input
+            type="text"
+            formControlName="symbol"
+            placeholder="Add symbol, e.g. AAPL"
+            data-testid="add-watchlist-symbol-input"
+          />
+          <button
+            type="submit"
+            class="btn-secondary"
+            [disabled]="addInstrumentForm.invalid || isSavingWatchlist()"
+            data-testid="add-watchlist-symbol-button"
+          >
+            Add instrument
+          </button>
+        </form>
+
+        <p *ngIf="watchlist.instruments.length === 0" class="status">No instruments in this watchlist yet.</p>
+
+        <table *ngIf="watchlist.instruments.length > 0">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Added</th>
+              <th>Latest Price</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let instrument of watchlist.instruments">
+              <td>{{ instrument.symbol }}</td>
+              <td>{{ instrument.addedOn | date:'short' }}</td>
+              <td>{{ instrument.latestPrice?.price ?? 'No quote yet' }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="btn-secondary danger"
+                  (click)="removeInstrument(instrument.symbol)"
+                  [disabled]="isSavingWatchlist()"
+                  data-testid="remove-watchlist-symbol-button"
+                >
+                  Remove
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
     </section>
   </ng-container>
 </section>

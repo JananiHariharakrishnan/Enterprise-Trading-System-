@@ -57,8 +57,12 @@ test.describe('Login Journey', () => {
     // Wait for dashboard to load
     await expect(page).toHaveURL(/\/dashboard/);
     
-    // Find and click sign out button (use data-testid to avoid ambiguity)
-    const signOutButton = page.locator('[data-testid="sign-out-button"]');
+    // Open the profile dropdown in the header, then click Sign out.
+    const profileMenuButton = page.locator('button[aria-label="Open profile menu"]');
+    await expect(profileMenuButton).toBeVisible();
+    await profileMenuButton.click();
+
+    const signOutButton = page.locator('.profile-dropdown button').filter({ hasText: 'Sign out' });
     await expect(signOutButton).toBeVisible();
     await signOutButton.click();
     

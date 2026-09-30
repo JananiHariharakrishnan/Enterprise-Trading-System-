@@ -123,16 +123,14 @@ class OrderPlacementCharacterisationTest {
         );
 
 
-        // Note: Balance is NOT updated at order placement time.
-         // Updates happen only during order execution (ExecutionProcessingService).
-         // Balance should remain unchanged at placement.
+        // Balance is not updated at placement time. Buying power is reserved for NEW BUY orders.
          assertEquals(
                 new BigDecimal("100000.00"),
                 cashBalance(1001L)
         );
 
         assertEquals(
-                new BigDecimal("100000.00"),
+                new BigDecimal("99050.00"),
                 buyingPower(1001L)
         );
 
@@ -213,9 +211,9 @@ class OrderPlacementCharacterisationTest {
         );
 
 
-        // Account version should NOT increment at placement since balance is not updated
+        // Account version increments because buying power is reserved at placement.
          assertEquals(
-                1,
+                2,
                 accountVersion(1001L)
         );
     }
@@ -593,7 +591,7 @@ class OrderPlacementCharacterisationTest {
         );
 
         assertEquals(
-                new BigDecimal("100000.00"),
+                new BigDecimal("99500.00"),
                 buyingPower(1001L)
         );
 

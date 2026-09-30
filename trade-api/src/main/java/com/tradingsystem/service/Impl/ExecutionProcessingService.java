@@ -87,6 +87,24 @@ public class ExecutionProcessingService {
 
         // For REJECTED: we will publish a REJECTED event after commit and return
         if ("REJECTED".equalsIgnoreCase(targetStatus)) {
+            if ("BUY".equalsIgnoreCase(order.getSide().name())) {
+                Account account = orderDataMapper.findAccountById(order.getAccountId());
+                if (account == null) {
+                    throw new MalformedExecutionException("Account not found: " + order.getAccountId());
+                }
+
+                BigDecimal reservedValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
+                int accountRows = orderDataMapper.updateAccountBalancesWithVersion(
+                        account.getAccountId(),
+                        account.getCashBalance(),
+                        account.getBuyingPower().add(reservedValue),
+                        account.getVersion()
+                );
+
+                if (accountRows != 1) {
+                    throw new OrderStateConflictException();
+                }
+            }
 
             TradeEventPayload payload = new TradeEventPayload();
             payload.setOrderId(orderId.toString());
@@ -136,13 +154,14 @@ public class ExecutionProcessingService {
             }
 
             BigDecimal orderValue = executedPrice.multiply(BigDecimal.valueOf(order.getQuantity()));
+            BigDecimal reservedValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
 
             BigDecimal newCashBalance = account.getCashBalance();
             BigDecimal newBuyingPower = account.getBuyingPower();
 
             if ("BUY".equalsIgnoreCase(order.getSide().name())) {
                 newCashBalance = newCashBalance.subtract(orderValue);
-                newBuyingPower = newBuyingPower.subtract(orderValue);
+                newBuyingPower = newBuyingPower.add(reservedValue).subtract(orderValue);
             } else if ("SELL".equalsIgnoreCase(order.getSide().name())) {
                 newCashBalance = newCashBalance.add(orderValue);
                 newBuyingPower = newBuyingPower.add(orderValue);

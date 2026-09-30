@@ -124,9 +124,9 @@ class OrderServiceTransactionalIntegrationTest {
                 )
         );
 
-        // Account version should NOT increment at placement
+        // Account version increments because buying power is reserved at placement.
          assertEquals(
-                1,
+                2,
                 accountVersion(1001L)
         );
 

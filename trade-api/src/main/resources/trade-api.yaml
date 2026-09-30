@@ -367,17 +367,14 @@ paths:
         '404':
           $ref: '#/components/responses/AccountNotFound'
 
-  /api/v1/accounts/{id}/watchlists:
+  /api/v1/watchlists:
     post:
       tags: [Watchlists]
       operationId: createWatchlist
       summary: Create a watchlist
       description: |
         Creates a named watchlist for the authenticated account. The effective account is derived from
-        the bearer token. The `{id}` path parameter is validated against that identity and is never
-        trusted on its own.
-      parameters:
-        - $ref: '#/components/parameters/AccountIdPath'
+        the bearer token.
       requestBody:
         required: true
         content:
@@ -416,9 +413,7 @@ paths:
       summary: List watchlists
       description: |
         Returns all named watchlists for the authenticated account, newest first. The account is
-        derived from the security context and checked against the `{id}` path parameter.
-      parameters:
-        - $ref: '#/components/parameters/AccountIdPath'
+        derived from the security context.
       responses:
         '200':
           description: Watchlists for the account.
@@ -435,7 +430,7 @@ paths:
         '404':
           $ref: '#/components/responses/AccountNotFound'
 
-  /api/v1/accounts/{id}/watchlists/{watchlistId}:
+  /api/v1/watchlists/{watchlistId}:
     get:
       tags: [Watchlists]
       operationId: getWatchlist
@@ -445,7 +440,6 @@ paths:
         snapshot when available. Prices come from the existing `latest_market_prices` projection and
         may be absent when no quote has been ingested yet.
       parameters:
-        - $ref: '#/components/parameters/AccountIdPath'
         - $ref: '#/components/parameters/WatchlistIdPath'
       responses:
         '200':
@@ -481,7 +475,6 @@ paths:
         Deletes the watchlist for the authenticated account. Membership rows are removed by the
         existing database cascade.
       parameters:
-        - $ref: '#/components/parameters/AccountIdPath'
         - $ref: '#/components/parameters/WatchlistIdPath'
       responses:
         '204':
@@ -506,7 +499,7 @@ paths:
                     errorCode: WAT-404
                     message: Watchlist not found
 
-  /api/v1/accounts/{id}/watchlists/{watchlistId}/instruments:
+  /api/v1/watchlists/{watchlistId}/instruments:
     post:
       tags: [Watchlists]
       operationId: addWatchlistInstrument
@@ -515,7 +508,6 @@ paths:
         Adds an existing instrument to the specified watchlist owned by the authenticated account.
         The response includes the latest known price snapshot when one exists.
       parameters:
-        - $ref: '#/components/parameters/AccountIdPath'
         - $ref: '#/components/parameters/WatchlistIdPath'
       requestBody:
         required: true
@@ -567,7 +559,7 @@ paths:
         '422':
           $ref: '#/components/responses/InvalidInput'
 
-  /api/v1/accounts/{id}/watchlists/{watchlistId}/instruments/{symbol}:
+  /api/v1/watchlists/{watchlistId}/instruments/{symbol}:
     delete:
       tags: [Watchlists]
       operationId: removeWatchlistInstrument
@@ -575,7 +567,6 @@ paths:
       description: |
         Removes one instrument from the specified watchlist owned by the authenticated account.
       parameters:
-        - $ref: '#/components/parameters/AccountIdPath'
         - $ref: '#/components/parameters/WatchlistIdPath'
         - $ref: '#/components/parameters/InstrumentSymbolPath'
       responses:

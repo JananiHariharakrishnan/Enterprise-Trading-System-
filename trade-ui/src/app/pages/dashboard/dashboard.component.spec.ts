@@ -1,12 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { ActivatedRoute, Router } from '@angular/router';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DashboardComponent } from './dashboard.component';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
-// Removed raw template/style imports; rely on TestBed to compile component resources.
 
 class AuthSessionServiceStub {
   currentUser = vi.fn(() => ({
@@ -68,7 +65,35 @@ class TradeApiClientServiceStub {
   watchlists = {
     listWatchlists: vi.fn().mockResolvedValue([
       { id: 11, name: 'Tech', entryCount: 3, createdOn: new Date(), updatedOn: new Date() }
-    ])
+    ]),
+    getWatchlist: vi.fn().mockResolvedValue({
+      id: 11,
+      name: 'Tech',
+      entryCount: 1,
+      createdOn: new Date('2026-01-01T09:00:00Z'),
+      updatedOn: new Date('2026-01-01T09:00:00Z'),
+      instruments: [
+        {
+          symbol: 'AAPL',
+          addedOn: new Date('2026-01-01T09:00:00Z'),
+          latestPrice: { symbol: 'AAPL', price: 232.71, currency: 'USD', marketState: 'OPEN', quotedAt: new Date('2026-01-01T09:00:00Z') }
+        }
+      ]
+    }),
+    createWatchlist: vi.fn().mockResolvedValue({
+      id: 12,
+      name: 'Dividend',
+      entryCount: 0,
+      createdOn: new Date('2026-01-01T09:00:00Z'),
+      updatedOn: new Date('2026-01-01T09:00:00Z')
+    }),
+    addWatchlistInstrument: vi.fn().mockResolvedValue({
+      symbol: 'MSFT',
+      addedOn: new Date('2026-01-01T09:00:00Z'),
+      latestPrice: null
+    }),
+    removeWatchlistInstrument: vi.fn().mockResolvedValue(undefined),
+    deleteWatchlist: vi.fn().mockResolvedValue(undefined)
   };
 }
 
@@ -117,6 +142,7 @@ describe('DashboardComponent', () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
+    await Promise.resolve();
 
     fixture.detectChanges();
 
@@ -148,6 +174,7 @@ describe('DashboardComponent', () => {
     expect(host.textContent).toContain('Priya Menon');
     expect(host.textContent).toContain('AAPL');
     expect(host.textContent).toContain('ORD-1');
+    expect(host.textContent).toContain('Tech');
   });
 
   it('shows dashboard error when session is missing', async () => {
@@ -181,5 +208,56 @@ describe('DashboardComponent', () => {
     expect(errorNode?.textContent).toContain(
       'Your session expired. Please sign in again.'
     );
+  });
+
+  it('creates and opens a watchlist from the dashboard', async () => {
+    fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    component.createWatchlistForm.setValue({ name: 'Dividend' });
+
+    await component.createWatchlist();
+    fixture.detectChanges();
+
+    expect(tradeApi.watchlists.createWatchlist).toHaveBeenCalledWith({
+      createWatchlistRequest: { name: 'Dividend' }
+    });
+    expect(tradeApi.watchlists.getWatchlist).toHaveBeenCalledWith({ watchlistId: 12 });
+    expect(component.watchlistMessage()).toBe('Watchlist created successfully.');
+  });
+
+  it('adds and removes instruments from the selected watchlist', async () => {
+    fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const component = fixture.componentInstance;
+    await component.openWatchlist(11);
+    component.addInstrumentForm.setValue({ symbol: 'msft' });
+
+    await component.addInstrument();
+    await component.removeInstrument('AAPL');
+
+    expect(tradeApi.watchlists.addWatchlistInstrument).toHaveBeenCalledWith({
+      watchlistId: 11,
+      addWatchlistInstrumentRequest: { symbol: 'MSFT' }
+    });
+    expect(tradeApi.watchlists.removeWatchlistInstrument).toHaveBeenCalledWith({
+      watchlistId: 11,
+      symbol: 'AAPL'
+    });
   });
 });

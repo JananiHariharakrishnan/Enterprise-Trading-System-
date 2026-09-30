@@ -38,32 +38,23 @@ import {
 } from '../models/index';
 
 export interface AddWatchlistInstrumentOperationRequest {
-    id: number;
     watchlistId: number;
     addWatchlistInstrumentRequest: AddWatchlistInstrumentRequest;
 }
 
 export interface CreateWatchlistOperationRequest {
-    id: number;
     createWatchlistRequest: CreateWatchlistRequest;
 }
 
 export interface DeleteWatchlistRequest {
-    id: number;
     watchlistId: number;
 }
 
 export interface GetWatchlistRequest {
-    id: number;
     watchlistId: number;
 }
 
-export interface ListWatchlistsRequest {
-    id: number;
-}
-
 export interface RemoveWatchlistInstrumentRequest {
-    id: number;
     watchlistId: number;
     symbol: string;
 }
@@ -78,7 +69,6 @@ export interface WatchlistsApiInterface {
     /**
      * Adds an existing instrument to the specified watchlist owned by the authenticated account. The response includes the latest known price snapshot when one exists. 
      * @summary Add an instrument to a watchlist
-     * @param {number} id The numeric account key, &#x60;ACCOUNTS.id&#x60;.
      * @param {number} watchlistId The numeric watchlist key, &#x60;WATCHLISTS.id&#x60;.
      * @param {AddWatchlistInstrumentRequest} addWatchlistInstrumentRequest 
      * @param {*} [options] Override http request option.
@@ -94,9 +84,8 @@ export interface WatchlistsApiInterface {
     addWatchlistInstrument(requestParameters: AddWatchlistInstrumentOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WatchlistInstrumentResponse>;
 
     /**
-     * Creates a named watchlist for the authenticated account. The effective account is derived from the bearer token. The `{id}` path parameter is validated against that identity and is never trusted on its own. 
+     * Creates a named watchlist for the authenticated account. The effective account is derived from the bearer token. 
      * @summary Create a watchlist
-     * @param {number} id The numeric account key, &#x60;ACCOUNTS.id&#x60;.
      * @param {CreateWatchlistRequest} createWatchlistRequest 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -105,7 +94,7 @@ export interface WatchlistsApiInterface {
     createWatchlistRaw(requestParameters: CreateWatchlistOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WatchlistSummaryResponse>>;
 
     /**
-     * Creates a named watchlist for the authenticated account. The effective account is derived from the bearer token. The `{id}` path parameter is validated against that identity and is never trusted on its own. 
+     * Creates a named watchlist for the authenticated account. The effective account is derived from the bearer token. 
      * Create a watchlist
      */
     createWatchlist(requestParameters: CreateWatchlistOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WatchlistSummaryResponse>;
@@ -113,7 +102,6 @@ export interface WatchlistsApiInterface {
     /**
      * Deletes the watchlist for the authenticated account. Membership rows are removed by the existing database cascade. 
      * @summary Delete a watchlist
-     * @param {number} id The numeric account key, &#x60;ACCOUNTS.id&#x60;.
      * @param {number} watchlistId The numeric watchlist key, &#x60;WATCHLISTS.id&#x60;.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -130,7 +118,6 @@ export interface WatchlistsApiInterface {
     /**
      * Returns one watchlist with every instrument in it, including the latest known market price snapshot when available. Prices come from the existing `latest_market_prices` projection and may be absent when no quote has been ingested yet. 
      * @summary Get a watchlist
-     * @param {number} id The numeric account key, &#x60;ACCOUNTS.id&#x60;.
      * @param {number} watchlistId The numeric watchlist key, &#x60;WATCHLISTS.id&#x60;.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -145,25 +132,23 @@ export interface WatchlistsApiInterface {
     getWatchlist(requestParameters: GetWatchlistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WatchlistDetailResponse>;
 
     /**
-     * Returns all named watchlists for the authenticated account, newest first. The account is derived from the security context and checked against the `{id}` path parameter. 
+     * Returns all named watchlists for the authenticated account, newest first. The account is derived from the security context. 
      * @summary List watchlists
-     * @param {number} id The numeric account key, &#x60;ACCOUNTS.id&#x60;.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof WatchlistsApiInterface
      */
-    listWatchlistsRaw(requestParameters: ListWatchlistsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WatchlistSummaryResponse>>>;
+    listWatchlistsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WatchlistSummaryResponse>>>;
 
     /**
-     * Returns all named watchlists for the authenticated account, newest first. The account is derived from the security context and checked against the `{id}` path parameter. 
+     * Returns all named watchlists for the authenticated account, newest first. The account is derived from the security context. 
      * List watchlists
      */
-    listWatchlists(requestParameters: ListWatchlistsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WatchlistSummaryResponse>>;
+    listWatchlists(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WatchlistSummaryResponse>>;
 
     /**
      * Removes one instrument from the specified watchlist owned by the authenticated account. 
      * @summary Remove an instrument from a watchlist
-     * @param {number} id The numeric account key, &#x60;ACCOUNTS.id&#x60;.
      * @param {number} watchlistId The numeric watchlist key, &#x60;WATCHLISTS.id&#x60;.
      * @param {string} symbol Instrument symbol in the existing source-of-truth instrument reference.
      * @param {*} [options] Override http request option.
@@ -190,13 +175,6 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
      * Add an instrument to a watchlist
      */
     async addWatchlistInstrumentRaw(requestParameters: AddWatchlistInstrumentOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WatchlistInstrumentResponse>> {
-        if (requestParameters['id'] == null) {
-            throw new runtime.RequiredError(
-                'id',
-                'Required parameter "id" was null or undefined when calling addWatchlistInstrument().'
-            );
-        }
-
         if (requestParameters['watchlistId'] == null) {
             throw new runtime.RequiredError(
                 'watchlistId',
@@ -226,7 +204,7 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
             }
         }
         const response = await this.request({
-            path: `/api/v1/accounts/{id}/watchlists/{watchlistId}/instruments`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"watchlistId"}}`, encodeURIComponent(String(requestParameters['watchlistId']))),
+            path: `/api/v1/watchlists/{watchlistId}/instruments`.replace(`{${"watchlistId"}}`, encodeURIComponent(String(requestParameters['watchlistId']))),
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
@@ -246,17 +224,10 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
     }
 
     /**
-     * Creates a named watchlist for the authenticated account. The effective account is derived from the bearer token. The `{id}` path parameter is validated against that identity and is never trusted on its own. 
+     * Creates a named watchlist for the authenticated account. The effective account is derived from the bearer token. 
      * Create a watchlist
      */
     async createWatchlistRaw(requestParameters: CreateWatchlistOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WatchlistSummaryResponse>> {
-        if (requestParameters['id'] == null) {
-            throw new runtime.RequiredError(
-                'id',
-                'Required parameter "id" was null or undefined when calling createWatchlist().'
-            );
-        }
-
         if (requestParameters['createWatchlistRequest'] == null) {
             throw new runtime.RequiredError(
                 'createWatchlistRequest',
@@ -279,7 +250,7 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
             }
         }
         const response = await this.request({
-            path: `/api/v1/accounts/{id}/watchlists`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            path: `/api/v1/watchlists`,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
@@ -290,7 +261,7 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
     }
 
     /**
-     * Creates a named watchlist for the authenticated account. The effective account is derived from the bearer token. The `{id}` path parameter is validated against that identity and is never trusted on its own. 
+     * Creates a named watchlist for the authenticated account. The effective account is derived from the bearer token. 
      * Create a watchlist
      */
     async createWatchlist(requestParameters: CreateWatchlistOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WatchlistSummaryResponse> {
@@ -303,13 +274,6 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
      * Delete a watchlist
      */
     async deleteWatchlistRaw(requestParameters: DeleteWatchlistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        if (requestParameters['id'] == null) {
-            throw new runtime.RequiredError(
-                'id',
-                'Required parameter "id" was null or undefined when calling deleteWatchlist().'
-            );
-        }
-
         if (requestParameters['watchlistId'] == null) {
             throw new runtime.RequiredError(
                 'watchlistId',
@@ -330,7 +294,7 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
             }
         }
         const response = await this.request({
-            path: `/api/v1/accounts/{id}/watchlists/{watchlistId}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"watchlistId"}}`, encodeURIComponent(String(requestParameters['watchlistId']))),
+            path: `/api/v1/watchlists/{watchlistId}`.replace(`{${"watchlistId"}}`, encodeURIComponent(String(requestParameters['watchlistId']))),
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
@@ -352,13 +316,6 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
      * Get a watchlist
      */
     async getWatchlistRaw(requestParameters: GetWatchlistRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WatchlistDetailResponse>> {
-        if (requestParameters['id'] == null) {
-            throw new runtime.RequiredError(
-                'id',
-                'Required parameter "id" was null or undefined when calling getWatchlist().'
-            );
-        }
-
         if (requestParameters['watchlistId'] == null) {
             throw new runtime.RequiredError(
                 'watchlistId',
@@ -379,7 +336,7 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
             }
         }
         const response = await this.request({
-            path: `/api/v1/accounts/{id}/watchlists/{watchlistId}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"watchlistId"}}`, encodeURIComponent(String(requestParameters['watchlistId']))),
+            path: `/api/v1/watchlists/{watchlistId}`.replace(`{${"watchlistId"}}`, encodeURIComponent(String(requestParameters['watchlistId']))),
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
@@ -398,17 +355,10 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
     }
 
     /**
-     * Returns all named watchlists for the authenticated account, newest first. The account is derived from the security context and checked against the `{id}` path parameter. 
+     * Returns all named watchlists for the authenticated account, newest first. The account is derived from the security context. 
      * List watchlists
      */
-    async listWatchlistsRaw(requestParameters: ListWatchlistsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WatchlistSummaryResponse>>> {
-        if (requestParameters['id'] == null) {
-            throw new runtime.RequiredError(
-                'id',
-                'Required parameter "id" was null or undefined when calling listWatchlists().'
-            );
-        }
-
+    async listWatchlistsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WatchlistSummaryResponse>>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -422,7 +372,7 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
             }
         }
         const response = await this.request({
-            path: `/api/v1/accounts/{id}/watchlists`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            path: `/api/v1/watchlists`,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
@@ -432,11 +382,11 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
     }
 
     /**
-     * Returns all named watchlists for the authenticated account, newest first. The account is derived from the security context and checked against the `{id}` path parameter. 
+     * Returns all named watchlists for the authenticated account, newest first. The account is derived from the security context. 
      * List watchlists
      */
-    async listWatchlists(requestParameters: ListWatchlistsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WatchlistSummaryResponse>> {
-        const response = await this.listWatchlistsRaw(requestParameters, initOverrides);
+    async listWatchlists(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WatchlistSummaryResponse>> {
+        const response = await this.listWatchlistsRaw(initOverrides);
         return await response.value();
     }
 
@@ -445,13 +395,6 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
      * Remove an instrument from a watchlist
      */
     async removeWatchlistInstrumentRaw(requestParameters: RemoveWatchlistInstrumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        if (requestParameters['id'] == null) {
-            throw new runtime.RequiredError(
-                'id',
-                'Required parameter "id" was null or undefined when calling removeWatchlistInstrument().'
-            );
-        }
-
         if (requestParameters['watchlistId'] == null) {
             throw new runtime.RequiredError(
                 'watchlistId',
@@ -479,7 +422,7 @@ export class WatchlistsApi extends runtime.BaseAPI implements WatchlistsApiInter
             }
         }
         const response = await this.request({
-            path: `/api/v1/accounts/{id}/watchlists/{watchlistId}/instruments/{symbol}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"watchlistId"}}`, encodeURIComponent(String(requestParameters['watchlistId']))).replace(`{${"symbol"}}`, encodeURIComponent(String(requestParameters['symbol']))),
+            path: `/api/v1/watchlists/{watchlistId}/instruments/{symbol}`.replace(`{${"watchlistId"}}`, encodeURIComponent(String(requestParameters['watchlistId']))).replace(`{${"symbol"}}`, encodeURIComponent(String(requestParameters['symbol']))),
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
