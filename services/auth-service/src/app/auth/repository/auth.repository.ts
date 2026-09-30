@@ -63,6 +63,28 @@ export async function accountExists(accountId: number): Promise<boolean> {
   return result.rowCount === 1;
 }
 
+export async function findAvailableAccountId(): Promise<number | null> {
+  const result = await db.query(
+    `
+    SELECT a.id
+    FROM tradingsystem.accounts a
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM tradingsystem.users u
+      WHERE u.account_id = a.id
+    )
+    ORDER BY random()
+    LIMIT 1
+    `,
+  );
+
+  if (result.rowCount === 0) {
+    return null;
+  }
+
+  return Number(result.rows[0].id);
+}
+
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const result = await db.query(
     `
@@ -167,7 +189,7 @@ export async function updateUserProfile(
   return mapUserRow(result.rows[0]);
 }
 
-export async function createUser(username: string, accountId: number, roles: string[] = ['CUSTOMER']): Promise<UserRecord> {
+export async function createUser(username: string, accountId: number, roles: string[] = ['CUSTOMER']): Promise<UserRecord | null> {
   const result = await db.query(
     `
     INSERT INTO tradingsystem.users (
@@ -183,10 +205,15 @@ export async function createUser(username: string, accountId: number, roles: str
       $3,
       NOW()
     )
+    ON CONFLICT (account_id) DO NOTHING
     RETURNING id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
     `,
     [username, accountId, roles],
   );
+
+  if (result.rowCount === 0) {
+    return null;
+  }
 
   return mapUserRow(result.rows[0]);
 }
@@ -224,6 +251,31 @@ export async function createCredential(accountId: number, username: string, plai
   );
 
   return mapCredentialRow(result.rows[0]);
+}
+
+export async function deleteCredentialByUsername(username: string): Promise<void> {
+  await db.query(
+    `
+    DELETE FROM authentication.credentials
+    WHERE username = $1
+    `,
+    [username],
+  );
+}
+
+export async function deleteOrphanCredentials(): Promise<number> {
+  const result = await db.query(
+    `
+    DELETE FROM authentication.credentials c
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM tradingsystem.users u
+      WHERE u.account_id = c.account_id
+    )
+    `,
+  );
+
+  return result.rowCount ?? 0;
 }
 
 export async function findCredentialByUsername(username: string): Promise<CredentialRecord | null> {

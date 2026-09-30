@@ -20,7 +20,7 @@ describe('AuthController (skeleton)', () => {
   const ctl = new AuthController(svc as any);
 
   it('register forwards to service', async () => {
-    await ctl.register({ username: 'u', password: 'p', accountId: 1 } as any);
+    await ctl.register({ username: 'u', password: 'p' } as any);
     expect(svc.register).toHaveBeenCalled();
   });
 

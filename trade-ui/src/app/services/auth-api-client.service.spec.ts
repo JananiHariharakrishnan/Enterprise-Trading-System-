@@ -335,22 +335,14 @@ describe('AuthSessionService', () => {
   });
 
   describe('register', () => {
-    it('should register and automatically login', async () => {
+    it('should register and return assigned account details', async () => {
       authApi.client.authRegisterPost.mockResolvedValue(
-        undefined
+        user
       );
 
-      authApi.client.authLoginPost.mockResolvedValue({
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token'
-      });
-
-      authApi.client.authMeGet.mockResolvedValue(user);
-
-      await service.register(
+      const registered = await service.register(
         'testuser',
-        'password',
-        123
+        'password'
       );
 
       expect(
@@ -358,27 +350,12 @@ describe('AuthSessionService', () => {
       ).toHaveBeenCalledWith({
         registerRequest: {
           username: 'testuser',
-          password: 'password',
-          accountId: 123
-        }
-      });
-
-      expect(
-        authApi.client.authLoginPost
-      ).toHaveBeenCalledWith({
-        loginRequest: {
-          username: 'testuser',
           password: 'password'
         }
       });
 
-      expect(
-        service.isAuthenticated()
-      ).toBe(true);
-
-      expect(
-        service.currentUser()
-      ).toEqual(user);
+      expect(authApi.client.authLoginPost).not.toHaveBeenCalled();
+      expect(registered).toEqual(user);
     });
 
     it('should throw a readable error when registration fails', async () => {
@@ -398,8 +375,7 @@ describe('AuthSessionService', () => {
       await expect(
         service.register(
           'testuser',
-          'password',
-          123
+          'password'
         )
       ).rejects.toThrow(
         'Username already exists.'
@@ -410,33 +386,10 @@ describe('AuthSessionService', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('should return the generic error when automatic login fails', async () => {
-      authApi.client.authRegisterPost.mockResolvedValue(
-        undefined
-      );
+    it('should return the generic error when registration fails unexpectedly', async () => {
+      authApi.client.authRegisterPost.mockRejectedValue(new Error('Unexpected'));
 
-      authApi.client.authLoginPost.mockRejectedValue(
-        new ResponseError(
-          new Response(
-            JSON.stringify({
-              message: 'Login failed.'
-            }),
-            {
-              status: 400
-            }
-          )
-        )
-      );
-
-      await expect(
-        service.register(
-          'testuser',
-          'password',
-          123
-        )
-      ).rejects.toThrow(
-        'Unable to sign in right now. Please try again.'
-      );
+      await expect(service.register('testuser', 'password')).rejects.toThrow('Unable to sign in right now. Please try again.');
     });
   });
 

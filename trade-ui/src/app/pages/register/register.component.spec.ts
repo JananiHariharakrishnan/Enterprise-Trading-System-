@@ -55,7 +55,6 @@ describe('RegisterComponent', () => {
 
     component.form.patchValue({
       username: 'newuser',
-      accountId: '123',
       password: 'correct horse battery staple',
       confirmPassword: 'different password'
     });
@@ -68,20 +67,24 @@ describe('RegisterComponent', () => {
   });
 
   it('valid registration data creates account and redirects', async () => {
-    authSession.register.mockResolvedValue(undefined);
+    authSession.register.mockResolvedValue({ accountId: 123 });
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     component.form.setValue({
       username: 'newuser',
-      accountId: '123',
       password: 'correct horse battery staple',
       confirmPassword: 'correct horse battery staple'
     });
 
+    expect(component.form.invalid).toBe(false);
     await component.onSubmit();
+    fixture.detectChanges();
 
-    expect(authSession.register).toHaveBeenCalledWith('newuser', 'correct horse battery staple', 123);
-    expect(navigateSpy).toHaveBeenCalledWith(['/dashboard']);
+    expect(authSession.register).toHaveBeenCalledWith('newuser', 'correct horse battery staple');
+    expect(navigateSpy).not.toHaveBeenCalled();
+
+    const success = fixture.nativeElement.querySelector('[data-testid="register-success"]') as HTMLElement;
+    expect(success?.textContent).toContain('account ID is 123');
   });
 
   it('registration error shows a readable error', async () => {
@@ -89,7 +92,6 @@ describe('RegisterComponent', () => {
 
     component.form.setValue({
       username: 'taken.user',
-      accountId: '123',
       password: 'correct horse battery staple',
       confirmPassword: 'correct horse battery staple'
     });

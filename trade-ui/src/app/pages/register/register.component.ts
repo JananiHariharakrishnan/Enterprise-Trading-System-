@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { AuthSessionService } from '../../services/auth-session.service';
 
 @Component({
@@ -14,16 +14,15 @@ import { AuthSessionService } from '../../services/auth-session.service';
 export class RegisterComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly authSession = inject(AuthSessionService);
-  private readonly router = inject(Router);
 
   readonly isSubmitting = signal(false);
   readonly submitError = signal<string | null>(null);
+  readonly assignedAccountId = signal<number | null>(null);
 
   readonly form = this.formBuilder.nonNullable.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(64), Validators.pattern(/^[a-zA-Z0-9._-]+$/)]],
     password: ['', [Validators.required, Validators.minLength(12), Validators.maxLength(128)]],
     confirmPassword: ['', [Validators.required]],
-    accountId: ['', [Validators.required, Validators.min(1)]]
   }, {
     validators: (group) => this.passwordMatchValidator(group)
   });
@@ -38,6 +37,7 @@ export class RegisterComponent {
 
   async onSubmit(): Promise<void> {
     this.submitError.set(null);
+    this.assignedAccountId.set(null);
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -47,9 +47,11 @@ export class RegisterComponent {
     this.isSubmitting.set(true);
 
     try {
-      const { username, password, accountId } = this.form.getRawValue();
-      await this.authSession.register(username, password, Number.parseInt(accountId, 10));
-      await this.router.navigate(['/dashboard']);
+      const { username, password } = this.form.getRawValue();
+      const registeredUser = await this.authSession.register(username, password);
+      this.assignedAccountId.set(registeredUser.accountId);
+      this.form.patchValue({ password: '', confirmPassword: '' });
+      this.form.markAsPristine();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to register right now. Please try again.';
       this.submitError.set(message);

@@ -15,9 +15,10 @@ export class RegisterRequestDto {
   password!: string;
 
   @Type(() => Number)
+  @IsOptional()
   @IsInt()
   @Min(1)
-  accountId!: number;
+  accountId?: number;
 
   @IsOptional()
   @IsArray()

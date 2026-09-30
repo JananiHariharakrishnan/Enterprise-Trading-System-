@@ -24,21 +24,6 @@
       {{ getUsernameErrorMessage() }}
     </p>
 
-    <label for="account-id">Account ID</label>
-    <input
-      id="account-id"
-      type="number"
-      formControlName="accountId"
-      data-testid="register-account-input"
-    />
-    <p
-      class="field-error"
-      *ngIf="form.get('accountId')?.invalid && form.get('accountId')?.touched"
-      data-testid="register-account-error"
-    >
-      Account ID is required and must be greater than zero.
-    </p>
-
     <label for="password">Password</label>
     <input
       id="password"
@@ -84,6 +69,15 @@
       data-testid="register-error"
     >
       {{ submitError() }}
+    </p>
+
+    <p
+      class="api-success"
+      *ngIf="assignedAccountId() !== null"
+      data-testid="register-success"
+    >
+      Account created successfully. Your account ID is {{ assignedAccountId() }}.
+      Please sign in to continue.
     </p>
 
     <button

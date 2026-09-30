@@ -291,23 +291,14 @@ describe('AuthSessionService', () => {
   });
 
   describe('register', () => {
-    it('should register and automatically sign in', async () => {
+    it('should register and return the assigned user account', async () => {
       apiStub.client.authRegisterPost.mockResolvedValue(
-        undefined
-      );
-
-      apiStub.client.authLoginPost.mockResolvedValue(
-        mockLoginResponse
-      );
-
-      apiStub.client.authMeGet.mockResolvedValue(
         mockUser
       );
 
-      await service.register(
+      const registered = await service.register(
         'priya.menon',
-        'password',
-        1
+        'password'
       );
 
       expect(
@@ -315,27 +306,13 @@ describe('AuthSessionService', () => {
       ).toHaveBeenCalledWith({
         registerRequest: {
           username: 'priya.menon',
-          password: 'password',
-          accountId: 1
-        }
-      });
-
-      expect(
-        apiStub.client.authLoginPost
-      ).toHaveBeenCalledWith({
-        loginRequest: {
-          username: 'priya.menon',
           password: 'password'
         }
       });
 
-      expect(
-        service.isAuthenticated()
-      ).toBe(true);
+      expect(apiStub.client.authLoginPost).not.toHaveBeenCalled();
 
-      expect(
-        service.currentUser()
-      ).toEqual(mockUser);
+      expect(registered).toEqual(mockUser);
     });
 
     it('should show a readable error when registration fails', async () => {
@@ -355,8 +332,7 @@ describe('AuthSessionService', () => {
       await expect(
         service.register(
           'priya.menon',
-          'password',
-          1
+          'password'
         )
       ).rejects.toThrow(
         'Username already exists.'
@@ -367,48 +343,10 @@ describe('AuthSessionService', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('should show the generic error when automatic login fails with 401', async () => {
-      apiStub.client.authRegisterPost.mockResolvedValue(
-        undefined
-      );
+    it('should return a generic error when registration fails unexpectedly', async () => {
+      apiStub.client.authRegisterPost.mockRejectedValue(new Error('Unexpected failure'));
 
-      apiStub.client.authLoginPost.mockRejectedValue(
-        new ResponseError(
-          new Response('{}', {
-            status: 401
-          })
-        )
-      );
-
-      await expect(
-        service.register(
-          'priya.menon',
-          'password',
-          1
-        )
-      ).rejects.toThrow(
-        'Unable to sign in right now. Please try again.'
-      );
-    });
-
-    it('should show the generic error when automatic login fails unexpectedly', async () => {
-      apiStub.client.authRegisterPost.mockResolvedValue(
-        undefined
-      );
-
-      apiStub.client.authLoginPost.mockRejectedValue(
-        new Error('Unexpected login failure')
-      );
-
-      await expect(
-        service.register(
-          'priya.menon',
-          'password',
-          1
-        )
-      ).rejects.toThrow(
-        'Unable to sign in right now. Please try again.'
-      );
+      await expect(service.register('priya.menon', 'password')).rejects.toThrow('Unable to sign in right now. Please try again.');
     });
   });
 

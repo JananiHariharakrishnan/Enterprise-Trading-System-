@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { LoginRequest, RegisterRequest, ResponseError, UserResponse } from '../generated/auth';
+import { LoginRequest, ResponseError, UserResponse } from '../generated/auth';
 import { AuthApiClientService } from './auth-api-client.service';
 import { TokenStorageService } from './token-storage.service';
 
@@ -33,13 +33,11 @@ export class AuthSessionService {
     }
   }
 
-  async register(username: string, password: string, accountId: number): Promise<void> {
-    const payload: RegisterRequest = { username, password, accountId };
+  async register(username: string, password: string): Promise<UserResponse> {
+    const payload = { username, password };
 
     try {
-      await this.authApi.client.authRegisterPost({ registerRequest: payload });
-      // After successful registration, automatically log in
-      await this.login(username, password);
+      return await this.authApi.client.authRegisterPost({ registerRequest: payload });
     } catch (error) {
       throw new Error(await this.toReadableError(error));
     }

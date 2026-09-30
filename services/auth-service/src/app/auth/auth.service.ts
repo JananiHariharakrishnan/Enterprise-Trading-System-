@@ -1,12 +1,13 @@
-import { ConflictException, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { logger } from '../common/logger.js';
 import {
-  accountExists,
   consumeRefreshToken,
   createCredential,
   createUser,
+  deleteCredentialByUsername,
+  deleteOrphanCredentials,
   findCredentialByUsername,
-  findUserByAccountId,
+  findAvailableAccountId,
   findUserById,
   findUserByUsername,
   saveRefreshToken,
@@ -28,26 +29,72 @@ export class AuthService {
       throw new ConflictException();
     }
 
-    const hasAccount = await accountExists(dto.accountId);
-    if (!hasAccount) {
-      throw new UnprocessableEntityException();
-    }
-
-    const existingAccountUser = await findUserByAccountId(dto.accountId);
-    if (existingAccountUser) {
+    const existingCredential = await findCredentialByUsername(dto.username);
+    if (existingCredential) {
       throw new ConflictException();
     }
 
-    await createCredential(dto.accountId, dto.username, dto.password);
-    const user = await createUser(dto.username, dto.accountId, ['CUSTOMER']);
+    const removedOrphans = await deleteOrphanCredentials();
+    if (removedOrphans > 0) {
+      logger.warn('cleaned orphan credentials before registration', {
+        removedCount: removedOrphans,
+      });
+    }
 
-    return {
-      id: user.id,
-      username: user.username,
-      accountId: user.accountId,
-      roles: user.roles,
-      createdOn: user.createdOn,
-    };
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const availableAccountId = await findAvailableAccountId();
+      if (!availableAccountId) {
+        throw new ConflictException();
+      }
+
+      try {
+        await createCredential(availableAccountId, dto.username, dto.password);
+      } catch (error) {
+        if (!isAccountAllocationConflict(error)) {
+          throw error;
+        }
+
+        logger.warn('account allocation conflict during credential insert, retrying', {
+          username: dto.username,
+          attempt: attempt + 1,
+        });
+        continue;
+      }
+
+      try {
+        const user = await createUser(dto.username, availableAccountId, ['CUSTOMER']);
+        if (!user) {
+          await deleteCredentialByUsername(dto.username);
+          logger.warn('account allocation conflict during user insert, retrying', {
+            username: dto.username,
+            attempt: attempt + 1,
+          });
+          continue;
+        }
+
+        return {
+          id: user.id,
+          username: user.username,
+          accountId: user.accountId,
+          roles: user.roles,
+          createdOn: user.createdOn,
+        };
+      } catch (error) {
+        if (!isAccountAllocationConflict(error)) {
+          throw error;
+        }
+
+        // Roll back the credential row created in this attempt so the next attempt can reserve a new account.
+        await deleteCredentialByUsername(dto.username);
+
+        logger.warn('account allocation conflict during registration, retrying', {
+          username: dto.username,
+          attempt: attempt + 1,
+        });
+      }
+    }
+
+    throw new ConflictException();
   }
 
   async login(dto: LoginRequestDto) {
@@ -144,6 +191,27 @@ export class AuthService {
       createdOn: updated.createdOn,
     };
   }
+}
+
+function isAccountAllocationConflict(error: unknown): boolean {
+  const dbError = error as { code?: string; constraint?: string; message?: string; cause?: unknown } | undefined;
+  const constraint = dbError?.constraint;
+  const message = dbError?.message ?? '';
+
+  if (dbError?.code === '23505' && (constraint === 'uq_users_account_id' || constraint === 'uq_credentials_account_id')) {
+    return true;
+  }
+
+  if (message.includes('uq_users_account_id') || message.includes('uq_credentials_account_id')) {
+    return true;
+  }
+
+  const cause = dbError?.cause as { code?: string; constraint?: string; message?: string } | undefined;
+  if (cause?.code === '23505' && (cause.constraint === 'uq_users_account_id' || cause.constraint === 'uq_credentials_account_id')) {
+    return true;
+  }
+
+  return Boolean((cause?.message ?? '').includes('uq_users_account_id') || (cause?.message ?? '').includes('uq_credentials_account_id'));
 }
 
 

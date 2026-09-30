@@ -17,7 +17,6 @@ describe('AuthController - Profile Update (e2e)', () => {
   const baseTestUser = {
     username: 'profiletest_user',
     password: 'ValidPassword123!',
-    accountId: 1,
   };
 
   let accessToken: string;

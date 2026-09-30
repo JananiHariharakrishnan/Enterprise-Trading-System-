@@ -29,7 +29,7 @@ describe('auth contract (e2e)', () => {
   it('implements registration, login, refresh and profile', async () => {
     const registration = await request(app!.getHttpServer())
       .post('/auth/register')
-      .send({ username: 'priya.menon', password: 'correct horse battery staple', accountId: 1 })
+      .send({ username: 'priya.menon', password: 'correct horse battery staple' })
       .expect(201);
 
     expect(registration.body).toEqual({
@@ -43,7 +43,7 @@ describe('auth contract (e2e)', () => {
 
     await request(app!.getHttpServer())
       .post('/auth/register')
-      .send({ username: 'priya.menon', password: 'correct horse battery staple', accountId: 1 })
+      .send({ username: 'priya.menon', password: 'correct horse battery staple' })
       .expect(409)
       .expect({ errorCode: 'AUTH-409', message: 'Registration failed' });
 
@@ -113,14 +113,13 @@ describe('auth contract (e2e)', () => {
   it('returns only platform envelopes on failure', async () => {
     const invalidRegistration = await request(app!.getHttpServer())
       .post('/auth/register')
-      .send({ username: 'ab', password: 'short', accountId: 0 })
+      .send({ username: 'ab', password: 'short' })
       .expect(422);
 
     expect(invalidRegistration.body.errorCode).toBe('VAL-422');
     expect(invalidRegistration.body.message).toContain('Invalid input:');
     expect(invalidRegistration.body.message).toContain('username must be longer than or equal to 3 characters');
     expect(invalidRegistration.body.message).toContain('password must be longer than or equal to 12 characters');
-    expect(invalidRegistration.body.message).toContain('accountId must not be less than 1');
 
     await request(app!.getHttpServer())
       .post('/auth/login')

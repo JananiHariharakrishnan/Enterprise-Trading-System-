@@ -95,6 +95,16 @@ input::placeholder {
   font-size: 0.95rem;
 }
 
+.api-success {
+  color: #34d399;
+  background-color: rgba(52, 211, 153, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  margin: var(--space-4) 0;
+  font-size: 0.95rem;
+}
+
 button {
   padding: var(--space-3);
   background-color: var(--color-primary);

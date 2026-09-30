@@ -91,9 +91,11 @@ paths:
       security: []
       summary: Register a user
       description: |
-        Creates a user and links it to an existing trading account. It does not create the trading
-        account: accounts are owned by the Trade REST API's schema and seeded in Sprint 3. Registering
-        against an unknown `accountId` fails validation.
+        Creates a user and links it to an existing trading account chosen by the backend. The
+        service reads from `tradingsystem.accounts`, skips account IDs already present in
+        `authentication.credentials`, and assigns the first available ID.
+
+        If no account IDs are available for assignment, registration fails with `AUTH-409`.
 
         Registration does not return tokens. The client logs in afterwards. Returning a session from
         a registration endpoint makes the endpoint an unauthenticated session factory, and any
@@ -247,7 +249,7 @@ components:
     RegisterRequest:
       type: object
       additionalProperties: false
-      required: [username, password, accountId]
+      required: [username, password]
       properties:
         username:
           type: string
@@ -267,7 +269,9 @@ components:
           type: integer
           format: int64
           minimum: 1
-          description: The numeric trading account key, `ACCOUNTS.id`, that this user will trade.
+          description: |
+            Optional and ignored for public registration. Account IDs are allocated by the backend
+            from existing `ACCOUNTS.id` values not yet present in `authentication.credentials`.
           example: 1
         roles:
           type: array
@@ -281,7 +285,6 @@ components:
       example:
         username: priya.menon
         password: 'correct horse battery staple'
-        accountId: 1
 
     LoginRequest:
       type: object

@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Register Journey', () => {
   const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:4200';
-  const accountId = process.env.E2E_ACCOUNT_ID || '9';
   
   // Generate a unique username for each test run to avoid conflicts
   const generateUniqueUsername = (): string => {
@@ -30,9 +29,6 @@ test.describe('Register Journey', () => {
     // Fill in partial data
     await page.fill('[data-testid="register-username-input"]', 'ab'); // Too short
     await expect(submitButton).toBeDisabled();
-    
-    // Fill in account ID
-    await page.fill('[data-testid="register-account-input"]', accountId);
     
     // Password still needed
     await expect(submitButton).toBeDisabled();
@@ -62,7 +58,7 @@ test.describe('Register Journey', () => {
     await expect(submitButton).toBeEnabled();
   });
 
-  test('successful registration creates account and redirects to dashboard', async ({ page }) => {
+  test('successful registration shows assigned account ID', async ({ page }) => {
     // Navigate to register
     await page.click('[data-testid="home-link-register"]');
     await expect(page).toHaveURL(/\/register/);
@@ -72,15 +68,16 @@ test.describe('Register Journey', () => {
     
     // Fill in the form with valid data
     await page.fill('[data-testid="register-username-input"]', uniqueUsername);
-    await page.fill('[data-testid="register-account-input"]', accountId);
     await page.fill('[data-testid="register-password-input"]', 'correct horse battery staple');
     await page.fill('[data-testid="register-confirm-password-input"]', 'correct horse battery staple');
     
     // Submit the form
     await page.click('[data-testid="register-button"]');
     
-    // Should redirect to dashboard (after automatic login)
-    await expect(page).toHaveURL(/\/dashboard/);
+    // Should remain on register page and show account assignment from backend
+    await expect(page).toHaveURL(/\/register/);
+    const successElement = page.locator('[data-testid="register-success"]');
+    await expect(successElement).toContainText(/account ID is/i);
   });
 
   test('duplicate username shows error', async ({ page }) => {
@@ -93,7 +90,6 @@ test.describe('Register Journey', () => {
     
     // Fill in the form
     await page.fill('[data-testid="register-username-input"]', existingUsername);
-    await page.fill('[data-testid="register-account-input"]', accountId);
     await page.fill('[data-testid="register-password-input"]', 'correct horse battery staple');
     await page.fill('[data-testid="register-confirm-password-input"]', 'correct horse battery staple');
     
