@@ -1,9 +1,10 @@
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AccountResponse, BalanceResponse, OrderHistoryEntry, PositionResponse } from '../../generated/trade';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
+import { UiEventsService } from '../../services/ui-events.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -12,7 +13,7 @@ import { TradeApiClientService } from '../../services/trade-api-client.service';
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent {
   readonly authSession = inject(AuthSessionService);
   private readonly tradeApi = inject(TradeApiClientService);
 
@@ -23,10 +24,10 @@ export class DashboardComponent implements OnInit {
   readonly positions = signal<PositionResponse[]>([]);
   readonly orders = signal<OrderHistoryEntry[]>([]);
 
-  ngOnInit(): void {
-    this.loadDashboard();
+  async ngOnInit(): Promise<void> {
+    await this.loadDashboard();
     // subscribe to global UI refresh events
-    const uiEvents = inject((await import('../../services/ui-events.service')).UiEventsService as any);
+    const uiEvents = inject(UiEventsService);
     uiEvents.onRefresh().subscribe(() => void this.refresh());
   }
 
