@@ -2,6 +2,7 @@ package com.tradingsystem.service.Impl;
 
 import com.tradingsystem.dto.request.AddWatchlistInstrumentRequest;
 import com.tradingsystem.dto.request.CreateWatchlistRequest;
+import com.tradingsystem.dto.response.LatestMarketPrice;
 import com.tradingsystem.dto.response.LatestPriceResponse;
 import com.tradingsystem.dto.response.WatchlistDetailResponse;
 import com.tradingsystem.dto.response.WatchlistInstrumentResponse;
@@ -19,13 +20,13 @@ import com.tradingsystem.model.Instrument;
 import com.tradingsystem.model.Watchlist;
 import com.tradingsystem.model.WatchlistEntry;
 import com.tradingsystem.security.CurrentUser;
+import com.tradingsystem.service.MarketDataService;
 import com.tradingsystem.service.WatchlistService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,15 +38,18 @@ public class WatchlistServiceImpl implements WatchlistService {
     private final WatchlistDataMapper watchlistDataMapper;
     private final AccountDataMapper accountDataMapper;
     private final CurrentUser currentUser;
+    private final MarketDataService marketDataService;
 
     public WatchlistServiceImpl(
             WatchlistDataMapper watchlistDataMapper,
             AccountDataMapper accountDataMapper,
-            CurrentUser currentUser
+            CurrentUser currentUser,
+            MarketDataService marketDataService
     ) {
         this.watchlistDataMapper = watchlistDataMapper;
         this.accountDataMapper = accountDataMapper;
         this.currentUser = currentUser;
+        this.marketDataService = marketDataService;
     }
 
     @Override
@@ -66,13 +70,16 @@ public class WatchlistServiceImpl implements WatchlistService {
             throw new WatchlistConflictException();
         }
 
-        Watchlist persisted = watchlistDataMapper.findWatchlistByAccountIdAndId(
-                account.getAccountId(),
-                watchlist.getId()
-        );
+        Watchlist persisted =
+                watchlistDataMapper.findWatchlistByAccountIdAndId(
+                        account.getAccountId(),
+                        watchlist.getId()
+                );
 
         if (persisted == null) {
-            throw new IllegalStateException("Created watchlist could not be reloaded");
+            throw new IllegalStateException(
+                    "Created watchlist could not be reloaded"
+            );
         }
 
         return toSummaryResponse(persisted);
@@ -100,12 +107,27 @@ public class WatchlistServiceImpl implements WatchlistService {
             Long watchlistId
     ) {
         Account account = getAuthorizedAccount(accountId);
-        Watchlist watchlist = getAuthorizedWatchlist(account.getAccountId(), watchlistId);
 
-        List<WatchlistEntry> entries = watchlistDataMapper.findEntriesByWatchlistId(watchlist.getId());
-        Map<String, Object> latestPricesBySymbol = loadLatestPrices(entries);
+        Watchlist watchlist =
+                getAuthorizedWatchlist(
+                        account.getAccountId(),
+                        watchlistId
+                );
 
-        List<WatchlistInstrumentResponse> instruments = new ArrayList<>();
+        List<WatchlistEntry> entries =
+                watchlistDataMapper.findEntriesByWatchlistId(
+                        watchlist.getId()
+                );
+
+        /*
+         * Market prices come from the in-memory market-data cache.
+         * No database query is made for the latest price.
+         */
+        Map<String, LatestMarketPrice> latestPricesBySymbol =
+                loadLatestPrices(entries);
+
+        List<WatchlistInstrumentResponse> instruments =
+                new ArrayList<>();
 
         for (WatchlistEntry entry : entries) {
             instruments.add(
@@ -116,12 +138,18 @@ public class WatchlistServiceImpl implements WatchlistService {
             );
         }
 
-        WatchlistDetailResponse response = new WatchlistDetailResponse();
+        WatchlistDetailResponse response =
+                new WatchlistDetailResponse();
+
         response.setId(watchlist.getId());
         response.setName(watchlist.getName());
         response.setEntryCount(watchlist.getEntryCount());
-        response.setCreatedOn(toOffsetDateTime(watchlist.getCreatedOn()));
-        response.setUpdatedOn(toOffsetDateTime(watchlist.getUpdatedOn()));
+        response.setCreatedOn(
+                toOffsetDateTime(watchlist.getCreatedOn())
+        );
+        response.setUpdatedOn(
+                toOffsetDateTime(watchlist.getUpdatedOn())
+        );
         response.setInstruments(instruments);
 
         return response;
@@ -135,10 +163,11 @@ public class WatchlistServiceImpl implements WatchlistService {
     ) {
         Account account = getAuthorizedAccount(accountId);
 
-        int deleted = watchlistDataMapper.deleteWatchlist(
-                account.getAccountId(),
-                watchlistId
-        );
+        int deleted =
+                watchlistDataMapper.deleteWatchlist(
+                        account.getAccountId(),
+                        watchlistId
+                );
 
         if (deleted == 0) {
             throw new WatchlistNotFoundException();
@@ -153,10 +182,17 @@ public class WatchlistServiceImpl implements WatchlistService {
             AddWatchlistInstrumentRequest request
     ) {
         Account account = getAuthorizedAccount(accountId);
-        Watchlist watchlist = getAuthorizedWatchlist(account.getAccountId(), watchlistId);
+
+        Watchlist watchlist =
+                getAuthorizedWatchlist(
+                        account.getAccountId(),
+                        watchlistId
+                );
 
         String symbol = normalizeSymbol(request.getSymbol());
-        Instrument instrument = watchlistDataMapper.findInstrumentBySymbol(symbol);
+
+        Instrument instrument =
+                watchlistDataMapper.findInstrumentBySymbol(symbol);
 
         if (instrument == null) {
             throw new InstrumentNotFoundException();
@@ -167,13 +203,21 @@ public class WatchlistServiceImpl implements WatchlistService {
         watchlistEntry.setSymbol(symbol);
 
         try {
-            watchlistDataMapper.insertWatchlistEntry(watchlistEntry);
+            watchlistDataMapper.insertWatchlistEntry(
+                    watchlistEntry
+            );
         } catch (DataIntegrityViolationException exception) {
-            throw new WatchlistConflictException("Instrument already in watchlist");
+            throw new WatchlistConflictException(
+                    "Instrument already in watchlist"
+            );
         }
 
         WatchlistEntry persisted = null;
-        List<WatchlistEntry> entries = watchlistDataMapper.findEntriesByWatchlistId(watchlist.getId());
+
+        List<WatchlistEntry> entries =
+                watchlistDataMapper.findEntriesByWatchlistId(
+                        watchlist.getId()
+                );
 
         for (WatchlistEntry entry : entries) {
             if (symbol.equals(entry.getSymbol())) {
@@ -183,12 +227,25 @@ public class WatchlistServiceImpl implements WatchlistService {
         }
 
         if (persisted == null) {
-            throw new IllegalStateException("Created watchlist instrument could not be reloaded");
+            throw new IllegalStateException(
+                    "Created watchlist instrument could not be reloaded"
+            );
         }
+
+        /*
+         * If the market-data consumer has already received a quote
+         * for this symbol, return it immediately.
+         *
+         * If there is no cached quote yet, latestPrice will be null.
+         */
+        LatestMarketPrice latestPrice =
+                marketDataService.getLatestPrice(
+                        persisted.getSymbol()
+                );
 
         return toInstrumentResponse(
                 persisted,
-                null  // Price will come from cache when Kafka consumer is implemented
+                latestPrice
         );
     }
 
@@ -200,24 +257,37 @@ public class WatchlistServiceImpl implements WatchlistService {
             String symbol
     ) {
         Account account = getAuthorizedAccount(accountId);
-        Watchlist watchlist = getAuthorizedWatchlist(account.getAccountId(), watchlistId);
 
-        int deleted = watchlistDataMapper.deleteWatchlistEntry(
-                watchlist.getId(),
-                normalizeSymbol(symbol)
-        );
+        Watchlist watchlist =
+                getAuthorizedWatchlist(
+                        account.getAccountId(),
+                        watchlistId
+                );
+
+        int deleted =
+                watchlistDataMapper.deleteWatchlistEntry(
+                        watchlist.getId(),
+                        normalizeSymbol(symbol)
+                );
 
         if (deleted == 0) {
-            throw new WatchlistNotFoundException("Watchlist instrument not found");
+            throw new WatchlistNotFoundException(
+                    "Watchlist instrument not found"
+            );
         }
     }
 
+    /**
+     * Gets the authenticated and active account.
+     */
     private Account getAuthorizedAccount(Long accountId) {
+
         if (accountId == null || accountId <= 0) {
             throw new AccountNotFoundException();
         }
 
-        Account account = accountDataMapper.findAccountById(accountId);
+        Account account =
+                accountDataMapper.findAccountById(accountId);
 
         if (account == null) {
             throw new AccountNotFoundException();
@@ -227,7 +297,8 @@ public class WatchlistServiceImpl implements WatchlistService {
             throw new AccountNotActiveException();
         }
 
-        Long authenticatedAccountId = currentUser.getAccountId();
+        Long authenticatedAccountId =
+                currentUser.getAccountId();
 
         if (authenticatedAccountId == null) {
             throw new TradingAuthenticationException();
@@ -240,6 +311,9 @@ public class WatchlistServiceImpl implements WatchlistService {
         return account;
     }
 
+    /**
+     * Gets a watchlist belonging to the authenticated account.
+     */
     private Watchlist getAuthorizedWatchlist(
             Long accountId,
             Long watchlistId
@@ -248,10 +322,11 @@ public class WatchlistServiceImpl implements WatchlistService {
             throw new WatchlistNotFoundException();
         }
 
-        Watchlist watchlist = watchlistDataMapper.findWatchlistByAccountIdAndId(
-                accountId,
-                watchlistId
-        );
+        Watchlist watchlist =
+                watchlistDataMapper.findWatchlistByAccountIdAndId(
+                        accountId,
+                        watchlistId
+                );
 
         if (watchlist == null) {
             throw new WatchlistNotFoundException();
@@ -260,44 +335,145 @@ public class WatchlistServiceImpl implements WatchlistService {
         return watchlist;
     }
 
-    private Map<String, Object> loadLatestPrices(
+    /**
+     * Loads the latest market price for every watchlist symbol
+     * from the in-memory market-data cache.
+     *
+     * This does NOT query the database.
+     */
+    private Map<String, LatestMarketPrice> loadLatestPrices(
             List<WatchlistEntry> entries
     ) {
-        // Prices are cached in-memory by Kafka consumer.
-        // For now, return empty map. When Kafka consumer is implemented,
-        // inject a market price cache service here to look up prices.
-        return new HashMap<>();
+        Map<String, LatestMarketPrice> latestPricesBySymbol =
+                new HashMap<>();
+
+        for (WatchlistEntry entry : entries) {
+
+            String symbol = entry.getSymbol();
+
+            LatestMarketPrice latestPrice =
+                    marketDataService.getLatestPrice(symbol);
+
+            latestPricesBySymbol.put(
+                    symbol,
+                    latestPrice
+            );
+        }
+
+        return latestPricesBySymbol;
     }
 
-    private WatchlistSummaryResponse toSummaryResponse(Watchlist watchlist) {
-        WatchlistSummaryResponse response = new WatchlistSummaryResponse();
+    /**
+     * Converts a Watchlist entity into the summary response.
+     */
+    private WatchlistSummaryResponse toSummaryResponse(
+            Watchlist watchlist
+    ) {
+        WatchlistSummaryResponse response =
+                new WatchlistSummaryResponse();
+
         response.setId(watchlist.getId());
         response.setName(watchlist.getName());
         response.setEntryCount(watchlist.getEntryCount());
-        response.setCreatedOn(toOffsetDateTime(watchlist.getCreatedOn()));
-        response.setUpdatedOn(toOffsetDateTime(watchlist.getUpdatedOn()));
+        response.setCreatedOn(
+                toOffsetDateTime(watchlist.getCreatedOn())
+        );
+        response.setUpdatedOn(
+                toOffsetDateTime(watchlist.getUpdatedOn())
+        );
+
         return response;
     }
 
+    /**
+     * Converts a WatchlistEntry and its cached market price
+     * into the API response.
+     */
     private WatchlistInstrumentResponse toInstrumentResponse(
             WatchlistEntry entry,
-            Object latestMarketPrice
+            LatestMarketPrice latestMarketPrice
     ) {
-        WatchlistInstrumentResponse response = new WatchlistInstrumentResponse();
+        WatchlistInstrumentResponse response =
+                new WatchlistInstrumentResponse();
+
         response.setSymbol(entry.getSymbol());
-        response.setAddedOn(toOffsetDateTime(entry.getAddedOn()));
-        response.setLatestPrice(null);  // Will be populated from cache when available
+
+        response.setAddedOn(
+                toOffsetDateTime(entry.getAddedOn())
+        );
+
+        response.setLatestPrice(
+                toLatestPriceResponse(latestMarketPrice)
+        );
+
         return response;
     }
 
+    /**
+     * Converts the internal cached market-price representation
+     * into the API response representation.
+     */
     private LatestPriceResponse toLatestPriceResponse(
-            Object latestMarketPrice
+            LatestMarketPrice latestMarketPrice
     ) {
-        return null;  // Will be populated from cache when Kafka consumer is implemented
+        /*
+         * A null value simply means that this symbol has not
+         * received market data yet or the cache was empty.
+         */
+        if (latestMarketPrice == null) {
+            return null;
+        }
+
+        LatestPriceResponse response =
+                new LatestPriceResponse();
+
+        response.setPrice(
+                latestMarketPrice.getPrice()
+        );
+
+        response.setCurrency(
+                latestMarketPrice.getCurrency()
+        );
+
+        response.setChange(
+                latestMarketPrice.getChange()
+        );
+
+        response.setChangePercent(
+                latestMarketPrice.getChangePercent()
+        );
+
+        response.setPreviousClose(
+                latestMarketPrice.getPreviousClose()
+        );
+
+        response.setMarketState(
+                latestMarketPrice.getMarketState()
+        );
+
+        if (latestMarketPrice.getStale() != null) {
+            response.setStale(
+                    latestMarketPrice.getStale()
+            );
+        }
+
+        if (latestMarketPrice.getQuoteAsOf() != null) {
+            response.setQuoteAsOf(
+                    OffsetDateTime.parse(
+                            latestMarketPrice.getQuoteAsOf()
+                    )
+            );
+        }
+
+        return response;
     }
 
-    private OffsetDateTime toOffsetDateTime(OffsetDateTime value) {
-        // Already an OffsetDateTime from the database (TIMESTAMPTZ)
+    /**
+     * Database already returns OffsetDateTime for TIMESTAMPTZ.
+     */
+    private OffsetDateTime toOffsetDateTime(
+            OffsetDateTime value
+    ) {
         return value;
     }
 
@@ -309,4 +485,3 @@ public class WatchlistServiceImpl implements WatchlistService {
         return symbol == null ? null : symbol.trim();
     }
 }
-

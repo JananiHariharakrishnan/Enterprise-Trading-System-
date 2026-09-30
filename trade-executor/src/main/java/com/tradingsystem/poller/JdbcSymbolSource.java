@@ -24,7 +24,7 @@ public class JdbcSymbolSource implements SymbolSource {
                 UNION
 
                 SELECT symbol
-                FROM watchlist
+                FROM watchlist_entries
 
                 ORDER BY symbol
                 """, String.class);
