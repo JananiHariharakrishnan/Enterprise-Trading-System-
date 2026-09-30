@@ -63,6 +63,13 @@ class TradeApiClientServiceStub {
       }
     ])
   };
+
+  // add watchlists stub data
+  watchlists = {
+    listWatchlists: vi.fn().mockResolvedValue([
+      { id: 11, name: 'Tech', entryCount: 3, createdOn: new Date(), updatedOn: new Date() }
+    ])
+  };
 }
 
 describe('DashboardComponent', () => {
