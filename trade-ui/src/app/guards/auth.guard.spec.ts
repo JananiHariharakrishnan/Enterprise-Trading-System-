@@ -39,6 +39,16 @@ describe('authGuard', () => {
     expect(result).toEqual(router.createUrlTree(['/login'], { queryParams: { returnUrl: '/positions' } }));
   });
 
+  it('refuses an off-origin return address', async () => {
+    authSession.isAuthenticated.mockReturnValue(false);
+
+    const result = await TestBed.runInInjectionContext(() =>
+      authGuard({} as any, { url: '//evil.example.com/phish' } as any)
+    );
+
+    expect(result).toEqual(router.createUrlTree(['/login']));
+  });
+
   it('allows dashboard route when session and profile are valid', async () => {
     authSession.loadCurrentUser.mockResolvedValue({ id: 'u-1' });
 

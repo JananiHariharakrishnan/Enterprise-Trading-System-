@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthSessionService } from '../../services/auth-session.service';
+import { getSafeReturnUrl } from '../../guards/return-url.util';
 
 @Component({
   selector: 'app-login',
@@ -38,9 +39,8 @@ export class LoginComponent {
       const { username, password } = this.form.getRawValue();
       await this.authSession.login(username, password);
 
-      // Honour a returnUrl only if it is a same-origin path (starts with '/').
       const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || undefined;
-      const safeReturn = returnUrl && returnUrl.startsWith('/') ? returnUrl : undefined;
+      const safeReturn = getSafeReturnUrl(returnUrl);
 
       if (safeReturn) {
         await this.router.navigateByUrl(safeReturn);

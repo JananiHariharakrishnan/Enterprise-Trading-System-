@@ -1,8 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { Router } from '@angular/router';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { routes } from '../../app.routes';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { LoginComponent } from './login.component';
@@ -17,15 +14,25 @@ describe('LoginComponent', () => {
   let component: LoginComponent;
   let authSession: AuthSessionServiceStub;
   let router: Router;
+  let activatedRoute: { snapshot: { queryParamMap: { get: ReturnType<typeof vi.fn> } } };
 
   beforeEach(async () => {
+    activatedRoute = {
+      snapshot: {
+        queryParamMap: {
+          get: vi.fn().mockReturnValue(null)
+        }
+      }
+    };
+
     // Component resources are provided centrally in src/test-setup.ts
 
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
         provideRouter(routes),
-        { provide: AuthSessionService, useClass: AuthSessionServiceStub }
+        { provide: AuthSessionService, useClass: AuthSessionServiceStub },
+        { provide: ActivatedRoute, useValue: activatedRoute }
       ]
     }).compileComponents();
 
@@ -51,15 +58,15 @@ describe('LoginComponent', () => {
 
   it('valid credentials sign in and redirect', async () => {
     authSession.login.mockResolvedValue(undefined);
-    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     component.form.setValue({
       username: 'priya.menon',
       password: 'correct horse battery staple'
     });
 
-    // Simulate a returnUrl present via ActivatedRoute snapshot
-    (component as any).route = { snapshot: { queryParamMap: { get: (k: string) => (k === 'returnUrl' ? '/instruments' : null) } } } as any;
+    activatedRoute.snapshot.queryParamMap.get.mockImplementation((key: string) =>
+      key === 'returnUrl' ? '/instruments' : null
+    );
 
     const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
 
@@ -78,8 +85,28 @@ describe('LoginComponent', () => {
       password: 'correct horse battery staple'
     });
 
-    // Off-origin returnUrl should be rejected
-    (component as any).route = { snapshot: { queryParamMap: { get: (k: string) => (k === 'returnUrl' ? 'https://evil.example.com/phish' : null) } } } as any;
+    activatedRoute.snapshot.queryParamMap.get.mockImplementation((key: string) =>
+      key === 'returnUrl' ? 'https://evil.example.com/phish' : null
+    );
+
+    await component.onSubmit();
+
+    expect(authSession.login).toHaveBeenCalled();
+    expect(navigateSpy).toHaveBeenCalledWith(['/dashboard']);
+  });
+
+  it('protocol-relative returnUrl is refused and navigates to dashboard', async () => {
+    authSession.login.mockResolvedValue(undefined);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    component.form.setValue({
+      username: 'priya.menon',
+      password: 'correct horse battery staple'
+    });
+
+    activatedRoute.snapshot.queryParamMap.get.mockImplementation((key: string) =>
+      key === 'returnUrl' ? '//evil.example.com/phish' : null
+    );
 
     await component.onSubmit();
 
