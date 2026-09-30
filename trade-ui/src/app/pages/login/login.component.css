@@ -100,7 +100,7 @@ button {
   background: var(--color-primary);
   border: none;
   border-radius: var(--radius-md);
-  color: #041009;
+  color: var(--color-on-primary);
   cursor: pointer;
   font-size: 1rem;
   font-weight: 600;

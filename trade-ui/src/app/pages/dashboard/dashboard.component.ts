@@ -25,6 +25,9 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadDashboard();
+    // subscribe to global UI refresh events
+    const uiEvents = inject((await import('../../services/ui-events.service')).UiEventsService as any);
+    uiEvents.onRefresh().subscribe(() => void this.refresh());
   }
 
   async refresh(): Promise<void> {
