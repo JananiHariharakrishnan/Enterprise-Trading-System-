@@ -23,6 +23,7 @@ export class DashboardComponent implements OnInit {
   readonly balance = signal<BalanceResponse | null>(null);
   readonly positions = signal<PositionResponse[]>([]);
   readonly orders = signal<OrderHistoryEntry[]>([]);
+  readonly watchlists = signal<any[]>([]);
 
   ngOnInit(): void {
     void this.loadDashboard();
@@ -49,17 +50,20 @@ export class DashboardComponent implements OnInit {
       }
 
       const accountId = user.accountId;
-      const [account, balance, positions, orders] = await Promise.all([
+      const [account, balance, positions, orders, watchlists] = await Promise.all([
         this.tradeApi.accounts.getAccount({ id: accountId }),
         this.tradeApi.accounts.getBalance({ id: accountId }),
         this.tradeApi.accounts.getPositions({ id: accountId }),
-        this.tradeApi.accounts.getOrders({ id: accountId })
+        this.tradeApi.accounts.getOrders({ id: accountId }),
+        this.tradeApi.watchlists.listWatchlists({ id: accountId })
       ]);
 
       this.account.set(account);
       this.balance.set(balance);
       this.positions.set(positions);
       this.orders.set(orders.slice(0, 10));
+      this.watchlists.set((Array.isArray((watchlists as any)) ? watchlists as any[] : [])
+        .slice(0, 5));
     } catch {
       this.loadError.set('Unable to load dashboard data right now. Check trade-api and try again.');
     } finally {

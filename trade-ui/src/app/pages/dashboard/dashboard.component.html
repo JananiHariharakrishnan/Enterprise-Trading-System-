@@ -94,5 +94,15 @@
         </tbody>
       </table>
     </section>
+
+    <section class="dashboard-card" data-testid="watchlists-list">
+      <h2>Watchlists</h2>
+      <p *ngIf="watchlists().length === 0" class="status">No watchlists found.</p>
+      <ul *ngIf="watchlists().length > 0">
+        <li *ngFor="let wl of watchlists()">
+          <strong>{{ wl.name }}</strong> — {{ wl.entryCount }} instruments
+        </li>
+      </ul>
+    </section>
   </ng-container>
 </section>

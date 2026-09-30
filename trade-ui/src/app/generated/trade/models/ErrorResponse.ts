@@ -29,6 +29,8 @@ export interface ErrorResponse {
      * | `INS-404` | 404 | Instrument not found or not tradable |
      * | `ORD-400` | 400 | Insufficient funds |
      * | `ORD-409` | 409 | Insufficient holdings, duplicate order, or order not cancellable |
+     * | `WAT-404` | 404 | Watchlist or watchlist instrument not found |
+     * | `WAT-409` | 409 | Duplicate watchlist name or duplicate watchlist instrument |
      * | `VAL-422` | 422 | Invalid input |
      * | `AUTH-401` | 401 | Unauthorised or invalid token |
      * 
@@ -56,6 +58,8 @@ export const ErrorResponseErrorCodeEnum = {
     Ins404: 'INS-404',
     Ord400: 'ORD-400',
     Ord409: 'ORD-409',
+    Wat404: 'WAT-404',
+    Wat409: 'WAT-409',
     Val422: 'VAL-422',
     Auth401: 'AUTH-401'
 } as const;
