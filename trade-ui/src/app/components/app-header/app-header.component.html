@@ -13,14 +13,19 @@
         <span class="theme-icon" *ngIf="themeService.currentTheme() === 'dark'">☀️</span>
         <span class="theme-icon" *ngIf="themeService.currentTheme() === 'light'">🌙</span>
       </button>
-      <button
-        *ngIf="authSession.isAuthenticated()"
-        type="button"
-        (click)="onSignOut()"
-        data-testid="sign-out-button"
-      >
-        Sign out
-      </button>
+
+      <!-- Global profile menu -->
+      <div class="profile-menu" *ngIf="authSession.isAuthenticated()">
+        <button class="profile-button" (click)="toggleProfileMenu()" aria-label="Open profile menu">
+          <span class="profile-initial">{{ authSession.currentUser()?.username?.charAt(0)?.toUpperCase() }}</span>
+        </button>
+
+        <div class="profile-dropdown" *ngIf="menuOpen">
+          <button type="button" (click)="goToProfile()">Update profile</button>
+          <button type="button" (click)="emitRefresh()">Refresh</button>
+          <button type="button" (click)="onSignOut()">Sign out</button>
+        </div>
+      </div>
     </div>
   </div>
 </header>

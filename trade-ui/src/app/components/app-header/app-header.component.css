@@ -13,10 +13,18 @@
   align-items: center;
   display: flex;
   justify-content: space-between;
-  margin: 0 auto;
-  max-width: var(--page-max-width);
+  width: 100%;
+  max-width: none;
   padding: var(--space-3) var(--space-7);
   gap: var(--space-4);
+}
+
+/* Make header background span full viewport and remove centered card look */
+.top-header {
+  left: 0;
+  right: 0;
+  width: 100vw;
+  border-radius: 0;
 }
 
 .brand {
@@ -49,7 +57,7 @@ button {
   background: var(--color-primary);
   border: none;
   border-radius: var(--radius-md);
-  color: #041009;
+  color: var(--color-on-primary);
   cursor: pointer;
   font-weight: 600;
   padding: var(--space-2) var(--space-4);
@@ -72,6 +80,60 @@ button:disabled {
   display: flex;
   gap: var(--space-3);
   align-items: center;
+}
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.profile-initial {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+
+.profile-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  /* use dropdown background variable (light in dark mode) for better contrast */
+  background: var(--dropdown-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-md);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+  z-index: 200;
+}
+
+
+.profile-dropdown button {
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--color-text) !important;
+  font-weight: 600;
+}
+
+.profile-dropdown button:hover {
+  background: var(--glass-bg-hover);
 }
 
 .btn-theme {

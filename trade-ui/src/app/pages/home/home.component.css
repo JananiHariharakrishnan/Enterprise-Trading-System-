@@ -237,7 +237,7 @@ button {
 
 button.primary {
   background-color: var(--color-primary);
-  color: #041009;
+  color: var(--color-on-primary);
 }
 
 button.primary:hover {

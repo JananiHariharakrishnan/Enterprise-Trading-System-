@@ -98,7 +98,7 @@ input::placeholder {
 button {
   padding: var(--space-3);
   background-color: var(--color-primary);
-  color: #041009;
+  color: var(--color-on-primary);
   border: none;
   border-radius: var(--radius-md);
   font-size: 1rem;
