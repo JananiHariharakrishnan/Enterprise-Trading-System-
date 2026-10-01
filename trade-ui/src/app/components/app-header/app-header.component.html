@@ -1,39 +1,166 @@
-<header class="top-header">
-  <div class="header-content">
-    <span class="brand">Trade Platform</span>
-    <nav class="nav-links" *ngIf="authSession.isAuthenticated()">
-      <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
-      <a routerLink="/orders" routerLinkActive="active">Place Order</a>
-      <a routerLink="/orders/history" routerLinkActive="active">Order History</a>
-      <!-- Analytics removed per UX decision -->
-      <a routerLink="/watchlists" routerLinkActive="active">Watchlists</a>
-      <a routerLink="/profile" routerLinkActive="active">Account</a>
+<div class="trade-shell-ui">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">▥</div>
+      <span>Firodha<span class="dot">.</span></span>
+    </div>
+
+    <div class="workspace-switcher">
+      <div class="workspace-icon">♜</div>
+      <div>
+        <strong>Personal workspace</strong>
+        <small>Individual brokerage</small>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+
+    <nav>
+      <div class="nav-group">
+        <div class="nav-label">WORKSPACE</div>
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="active">
+          <span class="nav-icon">▦</span><span>Overview</span>
+        </a>
+        <a class="nav-item" routerLink="/positions" routerLinkActive="active">
+          <span class="nav-icon">▣</span><span>Positions</span>
+        </a>
+        <a class="nav-item" routerLink="/orders" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          <span class="nav-icon">☷</span><span>Orders</span>
+        </a>
+        <a class="nav-item" routerLink="/orders/history" routerLinkActive="active">
+          <span class="nav-icon">◷</span><span>Order history</span>
+        </a>
+        <a class="nav-item" routerLink="/watchlists" routerLinkActive="active">
+          <span class="nav-icon">☆</span><span>Watchlists</span>
+        </a>
+        <a class="nav-item" routerLink="/profile" routerLinkActive="active">
+          <span class="nav-icon">⚙</span><span>Profile & settings</span>
+        </a>
+      </div>
     </nav>
-    <div class="header-actions">
+
+    <div class="sidebar-footer">
+      <div class="connection"><span></span> Paper trading connected <b>♢</b></div>
+      <button class="user-card" type="button" (click)="goToProfile()">
+        <span class="avatar">{{ authSession.currentUser()?.username?.charAt(0)?.toUpperCase() || 'U' }}</span>
+        <span>
+          <strong>{{ authSession.currentUser()?.username || 'Trader' }}</strong>
+          <small>Demo account</small>
+        </span>
+        <span>›</span>
+      </button>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <div class="crumbs"><span>Workspace</span><b>›</b><strong>Trading Platform</strong></div>
+    <div class="search-wrap">
+      <span>⌕</span>
       <button
         type="button"
-        class="btn-theme"
+        class="asset-search-trigger"
+        (click)="openAssetSearch()"
+      >
+        Search assets, orders, watchlists...
+      </button>
+    </div>
+    <div class="top-actions">
+      <button
+        type="button"
+        class="text-btn theme-btn"
         (click)="toggleTheme()"
         [title]="themeService.currentTheme() === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
         data-testid="theme-toggle-button"
         aria-label="Toggle theme"
       >
-        <span class="theme-icon" *ngIf="themeService.currentTheme() === 'dark'">☀️</span>
-        <span class="theme-icon" *ngIf="themeService.currentTheme() === 'light'">🌙</span>
+        {{ themeService.currentTheme() === 'dark' ? 'Light mode' : 'Dark mode' }}
       </button>
 
-      <!-- Global profile menu -->
-      <div class="profile-menu" *ngIf="authSession.isAuthenticated()">
-        <button class="profile-button" (click)="toggleProfileMenu()" aria-label="Open profile menu">
-          <span class="profile-initial">{{ authSession.currentUser()?.username?.charAt(0)?.toUpperCase() }}</span>
+      <button class="text-btn" type="button" (click)="emitRefresh()">Refresh</button>
+
+      <div class="profile-menu">
+        <button class="profile-button" type="button" (click)="toggleProfileMenu()" aria-label="Open profile menu">
+          <span class="profile-initial">{{ authSession.currentUser()?.username?.charAt(0)?.toUpperCase() || 'U' }}</span>
         </button>
 
         <div class="profile-dropdown" *ngIf="menuOpen">
           <button type="button" (click)="goToProfile()">Update profile</button>
-          <button type="button" (click)="emitRefresh()">Refresh</button>
+          <button type="button" (click)="emitRefresh()">Refresh data</button>
           <button type="button" (click)="onSignOut()">Sign out</button>
         </div>
       </div>
     </div>
+  </header>
+
+  <div class="market-strip">
+    <div class="snapshot"><span class="live-dot"></span><div><b>MARKET SNAPSHOT</b><small>{{ marketFeedLabel() }}</small></div></div>
+    <div *ngFor="let item of marketItems()">
+      <small>{{ item.label }}</small>
+      <strong>{{ item.value | number:'1.2-2' }}</strong>
+      <em [class.up]="item.changePct >= 0" [class.down]="item.changePct < 0">
+        {{ item.changePct >= 0 ? '↗' : '↘' }} {{ item.changePct >= 0 ? '+' : '' }}{{ item.changePct | number:'1.2-2' }}%
+      </em>
+    </div>
   </div>
-</header>
+
+  <div class="asset-search-modal" *ngIf="isAssetSearchOpen()" (click)="closeAssetSearch()">
+    <div class="asset-search-panel" (click)="$event.stopPropagation()">
+      <div class="asset-search-head">
+        <div>
+          <h3>Find an asset</h3>
+          <p>Stocks and ETFs from instruments table</p>
+        </div>
+        <button type="button" class="asset-search-close" (click)="closeAssetSearch()" aria-label="Close asset search">✕</button>
+      </div>
+
+      <div class="asset-search-input-wrap">
+        <span>⌕</span>
+        <input
+          [value]="instrumentSearchText()"
+          (input)="onAssetSearchInput($event)"
+          placeholder="Search symbol or company..."
+          autofocus
+        />
+      </div>
+
+      <div class="asset-search-status" *ngIf="isLoadingInstruments()">Loading instruments...</div>
+      <div class="asset-search-status error" *ngIf="instrumentSearchError()">{{ instrumentSearchError() }}</div>
+
+      <div class="asset-search-results" *ngIf="!isLoadingInstruments() && !instrumentSearchError()">
+        <div
+          class="asset-search-row"
+          *ngFor="let item of instrumentResults()"
+          (click)="selectInstrument(item)"
+          [class.selected]="selectedInstrument()?.symbol === item.symbol"
+        >
+          <div class="asset-left">
+            <span class="asset-initial">{{ getInstrumentInitial(item.symbol) }}</span>
+            <div>
+              <strong>{{ item.symbol }}</strong>
+              <small>{{ item.name }}</small>
+            </div>
+          </div>
+          <div class="asset-meta">
+            <span>{{ item.assetClass || 'EQUITY' }}</span>
+            <small>{{ item.currency || 'USD' }}</small>
+          </div>
+        </div>
+        <div class="asset-search-status" *ngIf="instrumentResults().length === 0">
+          No matching instruments found.
+        </div>
+      </div>
+
+      <div class="asset-detail" *ngIf="selectedInstrument() as item">
+        <div class="asset-detail-head">
+          <h4>Instrument details</h4>
+          <button type="button" (click)="clearSelectedInstrument()" aria-label="Close details">✕</button>
+        </div>
+        <div class="asset-detail-grid">
+          <div><small>Symbol</small><strong>{{ item.symbol }}</strong></div>
+          <div><small>Name</small><strong>{{ item.name }}</strong></div>
+          <div><small>Asset class</small><strong>{{ item.assetClass || 'EQUITY' }}</strong></div>
+          <div><small>Currency</small><strong>{{ item.currency || 'USD' }}</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

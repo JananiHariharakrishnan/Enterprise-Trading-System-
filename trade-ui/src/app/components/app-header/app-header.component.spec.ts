@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -51,6 +52,21 @@ describe('AppHeaderComponent', () => {
         { provide: AuthSessionService, useClass: AuthSessionServiceStub },
         { provide: ThemeService, useClass: ThemeServiceStub },
         { provide: UiEventsService, useClass: UiEventsServiceStub },
+        {
+          provide: HttpClient,
+          useValue: {
+            get: vi.fn().mockReturnValue(of({
+              quoteResponse: {
+                result: [
+                  { symbol: '^GSPC', regularMarketPrice: 6230.42, regularMarketChangePercent: 0.34 },
+                  { symbol: '^IXIC', regularMarketPrice: 20184.11, regularMarketChangePercent: 0.58 },
+                  { symbol: '^DJI', regularMarketPrice: 42932.18, regularMarketChangePercent: 0.21 },
+                  { symbol: '^VIX', regularMarketPrice: 14.79, regularMarketChangePercent: -1.52 }
+                ]
+              }
+            }))
+          }
+        },
         { provide: Router, useValue: router }
         , { provide: ActivatedRoute, useValue: { queryParams: of({}) } }
       ]

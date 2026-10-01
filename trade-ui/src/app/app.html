@@ -1,6 +1,7 @@
-<div class="app-shell">
+<div class="app-shell" [class.authenticated]="authSession.isAuthenticated()">
   <app-app-header *ngIf="authSession.isAuthenticated()"></app-app-header>
-  <main class="app-main">
+
+  <main class="app-main" [class.app-main-authenticated]="authSession.isAuthenticated()">
     <router-outlet></router-outlet>
   </main>
 </div>

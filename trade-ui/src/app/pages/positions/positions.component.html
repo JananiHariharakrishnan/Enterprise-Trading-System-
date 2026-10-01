@@ -1,0 +1,37 @@
+<section class="positions-page" data-testid="positions-page">
+  <header class="positions-header">
+    <div>
+      <h1>Positions</h1>
+      <p>Current holdings across your account.</p>
+    </div>
+    <button type="button" class="btn-secondary" (click)="refresh()">Refresh</button>
+  </header>
+
+  <p *ngIf="isLoading()" class="status" data-testid="positions-loading">Loading positions...</p>
+
+  <div *ngIf="loadError() as error" class="status status-error" data-testid="positions-error">
+    <p>{{ error }}</p>
+    <button type="button" class="btn-secondary" (click)="refresh()">Retry</button>
+  </div>
+
+  <section class="dashboard-card" data-testid="positions-list" *ngIf="!isLoading() && !loadError()">
+    <p *ngIf="positions().length === 0" class="status">No open positions.</p>
+
+    <table *ngIf="positions().length > 0">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Quantity</th>
+          <th>Average Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let position of positions()">
+          <td>{{ position.symbol }}</td>
+          <td>{{ position.quantity }}</td>
+          <td>{{ position.averageCost | number:'1.2-2' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</section>

@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { of } from 'rxjs';
 import { DashboardComponent } from './dashboard.component';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
@@ -120,6 +122,28 @@ describe('DashboardComponent', () => {
           useValue: tradeApi
         },
         {
+          provide: HttpClient,
+          useValue: {
+            get: vi.fn().mockImplementation((url: string) => {
+              if (url.includes('/coins/markets')) {
+                return of([
+                  { id: 'bitcoin', symbol: 'btc', current_price: 64210.25, price_change_percentage_24h: 2.84 },
+                  { id: 'ethereum', symbol: 'eth', current_price: 3388.40, price_change_percentage_24h: 2.16 },
+                  { id: 'solana', symbol: 'sol', current_price: 152.31, price_change_percentage_24h: 1.72 },
+                  { id: 'ripple', symbol: 'xrp', current_price: 0.62, price_change_percentage_24h: 1.11 },
+                  { id: 'avalanche-2', symbol: 'avax', current_price: 39.45, price_change_percentage_24h: 0.97 }
+                ]);
+              }
+
+              return of([
+                [1727740800000, 100, 101.5, 99.4, 100.8],
+                [1727827200000, 101, 102.4, 100.8, 102.0],
+                [1727913600000, 102, 103.2, 101.1, 102.9]
+              ]);
+            })
+          }
+        },
+        {
           provide: ActivatedRoute,
           useValue: { params: {} }
         },
@@ -158,10 +182,10 @@ describe('DashboardComponent', () => {
     expect(component.positions()).toHaveLength(1);
     expect(component.orders()).toHaveLength(1);
 
-    // account-summary and orders/watchlists moved to routed pages.
-    // Verify positions list remains present and data loaded instead.
+    // account-summary and positions moved to dedicated routed pages.
+    // Verify analytics card remains present on dashboard.
     expect(
-      host.querySelector('[data-testid="positions-list"]')
+      host.querySelector('[data-testid="analytics-charts"]')
     ).toBeTruthy();
 
     expect(host.textContent).toContain('ACC-001');

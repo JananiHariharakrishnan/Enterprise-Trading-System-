@@ -9,6 +9,7 @@ import { ProfileComponent } from './pages/profile/profile.component';
 import { OrdersComponent } from './pages/orders/orders.component';
 import { OrderHistoryComponent } from './pages/orders/order-history.component';
 import { WatchlistsComponent } from './pages/watchlists/watchlists.component';
+import { PositionsComponent } from './pages/positions/positions.component';
 
 export const routes: Routes = [
 	{
@@ -42,6 +43,11 @@ export const routes: Routes = [
 	{
 		path: 'orders/history',
 		component: OrderHistoryComponent,
+		canActivate: [authGuard]
+	},
+	{
+		path: 'positions',
+		component: PositionsComponent,
 		canActivate: [authGuard]
 	},
 	{
