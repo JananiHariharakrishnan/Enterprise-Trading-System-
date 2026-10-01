@@ -1,0 +1,114 @@
+<section class="order-history">
+  <h2>📊 Order History</h2>
+
+  <!-- Filter Controls -->
+  <div class="filter-panel">
+    <form [formGroup]="filterForm" class="filter-form" (ngSubmit)="applyFilters()">
+      <div class="filter-row">
+        <!-- Status Filter -->
+        <div class="filter-group">
+          <label for="status">Status</label>
+          <select id="status" formControlName="status" class="filter-select">
+            <option *ngFor="let status of statusOptions" [value]="status">
+              {{ status }}
+            </option>
+          </select>
+        </div>
+
+        <!-- From Date Filter -->
+        <div class="filter-group">
+          <label for="fromDate">From Date</label>
+          <input
+            id="fromDate"
+            type="date"
+            formControlName="fromDate"
+            class="filter-input"
+          />
+        </div>
+
+        <!-- To Date Filter -->
+        <div class="filter-group">
+          <label for="toDate">To Date</label>
+          <input
+            id="toDate"
+            type="date"
+            formControlName="toDate"
+            class="filter-input"
+          />
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="filter-actions">
+          <button
+            type="submit"
+            class="btn-secondary"
+            [disabled]="filterForm.invalid"
+          >
+            🔍 Apply Filters
+          </button>
+          <button
+            type="button"
+            class="btn-secondary secondary"
+            (click)="clearFilters()"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Filters Display -->
+      <div class="active-filters" *ngIf="selectedStatus() !== 'ALL' || fromDate()">
+        <span class="filter-badge">
+          Status: <strong>{{ selectedStatus() }}</strong>
+          <span *ngIf="selectedStatus() !== 'ALL'">✓</span>
+        </span>
+        <span class="filter-badge">
+          Range: <strong>{{ fromDate() }}</strong> to <strong>{{ toDate() }}</strong>
+        </span>
+      </div>
+    </form>
+  </div>
+
+  <!-- Loading & Error States -->
+  <p *ngIf="isLoading()" class="status">⏳ Loading orders...</p>
+  <div *ngIf="loadError()" class="status status-error">❌ {{ loadError() }}</div>
+
+  <!-- Orders Table -->
+  <table *ngIf="orders().length > 0 && !isLoading()">
+    <thead>
+      <tr>
+        <th>Order ID</th>
+        <th>Symbol</th>
+        <th>Side</th>
+        <th>Status</th>
+        <th>Quantity</th>
+        <th>Price</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let o of orders()" [class]="'status-' + (o.status.toLowerCase() || 'unknown')">
+        <td class="order-id">{{ o.orderId }}</td>
+        <td><strong>{{ o.symbol }}</strong></td>
+        <td>
+          <span [class]="'badge badge-' + (o.side.toLowerCase() || 'unknown')">
+            {{ o.side }}
+          </span>
+        </td>
+        <td>
+          <span [class]="'status-badge status-' + (o.status.toLowerCase() || 'unknown')">
+            {{ o.status }}
+          </span>
+        </td>
+        <td>{{ o.quantity }}</td>
+        <td class="price">${{ o.price | number:'1.2-2' }}</td>
+        <td>{{ o.createdOn | date:'short' }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Empty State -->
+  <p *ngIf="!isLoading() && orders().length === 0" class="status status-info">
+    📭 No orders found for the selected filters.
+  </p>
+</section>

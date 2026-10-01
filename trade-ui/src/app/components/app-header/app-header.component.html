@@ -1,6 +1,14 @@
 <header class="top-header">
   <div class="header-content">
     <span class="brand">Trade Platform</span>
+    <nav class="nav-links" *ngIf="authSession.isAuthenticated()">
+      <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+      <a routerLink="/orders" routerLinkActive="active">Place Order</a>
+      <a routerLink="/orders/history" routerLinkActive="active">Order History</a>
+      <!-- Analytics removed per UX decision -->
+      <a routerLink="/watchlists" routerLinkActive="active">Watchlists</a>
+      <a routerLink="/profile" routerLinkActive="active">Account</a>
+    </nav>
     <div class="header-actions">
       <button
         type="button"

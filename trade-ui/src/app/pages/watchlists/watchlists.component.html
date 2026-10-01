@@ -1,0 +1,222 @@
+<section class="watchlists-page">
+  <h2>Watchlists</h2>
+  
+  <!-- Loading & Status Messages -->
+  <p *ngIf="isLoading()" class="status">Loading watchlists...</p>
+  <div *ngIf="loadError()" class="status status-error">{{ loadError() }}</div>
+  <p *ngIf="message()" class="status status-success">✓ {{ message() }}</p>
+
+  <!-- Create Watchlist Form -->
+  <form class="watchlist-form" [formGroup]="createWatchlistForm" (ngSubmit)="createWatchlist()">
+    <input 
+      type="text" 
+      formControlName="name" 
+      placeholder="Create a watchlist (e.g. Tech Stocks, Blue Chips)" 
+      autocomplete="off"
+    />
+    <button type="submit" class="btn-secondary" [disabled]="createWatchlistForm.invalid || isSavingWatchlist()">
+      {{ isSavingWatchlist() ? 'Creating...' : 'Create Watchlist' }}
+    </button>
+  </form>
+
+  <!-- Watchlists Grid -->
+  <ul *ngIf="watchlists().length > 0" class="watchlist-list">
+    <li *ngFor="let wl of watchlists()" class="watchlist-summary-item">
+      <button type="button" class="watchlist-open-button" (click)="openWatchlist(wl.id)">
+        <strong>{{ wl.name }}</strong>
+        <div>{{ wl.entryCount }} instrument<span *ngIf="wl.entryCount !== 1">s</span></div>
+      </button>
+    </li>
+  </ul>
+
+  <p *ngIf="!isLoading() && watchlists().length === 0" class="status">No watchlists yet. Create one to get started!</p>
+
+  <!-- Watchlist Detail View -->
+  <section *ngIf="selectedWatchlist() as watchlist" class="watchlist-detail">
+    <!-- Header -->
+    <div class="watchlist-detail-header">
+      <div>
+        <h3>{{ watchlist.name }}</h3>
+        <p>{{ watchlist.entryCount }} instrument<span *ngIf="watchlist.entryCount !== 1">s</span></p>
+      </div>
+      <div class="watchlist-actions">
+        <button 
+          type="button" 
+          class="btn-secondary danger" 
+          (click)="deleteWatchlist(watchlist.id)"
+          [disabled]="isSavingWatchlist()"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <!-- Add Instrument Form -->
+    <form class="watchlist-form" [formGroup]="addInstrumentForm" (ngSubmit)="addInstrument()">
+      <input 
+        type="text" 
+        formControlName="symbol" 
+        placeholder="Add symbol (e.g. AAPL, GOOGL, MSFT)" 
+        autocomplete="off"
+        [disabled]="isSavingWatchlist()"
+      />
+      <button type="submit" class="btn-secondary" [disabled]="addInstrumentForm.invalid || isSavingWatchlist()">
+        {{ isSavingWatchlist() ? 'Adding...' : 'Add' }}
+      </button>
+    </form>
+
+    <!-- Empty State -->
+    <p *ngIf="watchlist.instruments.length === 0" class="status">
+      No instruments added yet. Add one to start tracking.
+    </p>
+
+    <!-- Instruments Table -->
+    <table *ngIf="watchlist.instruments.length > 0">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Added On</th>
+          <th>Latest Price</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let instrument of watchlist.instruments" 
+            class="instrument-row"
+            (click)="selectInstrument(instrument)"
+            [class.selected]="selectedInstrument() === instrument">
+          <td><strong>{{ instrument.symbol }}</strong></td>
+          <td>{{ instrument.addedOn | date:'short' }}</td>
+          <td>${{ formatPrice(instrument.latestPrice?.price) }}</td>
+          <td>
+            <button 
+              type="button" 
+              class="btn-secondary danger" 
+              (click)="removeInstrument(instrument.symbol); $event.stopPropagation()"
+              [disabled]="isSavingWatchlist()"
+            >
+              Remove
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</section>
+
+<!-- Modal Backdrop -->
+<div *ngIf="selectedInstrument()" class="modal-backdrop" (click)="selectInstrument(null)"></div>
+
+<!-- Instrument Detail Popup Modal -->
+<div *ngIf="selectedInstrument() as instrument" class="instrument-detail-panel">
+  <div class="detail-header">
+    <div>
+      <h4>{{ instrument.symbol }}</h4>
+      <p class="watchlist-name">Watchlist: {{ selectedWatchlist()?.name }}</p>
+    </div>
+    <button type="button" class="close-btn" (click)="selectInstrument(null)">✕</button>
+  </div>
+  
+  <div class="detail-body">
+    <!-- MARKET DATA SECTION -->
+    <div class="section-title">Market Data</div>
+    
+    <!-- Price Card -->
+    <div class="detail-card price-card">
+      <div class="card-label">price</div>
+      <div class="card-value">${{ formatPrice(instrument.latestPrice?.price) }}</div>
+      <div class="currency-badge">{{ instrument.latestPrice?.currency }}</div>
+    </div>
+
+    <!-- Change Card -->
+    <div class="detail-card" [class.positive]="(instrument.latestPrice?.change ?? 0) > 0" [class.negative]="(instrument.latestPrice?.change ?? 0) < 0">
+      <div class="card-label">change</div>
+      <div class="card-value" [class]="getChangeClass(instrument.latestPrice?.change)">
+        {{ formatChange(instrument.latestPrice?.change) }}
+      </div>
+      <div class="card-subtext">{{ (instrument.latestPrice?.changePercent ?? 0).toFixed(2) }}%</div>
+    </div>
+
+    <!-- Change Percent -->
+    <div class="detail-card">
+      <div class="card-label">changePercent</div>
+      <div class="card-value">{{ (instrument.latestPrice?.changePercent ?? 0).toFixed(4) }}%</div>
+    </div>
+
+    <!-- Previous Close -->
+    <div class="detail-card">
+      <div class="card-label">previousClose</div>
+      <div class="card-value">${{ formatPrice(instrument.latestPrice?.previousClose) }}</div>
+    </div>
+
+    <!-- Market State -->
+    <div class="detail-card">
+      <div class="card-label">marketState</div>
+      <div class="market-badge" [class]="'state-' + (instrument.latestPrice?.marketState ?? 'unknown')">
+        {{ instrument.latestPrice?.marketState ?? 'unknown' }}
+      </div>
+    </div>
+
+    <!-- Quote Time -->
+    <div class="detail-card">
+      <div class="card-label">quoteAsOf</div>
+      <div class="card-value quote-time">{{ instrument.latestPrice?.quoteAsOf | date:'medium' }}</div>
+    </div>
+
+    <!-- Data Freshness -->
+    <div class="detail-card" [class.stale]="instrument.latestPrice?.stale">
+      <div class="card-label">stale</div>
+      <span class="status-badge" [class.fresh]="!instrument.latestPrice?.stale" [class.stale]="instrument.latestPrice?.stale">
+        {{ instrument.latestPrice?.stale ? '⚠ Stale' : '✓ Fresh' }}
+      </span>
+    </div>
+
+    <!-- INSTRUMENT SECTION -->
+    <div class="section-title">Instrument Info</div>
+    
+    <!-- Symbol -->
+    <div class="detail-card">
+      <div class="card-label">symbol</div>
+      <div class="card-value">{{ instrument.symbol }}</div>
+    </div>
+
+    <!-- Added On -->
+    <div class="detail-card">
+      <div class="card-label">addedOn</div>
+      <div class="card-value">{{ instrument.addedOn | date:'medium' }}</div>
+    </div>
+
+    <!-- WATCHLIST SECTION -->
+    <div class="section-title" *ngIf="selectedWatchlist()">Watchlist Info</div>
+    
+    <!-- Watchlist Name -->
+    <div class="detail-card" *ngIf="selectedWatchlist()">
+      <div class="card-label">name</div>
+      <div class="card-value">{{ selectedWatchlist()?.name }}</div>
+    </div>
+
+    <!-- Watchlist ID -->
+    <div class="detail-card" *ngIf="selectedWatchlist()">
+      <div class="card-label">id</div>
+      <div class="card-value">{{ selectedWatchlist()?.id }}</div>
+    </div>
+
+    <!-- Entry Count -->
+    <div class="detail-card" *ngIf="selectedWatchlist()">
+      <div class="card-label">entryCount</div>
+      <div class="card-value">{{ selectedWatchlist()?.entryCount }}</div>
+    </div>
+
+    <!-- Created On -->
+    <div class="detail-card" *ngIf="selectedWatchlist()">
+      <div class="card-label">createdOn</div>
+      <div class="card-value">{{ selectedWatchlist()?.createdOn | date:'medium' }}</div>
+    </div>
+
+    <!-- Updated On -->
+    <div class="detail-card" *ngIf="selectedWatchlist()">
+      <div class="card-label">updatedOn</div>
+      <div class="card-value">{{ selectedWatchlist()?.updatedOn | date:'medium' }}</div>
+    </div>
+  </div>
+</div>

@@ -1,49 +1,24 @@
 <section class="dashboard" data-testid="dashboard-home">
   <header class="dashboard-header">
     <div>
-      <h1>Trading Dashboard</h1>
+      <h1>📊 Trading Dashboard</h1>
       <p *ngIf="authSession.currentUser() as user">
-        Signed in as <strong>{{ user.username }}</strong>.
+        Welcome back, <strong>{{ user.username }}</strong>
       </p>
-    </div>
-    <div class="header-actions">
-      <!-- Actions moved to global profile menu in top header -->
     </div>
   </header>
 
-  <p *ngIf="isLoading()" class="status" data-testid="dashboard-loading">Loading your account data...</p>
+  <p *ngIf="isLoading()" class="status" data-testid="dashboard-loading" style="background-color: #e6fffa; color: #234e52; border-left: 4px solid #4299e1;">⏳ Loading your account data...</p>
 
   <div *ngIf="loadError() as error" class="status status-error" data-testid="dashboard-error">
     <p>{{ error }}</p>
-    <button type="button" class="secondary" (click)="refresh()">Retry</button>
+    <button type="button" (click)="refresh()">🔄 Retry</button>
   </div>
 
   <ng-container *ngIf="!isLoading() && !loadError()">
-    <section class="dashboard-card" *ngIf="account() as account" data-testid="account-summary">
-      <h2>Account Summary</h2>
-      <div class="summary-grid">
-        <div>
-          <span class="label">Account ID</span>
-          <strong>{{ account.accountId }}</strong>
-        </div>
-        <div>
-          <span class="label">Holder</span>
-          <strong>{{ account.holderName || 'N/A' }}</strong>
-        </div>
-        <div>
-          <span class="label">Status</span>
-          <strong>{{ account.status }}</strong>
-        </div>
-        <div *ngIf="balance() as balance">
-          <span class="label">Cash Balance</span>
-          <strong>{{ balance.cashBalance | currency:balance.currency:'symbol':'1.2-2' }}</strong>
-        </div>
-        <div *ngIf="account['buyingPower'] !== undefined && account['buyingPower'] !== null">
-          <span class="label">Buying Power</span>
-          <strong>{{ account['buyingPower'] | currency }}</strong>
-        </div>
-      </div>
-    </section>
+    <!-- Account summary removed; use routed Account page instead -->
+
+    <!-- Quick Actions removed; navigation is handled by top header -->
 
     <section class="dashboard-card" data-testid="positions-list">
       <h2>Positions</h2>
@@ -66,195 +41,6 @@
       </table>
     </section>
 
-    <section class="dashboard-card" data-testid="orders-list">
-      <h2>Recent Orders</h2>
-      <p *ngIf="orders().length === 0" class="status">No orders found.</p>
-      <table *ngIf="orders().length > 0">
-        <thead>
-          <tr>
-            <th>Order</th>
-            <th>Symbol</th>
-            <th>Side</th>
-            <th>Status</th>
-            <th>Quantity</th>
-            <th>Price</th>
-            <th>Created</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let order of orders()">
-            <td>{{ order.orderId }}</td>
-            <td>{{ order.symbol }}</td>
-            <td>{{ order.side }}</td>
-            <td>{{ order.status }}</td>
-            <td>{{ order.quantity }}</td>
-            <td>{{ order.price | number:'1.2-2' }}</td>
-            <td>{{ order.createdOn | date:'short' }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="dashboard-card" data-testid="watchlists-list">
-      <h2>Watchlists</h2>
-      <form class="watchlist-form" [formGroup]="createWatchlistForm" (ngSubmit)="createWatchlist()">
-        <input
-          type="text"
-          formControlName="name"
-          placeholder="Create a watchlist"
-          data-testid="create-watchlist-input"
-        />
-        <button
-          type="submit"
-          class="btn-secondary"
-          [disabled]="createWatchlistForm.invalid || isSavingWatchlist()"
-          data-testid="create-watchlist-button"
-        >
-          Create
-        </button>
-      </form>
-
-      <p *ngIf="watchlistMessage() as message" class="status watchlist-success" data-testid="watchlist-success">{{ message }}</p>
-      <p *ngIf="watchlistError() as error" class="status status-error" data-testid="watchlist-error">{{ error }}</p>
-
-      <p *ngIf="watchlists().length === 0" class="status">No watchlists found.</p>
-      <ul *ngIf="watchlists().length > 0" class="watchlist-summary-list">
-        <li *ngFor="let wl of watchlists()" class="watchlist-summary-item">
-          <button
-            type="button"
-            class="watchlist-open-button"
-            (click)="openWatchlist(wl.id)"
-            data-testid="watchlist-open-button"
-          >
-            <strong>{{ wl.name }}</strong> — {{ wl.entryCount }} instruments
-          </button>
-          <button
-            type="button"
-            class="btn-secondary danger"
-            (click)="deleteWatchlist(wl.id)"
-            [disabled]="isSavingWatchlist()"
-            data-testid="watchlist-delete-button"
-          >
-            Delete
-          </button>
-        </li>
-      </ul>
-
-      <div *ngIf="isLoadingWatchlist()" class="status">Loading watchlist details...</div>
-
-      <section *ngIf="selectedWatchlist() as watchlist" class="watchlist-detail" data-testid="watchlist-detail">
-        <div class="watchlist-detail-header">
-          <div>
-            <h3>{{ watchlist.name }}</h3>
-            <p>{{ watchlist.entryCount }} instruments</p>
-          </div>
-        </div>
-
-        <form class="watchlist-form" [formGroup]="addInstrumentForm" (ngSubmit)="addInstrument()">
-          <input
-            type="text"
-            formControlName="symbol"
-            placeholder="Add symbol, e.g. AAPL"
-            data-testid="add-watchlist-symbol-input"
-          />
-          <button
-            type="submit"
-            class="btn-secondary"
-            [disabled]="addInstrumentForm.invalid || isSavingWatchlist()"
-            data-testid="add-watchlist-symbol-button"
-          >
-            Add instrument
-          </button>
-        </form>
-
-        <p *ngIf="watchlist.instruments.length === 0" class="status">No instruments in this watchlist yet.</p>
-
-        <table *ngIf="watchlist.instruments.length > 0">
-          <thead>
-            <tr>
-              <th>Symbol</th>
-              <th>Added</th>
-              <th>Latest Price</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let instrument of watchlist.instruments">
-              <td>
-                <button
-                  type="button"
-                  class="watchlist-symbol-button"
-                  (click)="openInstrumentDetails(instrument)"
-                  data-testid="watchlist-symbol-button"
-                >
-                  {{ instrument.symbol }}
-                </button>
-              </td>
-              <td>{{ instrument.addedOn | date:'short' }}</td>
-              <td>{{ instrument.latestPrice?.price ?? 'No quote yet' }}</td>
-              <td>
-                <button
-                  type="button"
-                  class="btn-secondary danger"
-                  (click)="removeInstrument(instrument.symbol)"
-                  [disabled]="isSavingWatchlist()"
-                  data-testid="remove-watchlist-symbol-button"
-                >
-                  Remove
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-    </section>
-
-    <div
-      *ngIf="selectedInstrument() as instrument"
-      class="watchlist-modal-backdrop"
-      (click)="closeInstrumentDetails()"
-      data-testid="watchlist-instrument-modal"
-    >
-      <section class="watchlist-modal" (click)="$event.stopPropagation()">
-        <div class="watchlist-modal-header">
-          <div>
-            <h3>{{ instrument.symbol }}</h3>
-            <p>Added {{ instrument.addedOn | date:'medium' }}</p>
-          </div>
-          <button type="button" class="btn-secondary" (click)="closeInstrumentDetails()">Close</button>
-        </div>
-
-        <div class="summary-grid">
-          <div>
-            <span class="label">Latest Price</span>
-            <strong>{{ latestPriceSummary(instrument.latestPrice) }}</strong>
-          </div>
-          <div>
-            <span class="label">Market State</span>
-            <strong>{{ instrument.latestPrice?.marketState ?? 'Unknown' }}</strong>
-          </div>
-          <div>
-            <span class="label">Change</span>
-            <strong>{{ instrument.latestPrice?.change ?? 'N/A' }}</strong>
-          </div>
-          <div>
-            <span class="label">Change %</span>
-            <strong>{{ instrument.latestPrice?.changePercent ?? 'N/A' }}</strong>
-          </div>
-          <div>
-            <span class="label">Previous Close</span>
-            <strong>{{ instrument.latestPrice?.previousClose ?? 'N/A' }}</strong>
-          </div>
-          <div>
-            <span class="label">Quoted At</span>
-            <strong>{{ instrument.latestPrice?.quoteAsOf ? (instrument.latestPrice?.quoteAsOf | date:'medium') : 'No quote yet' }}</strong>
-          </div>
-          <div>
-            <span class="label">Stale</span>
-            <strong>{{ instrument.latestPrice?.stale === true ? 'Yes' : instrument.latestPrice?.stale === false ? 'No' : 'Unknown' }}</strong>
-          </div>
-        </div>
-      </section>
-    </div>
+    <!-- Order history and watchlists moved to routed pages: /orders/history and /watchlists -->
   </ng-container>
 </section>

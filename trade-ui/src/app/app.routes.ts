@@ -6,6 +6,9 @@ import { LoginComponent } from './pages/login/login.component';
 import { RegisterComponent } from './pages/register/register.component';
 import { HomeComponent } from './pages/home/home.component';
 import { ProfileComponent } from './pages/profile/profile.component';
+import { OrdersComponent } from './pages/orders/orders.component';
+import { OrderHistoryComponent } from './pages/orders/order-history.component';
+import { WatchlistsComponent } from './pages/watchlists/watchlists.component';
 
 export const routes: Routes = [
 	{
@@ -31,6 +34,22 @@ export const routes: Routes = [
 		component: ProfileComponent,
 		canActivate: [authGuard]
 	},
+	{
+		path: 'orders',
+		component: OrdersComponent,
+		canActivate: [authGuard]
+	},
+	{
+		path: 'orders/history',
+		component: OrderHistoryComponent,
+		canActivate: [authGuard]
+	},
+	{
+		path: 'watchlists',
+		component: WatchlistsComponent,
+		canActivate: [authGuard]
+	},
+	// Analytics removed — no route registered
 	{
 		path: '**',
 		redirectTo: ''

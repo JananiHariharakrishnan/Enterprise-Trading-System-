@@ -1,0 +1,522 @@
+.watchlists-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.watchlists-page h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin: 0 0 2rem 0;
+  letter-spacing: -0.5px;
+}
+
+.status {
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.status-error {
+  background-color: #fed7d7;
+  color: #742a2a;
+  border-left: 4px solid #e53e3e;
+}
+
+.status-success {
+  background-color: #c6f6d5;
+  color: #22543d;
+  border-left: 4px solid #38a169;
+}
+
+/* Create Watchlist Form */
+.watchlist-form {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.watchlist-form input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.watchlist-form input:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #3182ce;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary.danger {
+  background-color: #e53e3e;
+}
+
+.btn-secondary.danger:hover:not(:disabled) {
+  background-color: #c53030;
+  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+}
+
+/* Watchlists List */
+.watchlist-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2rem 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.watchlist-summary-item {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.watchlist-summary-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.watchlist-open-button {
+  display: block;
+  width: 100%;
+  padding: 1.5rem;
+  text-align: left;
+  background: white;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.watchlist-open-button strong {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 0.5rem;
+}
+
+.watchlist-open-button {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+/* Watchlist Detail Section */
+.watchlist-detail {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.watchlist-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.watchlist-detail-header h3 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin: 0 0 0.5rem 0;
+}
+
+.watchlist-detail-header p {
+  margin: 0;
+  color: #718096;
+  font-size: 0.95rem;
+}
+
+.watchlist-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Instruments Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+}
+
+table thead {
+  background-color: #f7fafc;
+  border-bottom: 2px solid #cbd5e0;
+}
+
+table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+table td {
+  padding: 1.25rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #2d3748;
+  font-size: 0.95rem;
+}
+
+table tbody tr:hover {
+  background-color: #f7fafc;
+}
+
+table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Instrument Row Styling */
+.instrument-row {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.instrument-row:hover {
+  background-color: #eff6fc;
+  box-shadow: inset 0 0 0 2px #e0eef9;
+}
+
+.instrument-row.selected {
+  background-color: #e0eef9;
+  box-shadow: inset 0 0 0 2px #4299e1;
+}
+
+/* Price Styling */
+table td:nth-child(3) {
+  font-weight: 600;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  color: #2b6cb0;
+}
+
+/* Action Column */
+table td:last-child {
+  text-align: right;
+}
+
+table td:last-child button {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+/* Modal Backdrop */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Instrument Detail Panel - Popup Modal */
+.instrument-detail-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: popIn 0.3s ease;
+  z-index: 1000;
+  max-width: 700px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.detail-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.detail-header div {
+  flex: 1;
+}
+
+.detail-header h4 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+}
+
+.detail-header p {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.watchlist-name {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.detail-body {
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  max-height: calc(85vh - 120px);
+  overflow-y: auto;
+}
+
+.section-title {
+  grid-column: 1 / -1;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #667eea;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.section-title:first-child {
+  margin-top: 0;
+}
+
+.detail-card {
+  background: #f7fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.detail-card:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.detail-card.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-card.positive {
+  border-left: 4px solid #38a169;
+  background: rgba(56, 161, 105, 0.05);
+}
+
+.detail-card.negative {
+  border-left: 4px solid #e53e3e;
+  background: rgba(229, 62, 62, 0.05);
+}
+
+.detail-card.stale {
+  border-left: 4px solid #ed8936;
+  background: rgba(237, 137, 54, 0.05);
+}
+
+.card-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a202c;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.card-value.positive {
+  color: #38a169;
+}
+
+.card-value.negative {
+  color: #e53e3e;
+}
+
+.card-value.neutral {
+  color: #2d3748;
+}
+
+.card-subtext {
+  font-size: 0.9rem;
+  color: #718096;
+  margin-top: 0.5rem;
+}
+
+.currency-badge {
+  display: inline-block;
+  background: #edf2f7;
+  color: #2d3748;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  margin-top: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.market-badge {
+  display: inline-block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  text-transform: capitalize;
+}
+
+.market-badge.state-open {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.market-badge.state-closed {
+  background: #fed7d7;
+  color: #742a2a;
+}
+
+.market-badge.state-premarket {
+  background: #bee3f8;
+  color: #2c5282;
+}
+
+.market-badge.state-afterhours {
+  background: #faf089;
+  color: #5a4a00;
+}
+
+.market-badge.state-unknown {
+  background: #edf2f7;
+  color: #4a5568;
+}
+
+.quote-time {
+  font-size: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #4a5568;
+}
+
+.data-status {
+  display: flex;
+  gap: 1rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+}
+
+.status-badge.fresh {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.status-badge.stale {
+  background: #fed7d7;
+  color: #742a2a;
+}
+
+/* Empty State */
+.status {
+  text-align: center;
+  font-style: italic;
+}

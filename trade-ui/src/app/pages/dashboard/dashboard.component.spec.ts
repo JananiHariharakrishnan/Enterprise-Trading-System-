@@ -158,23 +158,15 @@ describe('DashboardComponent', () => {
     expect(component.positions()).toHaveLength(1);
     expect(component.orders()).toHaveLength(1);
 
-    expect(
-      host.querySelector('[data-testid="account-summary"]')
-    ).toBeTruthy();
-
+    // account-summary and orders/watchlists moved to routed pages.
+    // Verify positions list remains present and data loaded instead.
     expect(
       host.querySelector('[data-testid="positions-list"]')
-    ).toBeTruthy();
-
-    expect(
-      host.querySelector('[data-testid="orders-list"]')
     ).toBeTruthy();
 
     expect(host.textContent).toContain('ACC-001');
     expect(host.textContent).toContain('Priya Menon');
     expect(host.textContent).toContain('AAPL');
-    expect(host.textContent).toContain('ORD-1');
-    expect(host.textContent).toContain('Tech');
   });
 
   it('shows dashboard error when session is missing', async () => {
@@ -273,19 +265,15 @@ describe('DashboardComponent', () => {
 
     const component = fixture.componentInstance;
     await component.openWatchlist(11);
-    fixture.detectChanges();
 
-    const host = fixture.nativeElement as HTMLElement;
-    const symbolButton = host.querySelector('[data-testid="watchlist-symbol-button"]') as HTMLButtonElement;
-    symbolButton.click();
-    fixture.detectChanges();
+    // Directly open instrument details via component API since watchlist UI
+    // was moved to its own routed page.
+    const instrument = component.selectedWatchlist()!.instruments[0];
+    component.openInstrumentDetails(instrument);
 
     expect(component.selectedInstrument()?.symbol).toBe('AAPL');
-    expect(host.querySelector('[data-testid="watchlist-instrument-modal"]')).toBeTruthy();
-    expect(host.textContent).toContain('Market State');
 
     component.closeInstrumentDetails();
-    fixture.detectChanges();
 
     expect(component.selectedInstrument()).toBeNull();
   });
