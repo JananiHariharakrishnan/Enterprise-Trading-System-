@@ -27,7 +27,6 @@
         type="text"
         formControlName="username"
         class="form-input"
-        [disabled]="true"
         data-testid="profile-username-input"
       />
       <small class="form-note">(Read-only)</small>
@@ -42,7 +41,7 @@
           formControlName="firstName"
           class="form-input"
           data-testid="profile-firstName-input"
-          [disabled]="isSaving()"
+          [readonly]="isSaving()"
         />
         <div *ngIf="profileForm.get('firstName')?.hasError('required') && profileForm.get('firstName')?.touched" class="form-error" data-testid="profile-firstName-error-required">
           First name is required
@@ -60,7 +59,7 @@
           formControlName="lastName"
           class="form-input"
           data-testid="profile-lastName-input"
-          [disabled]="isSaving()"
+          [readonly]="isSaving()"
         />
         <div *ngIf="profileForm.get('lastName')?.hasError('required') && profileForm.get('lastName')?.touched" class="form-error" data-testid="profile-lastName-error-required">
           Last name is required
@@ -79,7 +78,7 @@
         formControlName="email"
         class="form-input"
         data-testid="profile-email-input"
-        [disabled]="isSaving()"
+        [readonly]="isSaving()"
       />
       <small class="form-note">We'll never share your email</small>
       <div *ngIf="profileForm.get('email')?.hasError('required') && profileForm.get('email')?.touched" class="form-error" data-testid="profile-email-error-required">
@@ -101,7 +100,7 @@
         formControlName="phoneNo"
         class="form-input"
         data-testid="profile-phoneNo-input"
-        [disabled]="isSaving()"
+        [readonly]="isSaving()"
         placeholder="+1 (555) 123-4567"
       />
       <small class="form-note">(Optional) 5-20 characters</small>
@@ -120,7 +119,6 @@
         type="text"
         formControlName="accountId"
         class="form-input"
-        [disabled]="true"
         data-testid="profile-accountid-input"
       />
       <small class="form-note">(Read-only)</small>

@@ -16,6 +16,11 @@ describe('ProfileComponent', () => {
   let mockAuthApi: AuthApiClientService;
   let mockRouter: Router;
 
+  const renderWithoutInit = () => {
+    vi.spyOn(component, 'ngOnInit').mockImplementation(() => undefined);
+    fixture.detectChanges();
+  };
+
   beforeEach(async () => {
     mockAuthSession = {
       loadCurrentUser: vi.fn().mockResolvedValue(null),
@@ -218,5 +223,114 @@ describe('ProfileComponent', () => {
       }
     });
     expect(component.successMessage()).toBeTruthy();
+  });
+
+  it('should render loading spinner while profile is loading', () => {
+    component.isLoading.set(true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Loading profile...');
+  });
+
+  it('should render error and success messages in template', () => {
+    renderWithoutInit();
+    component.isLoading.set(false);
+    component.errorMessage.set('Failed to update profile. Please try again.');
+    component.successMessage.set('Profile updated successfully!');
+    fixture.detectChanges();
+
+    const error = fixture.nativeElement.querySelector('[data-testid="profile-error"]') as HTMLElement;
+    const success = fixture.nativeElement.querySelector('[data-testid="profile-success"]') as HTMLElement;
+
+    expect(error).toBeTruthy();
+    expect(success).toBeTruthy();
+    expect(error.textContent).toContain('Failed to update profile. Please try again.');
+    expect(success.textContent).toContain('Profile updated successfully!');
+  });
+
+  it('should show validation messages for touched invalid fields', () => {
+    renderWithoutInit();
+    component.isLoading.set(false);
+    component.currentUser.set({
+      id: '1',
+      username: 'testuser',
+      accountId: 8,
+      firstName: '',
+      lastName: '',
+      email: '',
+      phoneNo: ''
+    } as any);
+
+    component.profileForm.patchValue({
+      firstName: '',
+      lastName: '',
+      email: 'invalid-email',
+      phoneNo: '123'
+    });
+
+    component.profileForm.get('firstName')?.markAsTouched();
+    component.profileForm.get('lastName')?.markAsTouched();
+    component.profileForm.get('email')?.markAsTouched();
+    component.profileForm.get('phoneNo')?.markAsTouched();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="profile-firstName-error-required"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="profile-lastName-error-required"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="profile-email-error-invalid"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="profile-phoneNo-error-minlength"]')).toBeTruthy();
+  });
+
+  it('should set editable fields to readonly while saving', () => {
+    renderWithoutInit();
+    component.isLoading.set(false);
+    component.isSaving.set(true);
+    component.currentUser.set({
+      id: '1',
+      username: 'testuser',
+      accountId: 8,
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      phoneNo: '+1234567890'
+    } as any);
+    component.profileForm.patchValue({
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      phoneNo: '+1234567890'
+    });
+    fixture.detectChanges();
+
+    const firstName = fixture.nativeElement.querySelector('[data-testid="profile-firstName-input"]') as HTMLInputElement;
+    const lastName = fixture.nativeElement.querySelector('[data-testid="profile-lastName-input"]') as HTMLInputElement;
+    const email = fixture.nativeElement.querySelector('[data-testid="profile-email-input"]') as HTMLInputElement;
+    const phone = fixture.nativeElement.querySelector('[data-testid="profile-phoneNo-input"]') as HTMLInputElement;
+    const backButton = fixture.nativeElement.querySelector('[data-testid="profile-back-button"]') as HTMLButtonElement;
+
+    expect(firstName.readOnly).toBe(true);
+    expect(lastName.readOnly).toBe(true);
+    expect(email.readOnly).toBe(true);
+    expect(phone.readOnly).toBe(true);
+    expect(backButton.disabled).toBe(true);
+  });
+
+  it('should navigate back to dashboard from back button click', () => {
+    renderWithoutInit();
+    component.isLoading.set(false);
+    component.currentUser.set({
+      id: '1',
+      username: 'testuser',
+      accountId: 8,
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      phoneNo: '+1234567890'
+    } as any);
+    fixture.detectChanges();
+
+    const backButton = fixture.nativeElement.querySelector('[data-testid="profile-back-button"]') as HTMLButtonElement;
+    backButton.click();
+
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/dashboard']);
   });
 });

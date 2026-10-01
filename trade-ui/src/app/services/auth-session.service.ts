@@ -127,8 +127,13 @@ export class AuthSessionService {
           return 'Invalid username or password.';
         }
 
-        const mapped = mapErrorCodeToMessage(code, serverMessage);
-        return mapped;
+        if (code) {
+          return mapErrorCodeToMessage(code, serverMessage);
+        }
+
+        if (serverMessage && serverMessage.trim().length > 0) {
+          return serverMessage;
+        }
       } catch {
         // Fallthrough to generic
       }

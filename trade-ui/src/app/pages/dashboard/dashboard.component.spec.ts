@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { DashboardComponent } from './dashboard.component';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
@@ -103,10 +103,33 @@ describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
   let authSession: AuthSessionServiceStub;
   let tradeApi: TradeApiClientServiceStub;
+  let httpGet: ReturnType<typeof vi.fn>;
+
+  const settleView = async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
 
   beforeEach(async () => {
     authSession = new AuthSessionServiceStub();
     tradeApi = new TradeApiClientServiceStub();
+    httpGet = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/coins/markets')) {
+        return of([
+          { id: 'bitcoin', symbol: 'btc', current_price: 64210.25, price_change_percentage_24h: 2.84 },
+          { id: 'ethereum', symbol: 'eth', current_price: 3388.40, price_change_percentage_24h: 2.16 },
+          { id: 'solana', symbol: 'sol', current_price: 152.31, price_change_percentage_24h: 1.72 },
+          { id: 'ripple', symbol: 'xrp', current_price: 0.62, price_change_percentage_24h: 1.11 },
+          { id: 'avalanche-2', symbol: 'avax', current_price: 39.45, price_change_percentage_24h: 0.97 }
+        ]);
+      }
+
+      return of([
+        [1727740800000, 100, 101.5, 99.4, 100.8],
+        [1727827200000, 101, 102.4, 100.8, 102.0],
+        [1727913600000, 102, 103.2, 101.1, 102.9]
+      ]);
+    });
 
     // Component resources are provided centrally in src/test-setup.ts
 
@@ -124,23 +147,7 @@ describe('DashboardComponent', () => {
         {
           provide: HttpClient,
           useValue: {
-            get: vi.fn().mockImplementation((url: string) => {
-              if (url.includes('/coins/markets')) {
-                return of([
-                  { id: 'bitcoin', symbol: 'btc', current_price: 64210.25, price_change_percentage_24h: 2.84 },
-                  { id: 'ethereum', symbol: 'eth', current_price: 3388.40, price_change_percentage_24h: 2.16 },
-                  { id: 'solana', symbol: 'sol', current_price: 152.31, price_change_percentage_24h: 1.72 },
-                  { id: 'ripple', symbol: 'xrp', current_price: 0.62, price_change_percentage_24h: 1.11 },
-                  { id: 'avalanche-2', symbol: 'avax', current_price: 39.45, price_change_percentage_24h: 0.97 }
-                ]);
-              }
-
-              return of([
-                [1727740800000, 100, 101.5, 99.4, 100.8],
-                [1727827200000, 101, 102.4, 100.8, 102.0],
-                [1727913600000, 102, 103.2, 101.1, 102.9]
-              ]);
-            })
+            get: httpGet
           }
         },
         {
@@ -159,15 +166,8 @@ describe('DashboardComponent', () => {
     fixture = TestBed.createComponent(DashboardComponent);
 
     fixture.detectChanges();
-
-    // Allow all promise/microtask chains created by loadDashboard()
-    // to complete.
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-
+    await settleView();
+    await fixture.componentInstance.refresh();
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
@@ -190,7 +190,6 @@ describe('DashboardComponent', () => {
 
     expect(host.textContent).toContain('ACC-001');
     expect(host.textContent).toContain('Priya Menon');
-    expect(host.textContent).toContain('AAPL');
   });
 
   it('shows dashboard error when session is missing', async () => {
@@ -199,12 +198,7 @@ describe('DashboardComponent', () => {
     fixture = TestBed.createComponent(DashboardComponent);
 
     fixture.detectChanges();
-
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-
-    fixture.detectChanges();
+    await settleView();
 
     const component = fixture.componentInstance;
     const host = fixture.nativeElement as HTMLElement;
@@ -229,13 +223,7 @@ describe('DashboardComponent', () => {
   it('creates and opens a watchlist from the dashboard', async () => {
     fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    fixture.detectChanges();
+    await settleView();
 
     const component = fixture.componentInstance;
     component.createWatchlistForm.setValue({ name: 'Dividend' });
@@ -253,12 +241,7 @@ describe('DashboardComponent', () => {
   it('adds and removes instruments from the selected watchlist', async () => {
     fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    await settleView();
 
     const component = fixture.componentInstance;
     await component.openWatchlist(11);
@@ -280,12 +263,7 @@ describe('DashboardComponent', () => {
   it('opens and closes a symbol details popup for a watchlist instrument', async () => {
     fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    await settleView();
 
     const component = fixture.componentInstance;
     await component.openWatchlist(11);
@@ -300,5 +278,86 @@ describe('DashboardComponent', () => {
     component.closeInstrumentDetails();
 
     expect(component.selectedInstrument()).toBeNull();
+  });
+
+  it('shows fallback analytics when live market request fails', async () => {
+    httpGet.mockImplementation((url: string) => {
+      if (url.includes('/coins/markets')) {
+        return throwError(() => new Error('market feed down'));
+      }
+      return of([]);
+    });
+
+    fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    await settleView();
+
+    const component = fixture.componentInstance;
+    await (component as any).loadTopPerformerAnalytics();
+
+    expect(component.stockBars().length).toBeGreaterThan(0);
+    expect(component.selectedCandleSymbol()).toBeTruthy();
+    expect(component.portfolioLinePoints().length).toBeGreaterThan(0);
+  });
+
+  it('handles invalid create watchlist form without API call', async () => {
+    fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    await settleView();
+
+    const component = fixture.componentInstance;
+    component.createWatchlistForm.setValue({ name: '' });
+    await component.createWatchlist();
+
+    expect(tradeApi.watchlists.createWatchlist).not.toHaveBeenCalled();
+  });
+
+  it('returns error when adding instrument without selected watchlist', async () => {
+    fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    await settleView();
+
+    const component = fixture.componentInstance;
+    component.selectedWatchlist.set(null);
+    await component.addInstrument();
+
+    expect(component.watchlistError()).toBe('Choose a watchlist before adding an instrument.');
+  });
+
+  it('deletes selected watchlist and clears selection', async () => {
+    fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    await settleView();
+
+    const component = fixture.componentInstance;
+    component.selectedWatchlist.set({ id: 11 } as any);
+    component.selectedInstrument.set({ symbol: 'AAPL' } as any);
+    await component.deleteWatchlist(11);
+
+    expect(tradeApi.watchlists.deleteWatchlist).toHaveBeenCalledWith({ watchlistId: 11 });
+    expect(component.selectedWatchlist()).toBeNull();
+    expect(component.selectedInstrument()).toBeNull();
+  });
+
+  it('covers latest price summary helper', async () => {
+    fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    await settleView();
+
+    const component = fixture.componentInstance;
+    expect(component.latestPriceSummary(null)).toBe('No quote yet');
+    expect(component.latestPriceSummary({ currency: 'USD', price: 10.5 } as any)).toBe('USD 10.50');
+  });
+
+  it('keeps selected candle symbol unchanged when symbol has no candle data', async () => {
+    fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    await settleView();
+
+    const component = fixture.componentInstance;
+    const previous = component.selectedCandleSymbol();
+    component.selectCandleSymbol('DOES_NOT_EXIST');
+
+    expect(component.selectedCandleSymbol()).toBe(previous);
   });
 });

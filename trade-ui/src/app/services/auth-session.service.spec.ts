@@ -290,11 +290,9 @@ describe('AuthSessionService', () => {
       );
     });
 
-    it('should show readable message when response status is 0', async () => {
+    it('should show readable message when auth service cannot be reached', async () => {
       apiStub.client.authLoginPost.mockRejectedValue(
-        new ResponseError(
-          new Response('{}', { status: 0 })
-        )
+        new TypeError('Failed to fetch')
       );
 
       await expect(
