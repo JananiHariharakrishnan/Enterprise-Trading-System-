@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -13,7 +13,7 @@ import type { OrderHistoryEntry } from '../../generated/trade';
   templateUrl: './order-history.component.html',
   styleUrls: ['./order-history.component.css']
 })
-export class OrderHistoryComponent implements OnInit {
+export class OrderHistoryComponent implements OnInit, OnDestroy {
   private readonly api = inject(TradeApiClientService);
   private readonly auth = inject(AuthSessionService);
   private readonly route = inject(ActivatedRoute);
@@ -23,6 +23,18 @@ export class OrderHistoryComponent implements OnInit {
   readonly isLoading = signal(true);
   readonly loadError = signal<string | null>(null);
   readonly orders = signal<OrderHistoryEntry[]>([]);
+
+  // Polling signals
+  readonly isPolling = signal(false);
+  readonly pollAttempts = signal(0);
+  readonly maxPollAttempts = 12;
+  readonly pollIntervalMs = 5000; // 5 seconds
+  private pollTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  // Computed signal: true if any order has status === 'NEW'
+  readonly hasNewOrders = computed(() => {
+    return this.orders().some(order => order.status === 'NEW');
+  });
 
   // Filter signals
   readonly statusOptions = ['ALL', 'NEW', 'FILLED', 'REJECTED', 'CANCELLED'];
@@ -123,10 +135,68 @@ export class OrderHistoryComponent implements OnInit {
       });
 
       this.orders.set(fetched.slice(0, 500));
+      
+      // Schedule next poll if there are NEW orders and we haven't exceeded max attempts
+      this.scheduleNextPoll();
     } catch (err) {
       this.loadError.set('Unable to load order history. Please check your filters.');
+      // Still attempt to reschedule polling on error
+      this.scheduleNextPoll();
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  /**
+   * Public method for users to manually refresh the order history.
+   * Resets poll attempts and triggers an immediate load.
+   */
+  refresh(): void {
+    this.clearPolling();
+    this.pollAttempts.set(0);
+    void this.loadOrders();
+  }
+
+  /**
+   * Schedule the next poll if conditions are met:
+   * - At least one order has status === 'NEW'
+   * - Poll attempts haven't exceeded the maximum
+   */
+  private scheduleNextPoll(): void {
+    if (!this.hasNewOrders() || this.pollAttempts() >= this.maxPollAttempts) {
+      // Stop polling: either no NEW orders or max attempts reached
+      this.isPolling.set(false);
+      return;
+    }
+
+    // Increment poll attempts and schedule next reload
+    this.pollAttempts.update(count => count + 1);
+    this.isPolling.set(true);
+
+    // Clear any existing timeout
+    this.clearPolling();
+
+    // Schedule next load
+    this.pollTimeoutId = setTimeout(() => {
+      void this.loadOrders();
+    }, this.pollIntervalMs);
+  }
+
+  /**
+   * Clear any running polling timeout and reset polling state.
+   */
+  private clearPolling(): void {
+    if (this.pollTimeoutId) {
+      clearTimeout(this.pollTimeoutId);
+      this.pollTimeoutId = null;
+    }
+    this.isPolling.set(false);
+  }
+
+  /**
+   * Angular lifecycle: cleanup when component is destroyed.
+   */
+  ngOnDestroy(): void {
+    this.clearPolling();
   }
 }

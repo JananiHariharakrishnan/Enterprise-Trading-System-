@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
+import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { ThemeService } from '../../services/theme.service';
@@ -29,7 +30,7 @@ describe('AppHeaderComponent', () => {
   let authSession: AuthSessionServiceStub;
   let themeService: ThemeServiceStub;
   let uiEvents: UiEventsServiceStub;
-  let router: { navigate: ReturnType<typeof vi.fn> };
+  let router: any;
 
   const openProfileMenu = () => {
     const profileButton = fixture.nativeElement.querySelector('.profile-button') as HTMLButtonElement;
@@ -39,7 +40,9 @@ describe('AppHeaderComponent', () => {
 
   beforeEach(async () => {
     router = {
-      navigate: vi.fn().mockResolvedValue(true)
+      navigate: vi.fn().mockResolvedValue(true),
+      // RouterLinkActive and other directives subscribe to `events`
+      events: of(null)
     };
 
     await TestBed.configureTestingModule({
@@ -49,6 +52,7 @@ describe('AppHeaderComponent', () => {
         { provide: ThemeService, useClass: ThemeServiceStub },
         { provide: UiEventsService, useClass: UiEventsServiceStub },
         { provide: Router, useValue: router }
+        , { provide: ActivatedRoute, useValue: { queryParams: of({}) } }
       ]
     }).compileComponents();
 

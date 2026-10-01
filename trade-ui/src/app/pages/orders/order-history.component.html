@@ -70,8 +70,26 @@
   </div>
 
   <!-- Loading & Error States -->
-  <p *ngIf="isLoading()" class="status">⏳ Loading orders...</p>
-  <div *ngIf="loadError()" class="status status-error">❌ {{ loadError() }}</div>
+  <div class="status-bar">
+    <div class="status-messages">
+      <p *ngIf="isLoading()" class="status">⏳ Loading orders...</p>
+      <div *ngIf="loadError()" class="status status-error">❌ {{ loadError() }}</div>
+      <p *ngIf="isPolling()" class="status status-polling">
+        🔄 Still working... ({{ pollAttempts() }}/{{ maxPollAttempts }} checks)
+      </p>
+    </div>
+
+    <!-- Refresh Button -->
+    <button
+      type="button"
+      class="btn-refresh"
+      (click)="refresh()"
+      [disabled]="isLoading()"
+      data-testid="refresh-orders-button"
+    >
+      🔄 Refresh
+    </button>
+  </div>
 
   <!-- Orders Table -->
   <table *ngIf="orders().length > 0 && !isLoading()">

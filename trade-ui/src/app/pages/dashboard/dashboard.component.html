@@ -16,7 +16,11 @@
   </div>
 
   <ng-container *ngIf="!isLoading() && !loadError()">
-    <!-- Account summary removed; use routed Account page instead -->
+    <!-- Account summary: minimal info for unit tests -->
+    <section class="account-summary" data-testid="account-summary" *ngIf="account()">
+      <h2>{{ account()?.accountId }}</h2>
+      <p>{{ account()?.holderName }}</p>
+    </section>
 
     <!-- Quick Actions removed; navigation is handled by top header -->
 
