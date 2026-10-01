@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthSessionService } from '../../services/auth-session.service';
+import { mapErrorCodeToMessage } from '../../errors/error-messages';
 import { getSafeReturnUrl } from '../../guards/return-url.util';
 
 @Component({

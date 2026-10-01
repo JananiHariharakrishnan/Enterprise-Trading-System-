@@ -6,6 +6,7 @@ import { AuthApiClientService } from './auth-api-client.service';
 import { AuthSessionService } from './auth-session.service';
 import { TokenStorageService } from './token-storage.service';
 import { ResponseError } from '../generated/auth';
+import { authMappingComplete, tradeMappingComplete } from '../errors/error-messages';
 
 class AuthApiClientServiceStub {
   client = {
@@ -288,6 +289,18 @@ describe('AuthSessionService', () => {
         'Unable to sign in right now. Please try again.'
       );
     });
+
+    it('should show readable message when response status is 0', async () => {
+      apiStub.client.authLoginPost.mockRejectedValue(
+        new ResponseError(
+          new Response('{}', { status: 0 })
+        )
+      );
+
+      await expect(
+        service.login('priya.menon', 'password')
+      ).rejects.toThrow(/Cannot reach Auth service/);
+    });
   });
 
   describe('register', () => {
@@ -347,6 +360,14 @@ describe('AuthSessionService', () => {
       apiStub.client.authRegisterPost.mockRejectedValue(new Error('Unexpected failure'));
 
       await expect(service.register('priya.menon', 'password')).rejects.toThrow('Unable to sign in right now. Please try again.');
+    });
+
+    it('error mapping should be complete for auth contract', () => {
+      expect(authMappingComplete).toBe(true);
+    });
+
+    it('error mapping should be complete for trade contract', () => {
+      expect(tradeMappingComplete).toBe(true);
     });
   });
 

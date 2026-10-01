@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { LoginRequest, ResponseError, UserResponse } from '../generated/auth';
+import { mapErrorCodeToMessage } from '../errors/error-messages';
 import { AuthApiClientService } from './auth-api-client.service';
 import { TokenStorageService } from './token-storage.service';
 
@@ -103,22 +104,33 @@ export class AuthSessionService {
   }
 
   private async toReadableError(error: unknown): Promise<string> {
+    // Network errors / CORS / service down typically surface as TypeError or status 0
     if (error instanceof TypeError) {
       return `Cannot reach Auth service on http://${this.authHost}:3000. Start auth-service and try again.`;
     }
 
     if (error instanceof ResponseError) {
-      if (error.response.status === 401) {
-        return 'Invalid username or password.';
-      }
-
+      // map known codes to trader-friendly messages first
       try {
-        const body = (await error.response.clone().json()) as { message?: string };
-        if (body.message && body.message.trim().length > 0) {
-          return body.message;
+        const clone = error.response.clone();
+        const body = await clone.json().catch(() => ({}));
+        const serverMessage = body && typeof body.message === 'string' ? body.message : null;
+        const code = body && typeof body.errorCode === 'string' ? body.errorCode : undefined;
+
+        // Handle HTTP 0 (unreachable) explicitly
+        if (error.response.status === 0) {
+          return `Cannot reach Auth service on http://${this.authHost}:3000. Start auth-service and try again.`;
         }
+
+        // Specific 401 semantics for login
+        if (error.response.status === 401 && !code) {
+          return 'Invalid username or password.';
+        }
+
+        const mapped = mapErrorCodeToMessage(code, serverMessage);
+        return mapped;
       } catch {
-        // Fallback to generic error below when response body is missing.
+        // Fallthrough to generic
       }
     }
 
