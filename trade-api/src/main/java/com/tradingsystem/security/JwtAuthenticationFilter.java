@@ -37,6 +37,13 @@ public class JwtAuthenticationFilter implements Filter {
             return;
         }
 
+        // Skip authentication for internal service-to-service user management endpoints
+        String requestPath = httpRequest.getRequestURI();
+        if (requestPath != null && requestPath.startsWith("/api/v1/users")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         String header = httpRequest.getHeader(AUTHORIZATION);
         String token = extractBearerToken(header);
 

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tradingsystem.mapper.UserDataMapper">
+
+    <resultMap id="userResultMap" type="com.tradingsystem.model.User">
+        <id property="id" column="id"/>
+        <result property="accountId" column="account_id"/>
+        <result property="username" column="username"/>
+        <result property="firstName" column="first_name"/>
+        <result property="lastName" column="last_name"/>
+        <result property="email" column="email"/>
+        <result property="phoneNo" column="phone_no"/>
+        <result property="rolesString" column="roles" javaType="java.lang.String"/>
+        <result property="createdOn" column="created_on"/>
+    </resultMap>
+
+    <select id="findAvailableAccountId" resultType="java.lang.Long">
+        SELECT a.id
+        FROM tradingsystem.accounts a
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM tradingsystem.users u
+            WHERE u.account_id = a.id
+        )
+        ORDER BY RANDOM()
+        LIMIT 1
+    </select>
+
+    <select id="findUserByUsername" resultMap="userResultMap">
+        SELECT id, account_id, username, first_name, last_name, email, phone_no, roles, created_on
+        FROM tradingsystem.users
+        WHERE username = #{username}
+        LIMIT 1
+    </select>
+
+    <select id="findUserById" resultMap="userResultMap">
+        SELECT id, account_id, username, first_name, last_name, email, phone_no, roles, created_on
+        FROM tradingsystem.users
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <select id="findUserByAccountId" resultMap="userResultMap">
+        SELECT id, account_id, username, first_name, last_name, email, phone_no, roles, created_on
+        FROM tradingsystem.users
+        WHERE account_id = #{accountId}
+        LIMIT 1
+    </select>
+
+    <insert id="createUser">
+        INSERT INTO tradingsystem.users (
+            username,
+            account_id,
+            roles,
+            created_on
+        ) VALUES (
+            #{username},
+            #{accountId},
+            #{roles}::TEXT[],
+            NOW()
+        )
+    </insert>
+
+    <update id="updateUserProfile">
+        UPDATE tradingsystem.users
+        SET
+            <if test="firstName != null">first_name = #{firstName},</if>
+            <if test="lastName != null">last_name = #{lastName},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="phoneNo != null">phone_no = #{phoneNo},</if>
+            created_on = created_on
+        WHERE id = #{id}
+    </update>
+
+    <select id="accountExists" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM tradingsystem.accounts
+        WHERE id = #{accountId}
+    </select>
+
+    <select id="countOrphanCredentials" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM authentication.credentials c
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM tradingsystem.users u
+            WHERE u.account_id = c.account_id
+        )
+    </select>
+
+    <delete id="deleteOrphanCredentials">
+        DELETE FROM authentication.credentials c
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM tradingsystem.users u
+            WHERE u.account_id = c.account_id
+        )
+    </delete>
+
+</mapper>
