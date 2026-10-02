@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthSessionService } from '../../services/auth-session.service';
 
 @Component({
@@ -14,10 +14,17 @@ import { AuthSessionService } from '../../services/auth-session.service';
 export class RegisterComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly authSession = inject(AuthSessionService);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** How long the "account created" popup stays before moving to sign in. */
+  readonly redirectMs = 4000;
 
   readonly isSubmitting = signal(false);
   readonly submitError = signal<string | null>(null);
   readonly assignedAccountId = signal<number | null>(null);
+
+  private redirectTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly form = this.formBuilder.nonNullable.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(64), Validators.pattern(/^[a-zA-Z0-9._-]+$/)]],
@@ -27,6 +34,10 @@ export class RegisterComponent {
     validators: (group) => this.passwordMatchValidator(group)
   });
 
+  constructor() {
+    this.destroyRef.onDestroy(() => this.clearRedirectTimer());
+  }
+
   private passwordMatchValidator(group: any): { [key: string]: any } | null {
     const password = group.get('password')?.value;
     const confirmPassword = group.get('confirmPassword')?.value;
@@ -35,9 +46,17 @@ export class RegisterComponent {
       : null;
   }
 
+  /** True when the confirm field should glow red because the two passwords differ. */
+  get showMismatch(): boolean {
+    return this.form.hasError('passwordMismatch') && !!this.form.get('confirmPassword')?.touched;
+  }
+
   async onSubmit(): Promise<void> {
+    if (this.assignedAccountId() !== null) {
+      return;
+    }
+
     this.submitError.set(null);
-    this.assignedAccountId.set(null);
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -49,14 +68,32 @@ export class RegisterComponent {
     try {
       const { username, password } = this.form.getRawValue();
       const registeredUser = await this.authSession.register(username, password);
-      this.assignedAccountId.set(registeredUser.accountId);
+
       this.form.patchValue({ password: '', confirmPassword: '' });
       this.form.markAsPristine();
+      this.form.disable();
+      this.assignedAccountId.set(registeredUser.accountId);
+
+      // Show the popup for a few seconds, then move to the sign-in page.
+      this.redirectTimer = setTimeout(() => void this.goToSignIn(), this.redirectMs);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to register right now. Please try again.';
       this.submitError.set(message);
     } finally {
       this.isSubmitting.set(false);
+    }
+  }
+
+  /** Called by the timer, or immediately by the "Sign in now" button. */
+  async goToSignIn(): Promise<void> {
+    this.clearRedirectTimer();
+    await this.router.navigate(['/login'], { queryParamsHandling: 'preserve' });
+  }
+
+  private clearRedirectTimer(): void {
+    if (this.redirectTimer !== null) {
+      clearTimeout(this.redirectTimer);
+      this.redirectTimer = null;
     }
   }
 

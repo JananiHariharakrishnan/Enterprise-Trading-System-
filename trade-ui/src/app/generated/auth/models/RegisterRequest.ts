@@ -36,7 +36,7 @@ export interface RegisterRequest {
      * @type {number}
      * @memberof RegisterRequest
      */
-    accountId?: number;
+    accountId: number;
     /**
      * 
      * @type {Array<string>}
@@ -62,6 +62,7 @@ export type RegisterRequestRolesEnum = typeof RegisterRequestRolesEnum[keyof typ
 export function instanceOfRegisterRequest(value: object): value is RegisterRequest {
     if (!('username' in value) || value['username'] === undefined) return false;
     if (!('password' in value) || value['password'] === undefined) return false;
+    if (!('accountId' in value) || value['accountId'] === undefined) return false;
     return true;
 }
 
@@ -77,7 +78,7 @@ export function RegisterRequestFromJSONTyped(json: any, ignoreDiscriminator: boo
         
         'username': json['username'],
         'password': json['password'],
-        'accountId': json['accountId'] == null ? undefined : json['accountId'],
+        'accountId': json['accountId'],
         'roles': json['roles'] == null ? undefined : json['roles'],
     };
 }

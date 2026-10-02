@@ -1,3 +1,7 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
 <section class="signin-card">
   <h1>Sign in</h1>
   <p>Use your trading platform credentials to continue.</p>
@@ -34,20 +38,47 @@
       Username and password are required.
     </p>
 
-    <p
-      class="api-error"
+    <div
+      class="error-box"
       *ngIf="submitError()"
+      role="alert"
       data-testid="auth-error-invalid-credentials"
     >
-      {{ submitError() }}
-    </p>
+      <span class="error-box-icon" aria-hidden="true">!</span>
+      <span class="error-box-text">{{ submitError() }}</span>
+    </div>
 
     <button
       type="submit"
-      [disabled]="isSubmitting() || form.invalid"
+      [disabled]="isSubmitting() || isLocked() || form.invalid"
       data-testid="sign-in-button"
     >
       {{ isSubmitting() ? 'Signing in...' : 'Sign in' }}
     </button>
   </form>
 </section>
+
+<!-- Lockout popup: sits outside the card so it covers the whole page -->
+<div class="lockout-backdrop" *ngIf="isLocked()" data-testid="lockout-dialog">
+  <div
+    class="lockout-dialog"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="lockout-title"
+    aria-describedby="lockout-desc"
+  >
+    <h2 id="lockout-title">Too many failed attempts</h2>
+    <p id="lockout-desc">
+      Sign-in is paused for your security. You can try again when the timer reaches zero.
+    </p>
+
+    <div class="lockout-timer" role="timer" data-testid="lockout-countdown">
+      <span class="lockout-seconds">{{ remainingSeconds() }}</span>
+      <span class="lockout-unit">{{ remainingSeconds() === 1 ? 'second' : 'seconds' }}</span>
+    </div>
+
+    <div class="lockout-bar" aria-hidden="true">
+      <div class="lockout-bar-fill" [style.width.%]="progressPercent()"></div>
+    </div>
+  </div>
+</div>

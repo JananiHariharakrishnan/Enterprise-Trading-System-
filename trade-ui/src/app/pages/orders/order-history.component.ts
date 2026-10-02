@@ -1,10 +1,24 @@
 import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  ReactiveFormsModule,
+  FormBuilder,
+  ValidationErrors,
+  Validators
+} from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
 import { AuthSessionService } from '../../services/auth-session.service';
 import type { OrderHistoryEntry } from '../../generated/trade';
+
+/** The "From" date must not be after the "To" date. */
+function dateRangeValidator(group: AbstractControl): ValidationErrors | null {
+  const from = group.get('fromDate')?.value as string | undefined;
+  const to = group.get('toDate')?.value as string | undefined;
+  // ISO dates (YYYY-MM-DD) compare correctly as plain strings
+  return from && to && from > to ? { dateRange: true } : null;
+}
 
 @Component({
   selector: 'app-order-history',
@@ -24,6 +38,9 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
   readonly loadError = signal<string | null>(null);
   readonly orders = signal<OrderHistoryEntry[]>([]);
 
+  /** The most orders shown at once. */
+  readonly maxOrders = 500;
+
   // Polling signals
   readonly isPolling = signal(false);
   readonly pollAttempts = signal(0);
@@ -36,17 +53,38 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
     return this.orders().some(order => order.status === 'NEW');
   });
 
+  /** Counts by status for the summary row. */
+  readonly summary = computed(() => {
+    const list = this.orders();
+    const count = (status: string) => list.filter(order => order.status === status).length;
+    return {
+      total: list.length,
+      open: count('NEW'),
+      filled: count('FILLED'),
+      rejected: count('REJECTED'),
+      cancelled: count('CANCELLED')
+    };
+  });
+
   // Filter signals
   readonly statusOptions = ['ALL', 'NEW', 'FILLED', 'REJECTED', 'CANCELLED'];
+  readonly quickRanges = [
+    { label: '7 days', days: 7 },
+    { label: '30 days', days: 30 },
+    { label: '90 days', days: 90 }
+  ];
   readonly selectedStatus = signal<string>('ALL');
   readonly fromDate = signal<string>('');
   readonly toDate = signal<string>('');
 
-  readonly filterForm = this.fb.nonNullable.group({
-    status: ['ALL', Validators.required],
-    fromDate: ['', Validators.required],
-    toDate: ['', Validators.required]
-  });
+  readonly filterForm = this.fb.nonNullable.group(
+    {
+      status: ['ALL', Validators.required],
+      fromDate: ['', Validators.required],
+      toDate: ['', Validators.required]
+    },
+    { validators: dateRangeValidator }
+  );
 
   ngOnInit(): void {
     // Read query parameters from URL
@@ -65,18 +103,33 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
         toDate
       });
 
+      // New filters start a fresh polling cycle
+      this.stopPolling();
+      this.pollAttempts.set(0);
       void this.loadOrders();
     });
   }
 
-  private getDefaultFromDate(): string {
+  /** Local calendar date as YYYY-MM-DD (toISOString would use UTC and can be a day off). */
+  private toLocalDateString(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private dateDaysAgo(days: number): string {
     const date = new Date();
-    date.setDate(date.getDate() - 30); // 30 days back
-    return date.toISOString().split('T')[0];
+    date.setDate(date.getDate() - days);
+    return this.toLocalDateString(date);
+  }
+
+  private getDefaultFromDate(): string {
+    return this.dateDaysAgo(30); // 30 days back
   }
 
   private getDefaultToDate(): string {
-    return new Date().toISOString().split('T')[0];
+    return this.toLocalDateString(new Date());
   }
 
   applyFilters(): void {
@@ -87,7 +140,7 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
     const { status, fromDate, toDate } = this.filterForm.value;
 
     // Update query parameters in URL
-    this.router.navigate([], {
+    void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
         status: status === 'ALL' ? null : status,
@@ -105,6 +158,25 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
       toDate: this.getDefaultToDate()
     });
     this.applyFilters();
+  }
+
+  /** Status buttons apply straight away. */
+  setStatus(status: string): void {
+    this.filterForm.controls.status.setValue(status);
+    this.applyFilters();
+  }
+
+  /** Quick range buttons ("7 days" etc.) apply straight away. */
+  setQuickRange(days: number): void {
+    this.filterForm.patchValue({
+      fromDate: this.dateDaysAgo(days),
+      toDate: this.getDefaultToDate()
+    });
+    this.applyFilters();
+  }
+
+  isActiveRange(days: number): boolean {
+    return this.fromDate() === this.dateDaysAgo(days) && this.toDate() === this.getDefaultToDate();
   }
 
   private async loadOrders(): Promise<void> {
@@ -134,8 +206,8 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
         status: status !== 'ALL' ? (status as any) : undefined
       });
 
-      this.orders.set(fetched.slice(0, 500));
-      
+      this.orders.set(fetched.slice(0, this.maxOrders));
+
       // Schedule next poll if there are NEW orders and we haven't exceeded max attempts
       this.scheduleNextPoll();
     } catch (err) {
@@ -152,7 +224,7 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
    * Resets poll attempts and triggers an immediate load.
    */
   refresh(): void {
-    this.clearPolling();
+    this.stopPolling();
     this.pollAttempts.set(0);
     void this.loadOrders();
   }
@@ -165,16 +237,14 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
   private scheduleNextPoll(): void {
     if (!this.hasNewOrders() || this.pollAttempts() >= this.maxPollAttempts) {
       // Stop polling: either no NEW orders or max attempts reached
-      this.isPolling.set(false);
+      this.stopPolling();
       return;
     }
 
-    // Increment poll attempts and schedule next reload
+    // Clear any pending timer first, then mark polling as active
+    this.clearPollTimer();
     this.pollAttempts.update(count => count + 1);
     this.isPolling.set(true);
-
-    // Clear any existing timeout
-    this.clearPolling();
 
     // Schedule next load
     this.pollTimeoutId = setTimeout(() => {
@@ -182,21 +252,42 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
     }, this.pollIntervalMs);
   }
 
-  /**
-   * Clear any running polling timeout and reset polling state.
-   */
-  private clearPolling(): void {
+  private clearPollTimer(): void {
     if (this.pollTimeoutId) {
       clearTimeout(this.pollTimeoutId);
       this.pollTimeoutId = null;
     }
+  }
+
+  /** Cancel any pending poll and clear the "still working" state. */
+  private stopPolling(): void {
+    this.clearPollTimer();
     this.isPolling.set(false);
+  }
+
+  // ---------- Display helpers ----------
+
+  statusKey(value?: string | null): string {
+    return (value ?? 'unknown').toLowerCase();
+  }
+
+  /** Stable hue (0-359) per symbol, used to tint the symbol badges. */
+  symbolHue(symbol: string): number {
+    let hash = 0;
+    for (const char of symbol ?? '') {
+      hash = (hash * 31 + char.charCodeAt(0)) % 360;
+    }
+    return hash;
+  }
+
+  trackByOrderId(_: number, order: OrderHistoryEntry): string | number {
+    return order.orderId;
   }
 
   /**
    * Angular lifecycle: cleanup when component is destroyed.
    */
   ngOnDestroy(): void {
-    this.clearPolling();
+    this.stopPolling();
   }
 }

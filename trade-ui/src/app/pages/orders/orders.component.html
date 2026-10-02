@@ -12,22 +12,22 @@
       <div class="form-row">
         <div class="form-group">
           <label for="symbol-input" class="form-label">Symbol</label>
-          <input 
+          <input
             id="symbol-input"
-            type="text" 
-            formControlName="symbol" 
+            type="text"
+            formControlName="symbol"
             placeholder="e.g. AAPL, GOOGL, MSFT"
             class="form-input"
-            data-testid="order-symbol-input" 
+            data-testid="order-symbol-input"
           />
           <span class="form-hint">Enter stock ticker symbol</span>
         </div>
 
         <div class="form-group">
           <label for="side-select" class="form-label">Side</label>
-          <select 
+          <select
             id="side-select"
-            formControlName="side" 
+            formControlName="side"
             class="form-select"
             data-testid="order-side-select"
           >
@@ -41,27 +41,27 @@
       <div class="form-row">
         <div class="form-group">
           <label for="quantity-input" class="form-label">Quantity</label>
-          <input 
+          <input
             id="quantity-input"
-            type="number" 
-            formControlName="quantity" 
+            type="number"
+            formControlName="quantity"
             placeholder="1"
             class="form-input"
-            data-testid="order-quantity-input" 
+            data-testid="order-quantity-input"
           />
           <span class="form-hint">Shares to trade</span>
         </div>
 
         <div class="form-group">
           <label for="price-input" class="form-label">Price per Share</label>
-          <input 
+          <input
             id="price-input"
-            type="number" 
-            step="0.01" 
-            formControlName="price" 
+            type="number"
+            step="0.01"
+            formControlName="price"
             placeholder="0.01"
             class="form-input"
-            data-testid="order-price-input" 
+            data-testid="order-price-input"
           />
           <span class="form-hint">USD per share</span>
         </div>
@@ -71,9 +71,9 @@
       <div class="form-row">
         <div class="form-group">
           <label for="order-type-select" class="form-label">Order Type</label>
-          <select 
+          <select
             id="order-type-select"
-            formControlName="orderType" 
+            formControlName="orderType"
             class="form-select"
             data-testid="order-type-select"
           >
@@ -89,9 +89,9 @@
       <div *ngIf="errorMessage()" class="status status-error" data-testid="order-error">✕ {{ errorMessage() }}</div>
 
       <!-- Submit Button -->
-      <button 
-        type="submit" 
-        [disabled]="form.invalid" 
+      <button
+        type="submit"
+        [disabled]="form.invalid"
         class="btn-place-order"
         data-testid="place-order-button"
       >

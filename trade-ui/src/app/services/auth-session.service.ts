@@ -38,7 +38,11 @@ export class AuthSessionService {
     const payload = { username, password };
 
     try {
-      return await this.authApi.client.authRegisterPost({ registerRequest: payload });
+      // The generated `RegisterRequest` model currently requires `accountId`,
+      // but the Auth service will allocate an account id when omitted. Cast
+      // to `any` to match the generated client signature without forcing a
+      // synthetic accountId value here.
+      return await this.authApi.client.authRegisterPost({ registerRequest: payload as any });
     } catch (error) {
       throw new Error(await this.toReadableError(error));
     }

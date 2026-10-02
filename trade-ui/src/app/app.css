@@ -29,8 +29,14 @@
 }
 
 .app-main-authenticated {
+  /* The sidebar is offset with margin-left, so the width must NOT be 100%:
+     100% + margin-left is wider than the window and causes the sideways scroll.
+     "auto" lets the flex column stretch the area into the space that's left. */
+  width: auto;
+  min-width: 0;
   max-width: none;
   margin-left: 265px;
+  margin-right: 0; /* an auto margin here would stop the stretch */
   padding: 146px 34px 40px;
   justify-content: flex-start;
 }

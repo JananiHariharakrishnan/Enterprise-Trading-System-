@@ -1,0 +1,27 @@
+<div class="auth-layout">
+  <nav class="auth-switch" aria-label="Sign in or sign up">
+    <a
+      routerLink="/login"
+      queryParamsHandling="preserve"
+      class="auth-switch__tab"
+      [class.active]="!isRegister()"
+      [attr.aria-current]="!isRegister() ? 'page' : null"
+      data-testid="auth-tab-login"
+    >Sign in</a
+    >
+    <a
+      routerLink="/register"
+      queryParamsHandling="preserve"
+      class="auth-switch__tab"
+      [class.active]="isRegister()"
+      [attr.aria-current]="isRegister() ? 'page' : null"
+      data-testid="auth-tab-register"
+    >Sign up</a
+    >
+    <div class="auth-switch__highlight" [class.right]="isRegister()" aria-hidden="true"></div>
+  </nav>
+
+  <section class="auth-card-area">
+    <router-outlet></router-outlet>
+  </section>
+</div>

@@ -60,7 +60,7 @@
         class="asset-search-trigger"
         (click)="openAssetSearch()"
       >
-        Search assets, orders, watchlists...
+        Search assets...
       </button>
     </div>
     <div class="top-actions">
@@ -75,7 +75,6 @@
         {{ themeService.currentTheme() === 'dark' ? 'Light mode' : 'Dark mode' }}
       </button>
 
-      <button class="text-btn" type="button" (click)="emitRefresh()">Refresh</button>
 
       <div class="profile-menu">
         <button class="profile-button" type="button" (click)="toggleProfileMenu()" aria-label="Open profile menu">
@@ -84,7 +83,6 @@
 
         <div class="profile-dropdown" *ngIf="menuOpen">
           <button type="button" (click)="goToProfile()">Update profile</button>
-          <button type="button" (click)="emitRefresh()">Refresh data</button>
           <button type="button" (click)="onSignOut()">Sign out</button>
         </div>
       </div>

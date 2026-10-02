@@ -1,2 +1,393 @@
-:host { display: block; width: 100%; }
-.signin-card { width: min(100%, 520px); }
+/* ==========================================================
+   Sign-in card
+   Font: IBM Plex Sans (add the <link> from the notes to index.html)
+   No HTML changes required; all data-testid hooks are untouched.
+   ========================================================== */
+
+:host {
+  display: block;
+  width: 100%;
+
+  --ink: #0e1b2c;
+  --ink-soft: #5a6b7f;
+  --line: #d3dbe4;
+  --surface: #ffffff;
+  --accent: #0b7a5c;
+  --accent-hover: #09664d;
+  --accent-ring: rgba(11, 122, 92, 0.22);
+  --danger: #b3261e;
+  --danger-bg: #fdf0ef;
+
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Card ---------- */
+
+.signin-card {
+  width: min(100%, 520px);
+  margin-inline: auto;
+  padding: 40px 40px 36px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid rgba(14, 27, 44, 0.06);
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgba(14, 27, 44, 0.06),
+    0 8px 24px rgba(14, 27, 44, 0.08),
+    0 24px 56px rgba(14, 27, 44, 0.1);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  animation: card-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.signin-card:hover {
+  box-shadow:
+    0 1px 2px rgba(14, 27, 44, 0.06),
+    0 12px 32px rgba(14, 27, 44, 0.1),
+    0 32px 72px rgba(14, 27, 44, 0.14);
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- Heading ---------- */
+
+.signin-card h1 {
+  margin: 0 0 8px;
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.signin-card > p {
+  margin: 0 0 28px;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* ---------- Form ---------- */
+
+.signin-card form {
+  display: flex;
+  flex-direction: column;
+}
+
+.signin-card label {
+  margin: 0 0 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.signin-card input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 20px;
+  padding: 13px 14px;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  background: #f8fafc;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.18s ease, background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.signin-card input:hover {
+  border-color: #aebbc9;
+  background: #fff;
+}
+
+.signin-card input:focus {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 4px var(--accent-ring);
+}
+
+/* Show a red border only after the user has interacted */
+.signin-card input.ng-invalid.ng-touched {
+  border-color: var(--danger);
+}
+
+.signin-card input.ng-invalid.ng-touched:focus {
+  box-shadow: 0 0 0 4px rgba(179, 38, 30, 0.18);
+}
+
+/* Keep browser autofill from painting a yellow/blue box */
+.signin-card input:-webkit-autofill,
+.signin-card input:-webkit-autofill:hover,
+.signin-card input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink);
+  box-shadow: 0 0 0 1000px #fff inset;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* ---------- Messages ---------- */
+
+.validation-error,
+.api-error {
+  margin: -6px 0 18px;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-left: 3px solid var(--danger);
+  border-radius: 6px;
+}
+
+/* ---------- Button ---------- */
+
+.signin-card button[type='submit'] {
+  margin-top: 4px;
+  padding: 14px 20px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #fff;
+  background: var(--accent);
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(11, 122, 92, 0.3),
+    0 6px 14px rgba(11, 122, 92, 0.22);
+  transition: background-color 0.18s ease, transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.signin-card button[type='submit']:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow:
+    0 2px 4px rgba(11, 122, 92, 0.3),
+    0 12px 24px rgba(11, 122, 92, 0.3);
+}
+
+.signin-card button[type='submit']:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(11, 122, 92, 0.3);
+}
+
+.signin-card button[type='submit']:focus-visible {
+  outline: 3px solid var(--accent-ring);
+  outline-offset: 3px;
+}
+
+.signin-card button[type='submit']:disabled {
+  color: #8696a8;
+  background: #e6ebf1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 480px) {
+  .signin-card {
+    padding: 28px 22px 26px;
+    border-radius: 14px;
+  }
+
+  .signin-card h1 {
+    font-size: 1.625rem;
+  }
+}
+
+/* ---------- Respect reduced-motion settings ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .signin-card,
+  .signin-card input,
+  .signin-card button[type='submit'] {
+    animation: none;
+    transition: none;
+  }
+
+  .signin-card button[type='submit']:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* ==========================================================
+   Disabled inputs (while locked)
+   ========================================================== */
+
+.signin-card input:disabled {
+  color: #8696a8;
+  background: #eef2f6;
+  border-color: var(--line);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ==========================================================
+   Lockout popup
+   ========================================================== */
+
+:host {
+  --timer: #0b7a5c;
+}
+
+.lockout-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(14, 27, 44, 0.6);
+  backdrop-filter: blur(4px);
+  animation: lockout-fade 0.2s ease both;
+}
+
+.lockout-dialog {
+  width: min(100%, 400px);
+  box-sizing: border-box;
+  padding: 32px 28px 28px;
+  text-align: center;
+  color: var(--ink);
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow:
+    0 2px 4px rgba(14, 27, 44, 0.1),
+    0 16px 40px rgba(14, 27, 44, 0.25);
+  animation: lockout-pop 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.lockout-dialog h2 {
+  margin: 0 0 8px;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.lockout-dialog p {
+  margin: 0 auto 24px;
+  max-width: 32ch;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.lockout-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.lockout-seconds {
+  min-width: 2ch;
+  font-size: 4rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--timer);
+  font-variant-numeric: tabular-nums;
+}
+
+.lockout-unit {
+  margin-top: 6px;
+  font-size: 0.9375rem;
+  color: var(--ink-soft);
+}
+
+.lockout-bar {
+  height: 6px;
+  overflow: hidden;
+  background: #e6ebf1;
+  border-radius: 999px;
+}
+
+.lockout-bar-fill {
+  height: 100%;
+  background: var(--timer);
+  border-radius: inherit;
+  transition: width 1s linear;
+}
+
+@keyframes lockout-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes lockout-pop {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lockout-backdrop,
+  .lockout-dialog {
+    animation: none;
+  }
+
+  .lockout-bar-fill {
+    transition: none;
+  }
+}
+
+/* ==========================================================
+   Wrong-credentials error box
+   ========================================================== */
+
+.error-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -6px 0 20px;
+  padding: 14px 16px;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border: 1.5px solid rgba(179, 38, 30, 0.35);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(179, 38, 30, 0.12);
+  animation: error-in 0.22s ease both;
+}
+
+.error-box-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--danger);
+  border-radius: 50%;
+}
+
+.error-box-text {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+@keyframes error-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .error-box {
+    animation: none;
+  }
+}
+
+

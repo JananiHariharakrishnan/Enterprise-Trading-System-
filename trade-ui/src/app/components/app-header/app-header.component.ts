@@ -82,11 +82,6 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
     this.menuOpen = false;
   }
 
-  emitRefresh(): void {
-    this.uiEvents.emitRefresh();
-    this.menuOpen = false;
-  }
-
   async openAssetSearch(): Promise<void> {
     this.isAssetSearchOpen.set(true);
     this.instrumentSearchText.set('');

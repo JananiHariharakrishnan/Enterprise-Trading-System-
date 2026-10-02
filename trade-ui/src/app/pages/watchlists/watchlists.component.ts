@@ -1,8 +1,28 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
 import type { WatchlistSummaryResponse, WatchlistDetailResponse } from '../../generated/trade';
+
+type WatchlistInstrument = NonNullable<WatchlistDetailResponse['instruments']>[number];
+type TradeSide = 'buy' | 'sell';
+type ToastType = 'success' | 'error';
+
+interface Toast {
+  id: number;
+  type: ToastType;
+  text: string;
+}
+
+/** How long a toast stays on screen (no countdown is shown). */
+const TOAST_SUCCESS_MS = 3500;
+const TOAST_ERROR_MS = 5000;
+/** Newest toasts win if several pile up. */
+const TOAST_MAX_VISIBLE = 3;
+
+/** Number of colour themes the watchlist cards cycle through (see .tone-N in the CSS). */
+const TONE_COUNT = 6;
 
 @Component({
   selector: 'app-watchlists',
@@ -11,17 +31,60 @@ import type { WatchlistSummaryResponse, WatchlistDetailResponse } from '../../ge
   templateUrl: './watchlists.component.html',
   styleUrls: ['./watchlists.component.css']
 })
-export class WatchlistsComponent implements OnInit {
+export class WatchlistsComponent implements OnInit, OnDestroy {
   private readonly api = inject(TradeApiClientService);
   private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
 
   readonly isLoading = signal(true);
   readonly loadError = signal<string | null>(null);
-  readonly message = signal<string | null>(null);
+  readonly toasts = signal<Toast[]>([]);
+  private readonly toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private toastSeq = 0;
   readonly watchlists = signal<WatchlistSummaryResponse[]>([]);
   readonly selectedWatchlist = signal<WatchlistDetailResponse | null>(null);
-  readonly selectedInstrument = signal<any>(null);
   readonly isSavingWatchlist = signal(false);
+
+  /**
+   * The popup is driven by the symbol, not the object, so it keeps working
+   * after the watchlist is reloaded from the API (new objects, same symbol).
+   */
+  readonly selectedSymbol = signal<string | null>(null);
+  readonly selectedInstrument = computed<WatchlistInstrument | null>(() => {
+    const symbol = this.selectedSymbol();
+    if (!symbol) return null;
+    return this.selectedWatchlist()?.instruments?.find((i) => i.symbol === symbol) ?? null;
+  });
+
+  /** Performance summary for the open watchlist, shown inside the watchlist card. */
+  readonly watchlistStats = computed(() => {
+    const instruments = this.selectedWatchlist()?.instruments ?? [];
+
+    const moves = instruments.flatMap((i) => {
+      const pct = i.latestPrice?.changePercent;
+      return pct == null ? [] : [{ symbol: i.symbol, pct }];
+    });
+
+    const gainers = moves.filter((m) => m.pct > 0).length;
+    const losers = moves.filter((m) => m.pct < 0).length;
+    const flat = moves.length - gainers - losers;
+    const pricedTotal = moves.length;
+
+    return {
+      total: instruments.length,
+      gainers,
+      losers,
+      flat,
+      pricedTotal,
+      gainersPct: pricedTotal ? (gainers / pricedTotal) * 100 : 0,
+      flatPct: pricedTotal ? (flat / pricedTotal) * 100 : 0,
+      losersPct: pricedTotal ? (losers / pricedTotal) * 100 : 0,
+      avg: pricedTotal ? moves.reduce((sum, m) => sum + m.pct, 0) / pricedTotal : null,
+      best: pricedTotal ? moves.reduce((a, b) => (b.pct > a.pct ? b : a)) : null,
+      worst: pricedTotal ? moves.reduce((a, b) => (b.pct < a.pct ? b : a)) : null,
+      stale: instruments.filter((i) => i.latestPrice?.stale).length
+    };
+  });
 
   readonly createWatchlistForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]]
@@ -33,6 +96,38 @@ export class WatchlistsComponent implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.selectedSymbol()) {
+      this.selectedSymbol.set(null);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.toastTimers.forEach((timer) => clearTimeout(timer));
+    this.toastTimers.clear();
+  }
+
+  // ---------- Toasts ----------
+
+  private showToast(type: ToastType, text: string): void {
+    const id = ++this.toastSeq;
+    this.toasts.update((list) => [...list.slice(-(TOAST_MAX_VISIBLE - 1)), { id, type, text }]);
+    this.toastTimers.set(
+      id,
+      setTimeout(() => this.dismissToast(id), type === 'error' ? TOAST_ERROR_MS : TOAST_SUCCESS_MS)
+    );
+  }
+
+  dismissToast(id: number): void {
+    const timer = this.toastTimers.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      this.toastTimers.delete(id);
+    }
+    this.toasts.update((list) => list.filter((toast) => toast.id !== id));
   }
 
   private async load(): Promise<void> {
@@ -50,7 +145,6 @@ export class WatchlistsComponent implements OnInit {
   }
 
   async createWatchlist(): Promise<void> {
-    this.message.set(null);
     this.loadError.set(null);
 
     if (this.createWatchlistForm.invalid) {
@@ -65,16 +159,15 @@ export class WatchlistsComponent implements OnInit {
       await this.load();
       await this.openWatchlist(created.id);
       this.createWatchlistForm.reset({ name: '' });
-      this.message.set('Watchlist created.');
+      this.showToast('success', 'Watchlist created.');
     } catch {
-      this.loadError.set('Unable to create watchlist right now.');
+      this.showToast('error', 'Unable to create watchlist right now.');
     } finally {
       this.isSavingWatchlist.set(false);
     }
   }
 
   async openWatchlist(watchlistId: number): Promise<void> {
-    this.message.set(null);
     this.loadError.set(null);
     this.isLoading.set(true);
     try {
@@ -83,9 +176,13 @@ export class WatchlistsComponent implements OnInit {
       if (detail.instruments && Array.isArray(detail.instruments)) {
         detail.instruments.sort((a, b) => a.symbol.localeCompare(b.symbol));
       }
+      // Switching to a different watchlist closes any open instrument popup
+      if (this.selectedWatchlist()?.id !== watchlistId) {
+        this.selectedSymbol.set(null);
+      }
       this.selectedWatchlist.set(detail);
     } catch {
-      this.loadError.set('Unable to load watchlist');
+      this.showToast('error', 'Unable to load watchlist');
     } finally {
       this.isLoading.set(false);
     }
@@ -106,9 +203,9 @@ export class WatchlistsComponent implements OnInit {
       await this.openWatchlist(watchlist.id);
       await this.load();
       this.addInstrumentForm.reset({ symbol: '' });
-      this.message.set(`Added ${symbol} to ${watchlist.name}.`);
+      this.showToast('success', `Added ${symbol} to ${watchlist.name}.`);
     } catch {
-      this.loadError.set('Unable to add instrument right now.');
+      this.showToast('error', 'Unable to add instrument right now.');
     } finally {
       this.isSavingWatchlist.set(false);
     }
@@ -120,44 +217,58 @@ export class WatchlistsComponent implements OnInit {
     this.isSavingWatchlist.set(true);
     try {
       await this.api.watchlists.removeWatchlistInstrument({ watchlistId: watchlist.id, symbol });
+      if (this.selectedSymbol() === symbol) {
+        this.selectedSymbol.set(null);
+      }
       await this.openWatchlist(watchlist.id);
       await this.load();
-      this.message.set(`Removed ${symbol} from ${watchlist.name}.`);
+      this.showToast('success', `Removed ${symbol} from ${watchlist.name}.`);
     } catch {
-      this.loadError.set('Unable to remove instrument right now.');
+      this.showToast('error', 'Unable to remove instrument right now.');
     } finally {
       this.isSavingWatchlist.set(false);
     }
   }
 
   async deleteWatchlist(watchlistId: number): Promise<void> {
-    this.message.set(null);
     this.loadError.set(null);
     if (!confirm('Delete this watchlist? This cannot be undone.')) return;
     this.isSavingWatchlist.set(true);
     try {
       await this.api.watchlists.deleteWatchlist({ watchlistId });
+      this.selectedSymbol.set(null);
       this.selectedWatchlist.set(null);
       await this.load();
-      this.message.set('Watchlist deleted.');
+      this.showToast('success', 'Watchlist deleted.');
     } catch {
-      this.loadError.set('Unable to delete watchlist right now.');
+      this.showToast('error', 'Unable to delete watchlist right now.');
     } finally {
       this.isSavingWatchlist.set(false);
     }
   }
-  
+
+  /** Opens the instrument popup (click the same instrument again to close it). */
+  selectInstrument(instrument: WatchlistInstrument | null): void {
+    const symbol = instrument?.symbol ?? null;
+    this.selectedSymbol.set(symbol && symbol !== this.selectedSymbol() ? symbol : null);
+  }
+
+  /** Sends the user to the orders page with the instrument and side prefilled in the URL. */
+  trade(instrument: WatchlistInstrument, side: TradeSide): void {
+    void this.router.navigate(['/orders'], {
+      queryParams: { symbol: instrument.symbol, side }
+    });
+  }
+
+  // ---------- Formatting helpers ----------
+
   formatPrice(price?: number | null): string {
     if (price == null) return 'N/A';
     return Math.abs(price) >= 1 ? price.toFixed(2) : price.toFixed(4);
   }
-  
+
   getPriceClass(price?: number | null): string {
     return price != null ? 'price-available' : 'price-unavailable';
-  }
-
-  selectInstrument(instrument: any): void {
-    this.selectedInstrument.set(this.selectedInstrument() === instrument ? null : instrument);
   }
 
   getChangeClass(change?: number | null): string {
@@ -165,8 +276,46 @@ export class WatchlistsComponent implements OnInit {
     return change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral';
   }
 
+  changeArrow(change?: number | null): string {
+    if (change == null || change === 0) return '–';
+    return change > 0 ? '▲' : '▼';
+  }
+
   formatChange(change?: number | null): string {
     if (change == null) return 'N/A';
     return change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2);
+  }
+
+  formatPercent(percent?: number | null): string {
+    if (percent == null) return 'N/A';
+    return `${percent > 0 ? '+' : ''}${percent.toFixed(2)}%`;
+  }
+
+  // ---------- Visual helpers ----------
+
+  /** Stable colour theme per watchlist, so each one keeps its colour between visits. */
+  toneClass(id: number): string {
+    return `tone-${Math.abs(id) % TONE_COUNT}`;
+  }
+
+  watchlistInitial(name: string): string {
+    return name.trim().charAt(0).toUpperCase() || '?';
+  }
+
+  /** Stable hue (0-359) per symbol, used to tint the symbol badges. */
+  symbolHue(symbol: string): number {
+    let hash = 0;
+    for (const char of symbol) {
+      hash = (hash * 31 + char.charCodeAt(0)) % 360;
+    }
+    return hash;
+  }
+
+  trackById(_: number, item: { id: number }): number {
+    return item.id;
+  }
+
+  trackBySymbol(_: number, item: { symbol: string }): string {
+    return item.symbol;
   }
 }
