@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: './e2e',
   timeout: 20_000,
   fullyParallel: false,
-  workers: 3,
+  workers: 1,
   retries: 0,
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
