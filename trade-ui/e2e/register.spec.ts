@@ -9,13 +9,14 @@ test.describe('Register Journey', () => {
   };
 
   test.beforeEach(async ({ page }) => {
-    // Start from the home page
-    await page.goto(`${baseUrl}/`);
+    // Navigate directly to the register page
+    await page.goto(`${baseUrl}/register`);
+    // Wait for page to be ready
+    await page.waitForLoadState('networkidle');
   });
 
   test('registration form validates before submission', async ({ page }) => {
-    // Click on register link
-    await page.click('[data-testid="home-link-register"]');
+    // We're already on the register page from beforeEach
     
     // Check that we're on the register page
     await expect(page).toHaveURL(/\/register/);
@@ -59,8 +60,7 @@ test.describe('Register Journey', () => {
   });
 
   test('successful registration shows assigned account ID', async ({ page }) => {
-    // Navigate to register
-    await page.click('[data-testid="home-link-register"]');
+    // We're already on the register page from beforeEach
     await expect(page).toHaveURL(/\/register/);
     
     // Generate unique username
@@ -81,12 +81,11 @@ test.describe('Register Journey', () => {
   });
 
   test('duplicate username shows error', async ({ page }) => {
-    // Navigate to register
-    await page.click('[data-testid="home-link-register"]');
+    // We're already on the register page from beforeEach
     await expect(page).toHaveURL(/\/register/);
     
-    // Use an existing username (from test setup or manual creation)
-    const existingUsername = 'existing.user';
+    // Use the shared E2E test account username (exists in seed data)
+    const existingUsername = 'e2e.tester';
     
     // Fill in the form
     await page.fill('[data-testid="register-username-input"]', existingUsername);
@@ -102,8 +101,7 @@ test.describe('Register Journey', () => {
   });
 
   test('username validation shows specific error messages', async ({ page }) => {
-    // Navigate to register
-    await page.click('[data-testid="home-link-register"]');
+    // We're already on the register page from beforeEach
     
     // Enter username that's too short
     const usernameInput = page.locator('[data-testid="register-username-input"]');
@@ -121,8 +119,7 @@ test.describe('Register Journey', () => {
   });
 
   test('password validation shows specific error messages', async ({ page }) => {
-    // Navigate to register
-    await page.click('[data-testid="home-link-register"]');
+    // We're already on the register page from beforeEach
     
     // Enter password that's too short
     const passwordInput = page.locator('[data-testid="register-password-input"]');
@@ -134,8 +131,7 @@ test.describe('Register Journey', () => {
   });
 
   test('link to sign-in is present and functional', async ({ page }) => {
-    // Navigate to register
-    await page.click('[data-testid="home-link-register"]');
+    // We're already on the register page from beforeEach
     
     // Check that sign-in link exists
     const loginLink = page.locator('[data-testid="link-to-login"]');

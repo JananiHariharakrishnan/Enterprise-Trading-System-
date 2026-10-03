@@ -2,8 +2,9 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 45_000,
+  timeout: 20_000,
   fullyParallel: false,
+  workers: 3,
   retries: 0,
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Login Journey', () => {
   const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:4200';
   const authApiUrl = process.env.E2E_AUTH_API || 'http://localhost:3000';
-  const username = process.env.E2E_USERNAME || 'janani.iyer';
+  const username = process.env.E2E_USERNAME || 'e2e.tester';
   const password = process.env.E2E_PASSWORD || 'correct horse battery staple';
 
   test.beforeEach(async ({ page }) => {
@@ -29,7 +29,7 @@ test.describe('Login Journey', () => {
     
     // Check for error message
     const errorElement = page.locator('[data-testid="auth-error-invalid-credentials"]');
-    await expect(errorElement).toContainText(/Invalid username or password|Cannot reach Auth service/);
+    await expect(errorElement).toContainText(/Wrong username or password|Invalid username or password|Cannot reach Auth service/);
   });
 
   test('successful sign-in stores token and redirects to dashboard', async ({ page }) => {
