@@ -1,0 +1,203 @@
+<section class="order-history">
+  <!-- Page header -->
+  <header class="page-head">
+    <div class="page-title">
+      <h2>Order History</h2>
+      <p>Review every order you've placed and watch open ones update.</p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-refresh"
+      (click)="refresh()"
+      [disabled]="isLoading()"
+      data-testid="refresh-orders-button"
+    >
+      <svg
+        class="refresh-icon"
+        [class.spinning]="isLoading()"
+        viewBox="0 0 24 24"
+        width="18"
+        height="18"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
+        <path d="M21 3v5h-5" />
+      </svg>
+      Refresh
+    </button>
+  </header>
+
+  <!-- Filters -->
+  <div class="filter-panel">
+    <form [formGroup]="filterForm" class="filter-form" (ngSubmit)="applyFilters()">
+      <div class="filter-row">
+        <!-- Status -->
+        <div class="filter-group">
+          <span class="filter-label" id="status-label">Status</span>
+          <div class="segmented" role="group" aria-labelledby="status-label">
+            <button
+              type="button"
+              class="seg-btn"
+              *ngFor="let status of statusOptions"
+              [class.active]="filterForm.controls.status.value === status"
+              [attr.aria-pressed]="filterForm.controls.status.value === status"
+              (click)="setStatus(status)"
+            >
+              {{ status }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick range -->
+        <div class="filter-group">
+          <span class="filter-label" id="range-label">Quick range</span>
+          <div class="segmented" role="group" aria-labelledby="range-label">
+            <button
+              type="button"
+              class="seg-btn"
+              *ngFor="let range of quickRanges"
+              [class.active]="isActiveRange(range.days)"
+              [attr.aria-pressed]="isActiveRange(range.days)"
+              (click)="setQuickRange(range.days)"
+            >
+              {{ range.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-row filter-row-dates">
+        <!-- From Date -->
+        <div class="filter-group">
+          <label class="filter-label" for="fromDate">From date</label>
+          <input id="fromDate" type="date" formControlName="fromDate" class="filter-input" />
+        </div>
+
+        <!-- To Date -->
+        <div class="filter-group">
+          <label class="filter-label" for="toDate">To date</label>
+          <input id="toDate" type="date" formControlName="toDate" class="filter-input" />
+        </div>
+
+        <!-- Actions -->
+        <div class="filter-actions">
+          <button type="submit" class="btn-primary" [disabled]="filterForm.invalid">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.3-4.3" />
+            </svg>
+            Apply Filters
+          </button>
+          <button type="button" class="btn-ghost" (click)="clearFilters()">Clear</button>
+        </div>
+      </div>
+
+      <p class="field-error" *ngIf="filterForm.hasError('dateRange')" role="alert">
+        The From date can't be after the To date.
+      </p>
+    </form>
+  </div>
+
+  <!-- Loading, error and polling states -->
+  <div class="banners" *ngIf="(isLoading() && orders().length === 0) || loadError() || isPolling()">
+    <div *ngIf="isLoading() && orders().length === 0" class="banner banner-loading" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      Loading orders...
+    </div>
+
+    <div *ngIf="loadError()" class="banner banner-error" role="alert">
+      <span class="banner-icon" aria-hidden="true">!</span>
+      {{ loadError() }}
+    </div>
+
+    <div *ngIf="isPolling()" class="banner banner-info" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      Still working... ({{ pollAttempts() }}/{{ maxPollAttempts }} checks)
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary" *ngIf="orders().length > 0 && summary() as s">
+    <div class="stat">
+      <span class="stat-label">Orders</span>
+      <span class="stat-value">{{ s.total }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">New</span>
+      <span class="stat-value amber">{{ s.open }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Filled</span>
+      <span class="stat-value up">{{ s.filled }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Rejected</span>
+      <span class="stat-value down">{{ s.rejected }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Cancelled</span>
+      <span class="stat-value">{{ s.cancelled }}</span>
+    </div>
+  </div>
+
+  <!-- Orders -->
+  <div class="results" *ngIf="orders().length > 0">
+    <p class="results-caption">
+      Showing {{ orders().length }} order<span *ngIf="orders().length !== 1">s</span>
+      from {{ fromDate() | date:'mediumDate' }} to {{ toDate() | date:'mediumDate' }}.
+      <span *ngIf="orders().length >= maxOrders">
+        Only the first {{ maxOrders }} are shown, so narrow the date range to see the rest.
+      </span>
+    </p>
+
+    <div class="table-wrap" [class.is-refreshing]="isLoading()">
+      <table>
+        <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Symbol</th>
+          <th>Side</th>
+          <th>Status</th>
+          <th class="num">Quantity</th>
+          <th class="num">Price</th>
+          <th>Created</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let o of orders(); trackBy: trackByOrderId">
+          <td class="order-id" [attr.title]="o.orderId">{{ o.orderId }}</td>
+          <td>
+              <span class="symbol-cell">
+                <span class="symbol-avatar" [style.--hue]="symbolHue(o.symbol)" aria-hidden="true">
+                  {{ o.symbol.slice(0, 2) }}
+                </span>
+                <strong>{{ o.symbol }}</strong>
+              </span>
+          </td>
+          <td>
+            <span class="pill" [ngClass]="'pill-' + statusKey(o.side)">{{ o.side }}</span>
+          </td>
+          <td>
+            <span class="pill" [ngClass]="'pill-' + statusKey(o.status)">{{ o.status }}</span>
+          </td>
+          <td class="num">{{ o.quantity }}</td>
+          <td class="num">{{ o.price != null ? ('$' + (o.price | number:'1.2-2')) : '—' }}</td>
+          <td class="created">{{ o.createdOn | date:'short' }}</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div *ngIf="!isLoading() && !loadError() && orders().length === 0" class="empty-state">
+    <strong>No orders found</strong>
+    <span>Try a different status or a wider date range.</span>
+  </div>
+</section>

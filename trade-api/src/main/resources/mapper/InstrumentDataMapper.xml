@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tradingsystem.mapper.InstrumentDataMapper">
+
+    <resultMap id="instrumentResultMap" type="com.tradingsystem.model.Instrument">
+        <id property="symbol" column="symbol"/>
+        <result property="name" column="name"/>
+        <result property="assetClass" column="asset_class"/>
+        <result property="currency" column="currency"/>
+        <result property="tradable" column="tradable"/>
+    </resultMap>
+
+    <select id="findTradableInstruments" resultMap="instrumentResultMap">
+        SELECT
+            symbol,
+            name,
+            asset_class,
+            currency,
+            tradable
+        FROM instruments
+        WHERE tradable = TRUE
+          <if test="query != null and query != ''">
+            AND (
+              UPPER(symbol) LIKE CONCAT('%', UPPER(#{query}), '%')
+              OR UPPER(name) LIKE CONCAT('%', UPPER(#{query}), '%')
+            )
+          </if>
+        ORDER BY symbol ASC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

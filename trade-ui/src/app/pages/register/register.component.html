@@ -1,0 +1,114 @@
+<section class="register-card">
+  <h1>Create account</h1>
+  <p class="subtitle">Register to start trading on the platform.</p>
+
+  <form
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
+    data-testid="register-form"
+    novalidate
+  >
+    <label for="username">Username</label>
+    <input
+      id="username"
+      type="text"
+      formControlName="username"
+      autocomplete="username"
+      data-testid="register-username-input"
+    />
+    <p
+      class="field-error"
+      *ngIf="form.get('username')?.invalid && form.get('username')?.touched"
+      data-testid="register-username-error"
+    >
+      {{ getUsernameErrorMessage() }}
+    </p>
+
+    <label for="password">Password</label>
+    <input
+      id="password"
+      type="password"
+      formControlName="password"
+      autocomplete="new-password"
+      data-testid="register-password-input"
+    />
+    <p
+      class="field-error"
+      *ngIf="form.get('password')?.invalid && form.get('password')?.touched"
+      data-testid="register-password-error"
+    >
+      {{ getPasswordErrorMessage() }}
+    </p>
+
+    <label for="confirm-password">Confirm password</label>
+    <input
+      id="confirm-password"
+      type="password"
+      formControlName="confirmPassword"
+      autocomplete="new-password"
+      [class.mismatch]="showMismatch"
+      data-testid="register-confirm-password-input"
+    />
+    <p
+      class="field-error"
+      *ngIf="form.get('confirmPassword')?.invalid && form.get('confirmPassword')?.touched"
+      data-testid="register-confirm-password-error"
+    >
+      {{ form.get('confirmPassword')?.hasError('required') ? 'Please confirm your password.' : '' }}
+    </p>
+    <p
+      class="field-error"
+      *ngIf="showMismatch"
+      data-testid="register-password-mismatch-error"
+    >
+      Passwords do not match.
+    </p>
+
+    <div
+      class="error-box"
+      *ngIf="submitError()"
+      role="alert"
+      data-testid="register-error"
+    >
+      <span class="error-box-icon" aria-hidden="true">!</span>
+      <span class="error-box-text">{{ submitError() }}</span>
+    </div>
+
+    <button
+      type="submit"
+      [disabled]="isSubmitting() || form.invalid || form.disabled"
+      data-testid="register-button"
+    >
+      {{ isSubmitting() ? 'Creating account...' : 'Create account' }}
+    </button>
+  </form>
+
+  <p class="footer-link">
+    Already have an account? <a routerLink="/login" queryParamsHandling="preserve" data-testid="link-to-login">Sign in</a>
+  </p>
+</section>
+
+<!-- Success popup: shows the account ID for a few seconds, then moves to sign in -->
+<div class="success-backdrop" *ngIf="assignedAccountId() !== null" data-testid="register-success">
+  <div
+    class="success-dialog"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="success-title"
+    aria-describedby="success-desc"
+  >
+    <span class="success-check" aria-hidden="true">✓</span>
+    <h2 id="success-title">Account created successfully</h2>
+    <p id="success-desc">Your account ID is</p>
+    <div class="success-id" data-testid="register-account-id">{{ assignedAccountId() }}</div>
+    <p class="success-note">Taking you to sign in…</p>
+
+    <div class="success-bar" aria-hidden="true">
+      <div class="success-bar-fill" [style.animation-duration.ms]="redirectMs"></div>
+    </div>
+
+    <button type="button" class="success-skip" (click)="goToSignIn()" data-testid="register-go-to-login">
+      Sign in now
+    </button>
+  </div>
+</div>

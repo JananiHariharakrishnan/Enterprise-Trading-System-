@@ -126,7 +126,7 @@ class ExecutionProcessingServiceTest {
         when(orderDataMapper.updateAccountBalancesWithVersion(
             1001L,
             new BigDecimal("26850.00"), // 50000 - (231.50 * 100)
-            new BigDecimal("26850.00"),
+            new BigDecimal("50000.00").add(new BigDecimal("23000.00")).subtract(new BigDecimal("23150.00")),
             5
         )).thenReturn(1);
         when(orderDataMapper.findPosition(1001L, "AAPL")).thenReturn(position);
@@ -143,7 +143,7 @@ class ExecutionProcessingServiceTest {
         verify(orderDataMapper, times(1)).updateAccountBalancesWithVersion(
             1001L,
             new BigDecimal("26850.00"),
-            new BigDecimal("26850.00"),
+            new BigDecimal("49850.00"),
             5
         );
         verify(orderDataMapper, times(1)).updatePositionWithVersion(
@@ -255,6 +255,29 @@ class ExecutionProcessingServiceTest {
         });
     }
 
+    @Test
+    void rejectedBuyRestoresReservedBuyingPower() {
+        when(orderDataMapper.existsExecutionByEventId(eventId)).thenReturn(false);
+        when(orderDataMapper.updateOrderStatusIfStatus(orderId, "NEW", "REJECTED")).thenReturn(1);
+        when(orderDataMapper.findOrderById(orderId)).thenReturn(order);
+        when(orderDataMapper.findAccountById(1001L)).thenReturn(account);
+        when(orderDataMapper.updateAccountBalancesWithVersion(
+            1001L,
+            new BigDecimal("50000.00"),
+            new BigDecimal("73000.00"),
+            5
+        )).thenReturn(1);
+
+        executionService.applyExecution(orderId, rejectRequest);
+
+        verify(orderDataMapper).updateAccountBalancesWithVersion(
+            1001L,
+            new BigDecimal("50000.00"),
+            new BigDecimal("73000.00"),
+            5
+        );
+    }
+
     /**
      * Test: REJECTED order writes status and execution without position update.
      * 
@@ -269,6 +292,13 @@ class ExecutionProcessingServiceTest {
         when(orderDataMapper.existsExecutionByEventId(eventId)).thenReturn(false);
         when(orderDataMapper.updateOrderStatusIfStatus(orderId, "NEW", "REJECTED")).thenReturn(1);
         when(orderDataMapper.findOrderById(orderId)).thenReturn(order);
+        when(orderDataMapper.findAccountById(1001L)).thenReturn(account);
+        when(orderDataMapper.updateAccountBalancesWithVersion(
+            1001L,
+            new BigDecimal("50000.00"),
+            new BigDecimal("73000.00"),
+            5
+        )).thenReturn(1);
 
         // Act
         executionService.applyExecution(orderId, rejectRequest);
@@ -277,8 +307,13 @@ class ExecutionProcessingServiceTest {
         verify(orderDataMapper, times(1)).updateOrderStatusIfStatus(orderId, "NEW", "REJECTED");
         verify(orderDataMapper, times(1)).insertExecutionWithEventId(orderId, 100, order.getPrice(), eventId);
         
-        // Verify account and position were NOT updated
-        verify(orderDataMapper, never()).updateAccountBalancesWithVersion(anyLong(), any(), any(), anyInt());
+        // Verify no position update occurs, but BUY reservation is restored.
+        verify(orderDataMapper, times(1)).updateAccountBalancesWithVersion(
+            1001L,
+            new BigDecimal("50000.00"),
+            new BigDecimal("73000.00"),
+            5
+        );
         verify(orderDataMapper, never()).updatePositionWithVersion(anyLong(), anyString(), anyInt(), any(), anyInt());
     }
 

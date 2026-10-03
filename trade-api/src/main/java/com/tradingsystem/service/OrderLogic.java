@@ -109,7 +109,7 @@ public class OrderLogic {
                 throw new InvalidOrderException();
             }
 
-            if (account.getCashBalance().compareTo(orderValue) < 0) {
+            if (account.getBuyingPower().compareTo(orderValue) < 0) {
                 throw new InsufficientFundsException();
             }
         }

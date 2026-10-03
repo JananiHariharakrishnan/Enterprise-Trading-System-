@@ -11,12 +11,12 @@ describe('auth.repository', () => {
     vi.resetAllMocks();
   });
 
-  it('accountExists true/false', async () => {
-    (db.query as any).mockResolvedValueOnce({ rows: [{ '?column?': 1 }], rowCount: 1 });
-    expect(await repo.accountExists(1)).toBe(true);
+  it('findAvailableAccountId returns first available account id', async () => {
+    (db.query as any).mockResolvedValueOnce({ rows: [{ id: 3 }], rowCount: 1 });
+    expect(await repo.findAvailableAccountId()).toBe(3);
 
     (db.query as any).mockResolvedValueOnce({ rows: [], rowCount: 0 });
-    expect(await repo.accountExists(2)).toBe(false);
+    expect(await repo.findAvailableAccountId()).toBeNull();
   });
 
   it('create and find user', async () => {

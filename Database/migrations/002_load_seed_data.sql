@@ -44,10 +44,20 @@ INSERT INTO tradingsystem.accounts (
     ('ETP-2204', 95000.00, 95000.00, 'ACTIVE'),
     ('ETP-2205', 220000.00, 220000.00, 'SUSPENDED'),
     ('ETP-2206', 610000.00, 610000.00, 'CLOSED'),
-    ('ETP-2207',1000000.00,1000000.00,'ACTIVE'),
-    ('ETP-2208',100000.00,100000.00,'ACTIVE'),
-    ('ETP-2209',9000000.00,9000000.00,'ACTIVE'),
-    ('ETP-22010',900000.00,900000.00,'ACTIVE');
+    ('ETP-2207', 1000000.00, 1000000.00, 'ACTIVE'),
+    ('ETP-2208', 100000.00, 100000.00, 'ACTIVE'),
+    ('ETP-2209', 9000000.00, 9000000.00, 'ACTIVE'),
+    ('ETP-22010', 900000.00, 900000.00, 'ACTIVE'),
+    ('ETP-22011', 500000.00, 500000.00, 'ACTIVE'),
+    ('ETP-22012', 750000.00, 750000.00, 'ACTIVE'),
+    ('ETP-22013', 1100000.00, 1100000.00, 'ACTIVE'),
+    ('ETP-22014', 850000.00, 850000.00, 'ACTIVE'),
+    ('ETP-22015', 650000.00, 650000.00, 'ACTIVE'),
+    ('ETP-22016', 1200000.00, 1200000.00, 'ACTIVE'),
+    ('ETP-22017', 450000.00, 450000.00, 'ACTIVE'),
+    ('ETP-22018', 920000.00, 920000.00, 'ACTIVE'),
+    ('ETP-22019', 1050000.00, 1050000.00, 'ACTIVE'),
+    ('ETP-22020', 800000.00, 800000.00, 'ACTIVE');
 
 -- -----------------------------------------------------------------------------
 -- USERS
@@ -220,5 +230,61 @@ FROM (
 JOIN tradingsystem.orders o
     ON o.id = v.order_id::UUID;
 
+-- =============================================================================
+-- E2E TEST ACCOUNT
+-- Used by all developers for e2e testing. Credentials:
+-- Username: e2e.tester
+-- Password: correct horse battery staple
+-- =============================================================================
+
+-- Insert the E2E test account
+INSERT INTO tradingsystem.accounts (
+    account_reference,
+    cash_balance,
+    buying_power,
+    status
+) VALUES
+    ('E2E-TEST', 1000000.00, 1000000.00, 'ACTIVE')
+ON CONFLICT (account_reference) DO NOTHING;
+
+-- Insert the E2E test user
+INSERT INTO tradingsystem.users (
+    account_id,
+    username,
+    first_name,
+    last_name,
+    email,
+    phone_no,
+    roles
+)
+SELECT
+    a.id,
+    'e2e.tester',
+    'E2E',
+    'Tester',
+    'e2e.tester@example.com',
+    '+91-9999999999',
+    ARRAY['CUSTOMER']::TEXT[]
+FROM tradingsystem.accounts a
+WHERE a.account_reference = 'E2E-TEST'
+ON CONFLICT (username) DO NOTHING;
+
+-- Insert the credentials with Argon2id hashed password
+-- Hash generated for password: "correct horse battery staple"
+-- Argon2id parameters: time=3, memory=32768KB, parallelism=1
+INSERT INTO authentication.credentials (
+    account_id,
+    username,
+    password_hash,
+    params
+)
+SELECT
+    a.id,
+    'e2e.tester',
+    '$argon2id$v=19$m=32768,t=3,p=1$YbHCCX7EM4e9aYX3NKyXJA$YiAmEiAG+qAVrHUo3rlM02sdavfGYxaKrF8FSF0gzNs',
+    '{"time":3,"memory_kb":32768,"parallelism":1}'::JSONB
+FROM tradingsystem.accounts a
+WHERE a.account_reference = 'E2E-TEST'
+ON CONFLICT (account_id) DO NOTHING;
 
 COMMIT;

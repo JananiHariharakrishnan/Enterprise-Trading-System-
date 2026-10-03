@@ -2,9 +2,14 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 45_000,
+  timeout: 20_000,
   fullyParallel: false,
+  workers: 1,
   retries: 0,
+  reporter: [
+    ['html', { outputFolder: 'playwright-report' }],
+    ['list']
+  ],
   use: {
     baseURL: 'http://localhost:4200',
     trace: 'on-first-retry'

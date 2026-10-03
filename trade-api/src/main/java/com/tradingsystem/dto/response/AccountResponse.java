@@ -10,6 +10,7 @@ public class AccountResponse {
     private String accountId;
     private String holderName;
     private BigDecimal cashBalance;
+    private BigDecimal buyingPower;
     private String status;
     private Integer version;
     private OffsetDateTime lastUpdated;
@@ -48,6 +49,14 @@ public class AccountResponse {
 
     public void setCashBalance(BigDecimal cashBalance) {
         this.cashBalance = cashBalance;
+    }
+
+    public BigDecimal getBuyingPower() {
+        return buyingPower;
+    }
+
+    public void setBuyingPower(BigDecimal buyingPower) {
+        this.buyingPower = buyingPower;
     }
 
     public String getStatus() {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ConflictException, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '../src/app/auth/auth.service.js';
 
 vi.mock('../src/app/auth/repository/auth.repository.js');
@@ -18,25 +18,52 @@ describe('AuthService', () => {
 
   it('register throws Conflict when username exists', async () => {
     (repo.findUserByUsername as any).mockResolvedValue({ id: 'u1' });
-    await expect(svc.register({ username: 'u', password: 'p', accountId: 1 })).rejects.toBeInstanceOf(ConflictException);
+    await expect(svc.register({ username: 'u', password: 'p' })).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('register throws Unprocessable when account missing', async () => {
+  it('register throws Conflict when credential username exists', async () => {
     (repo.findUserByUsername as any).mockResolvedValue(null);
-    (repo.accountExists as any).mockResolvedValue(false);
-    await expect(svc.register({ username: 'u', password: 'p', accountId: 2 })).rejects.toBeInstanceOf(UnprocessableEntityException);
+    (repo.findCredentialByUsername as any).mockResolvedValue({ id: 'c1' });
+    await expect(svc.register({ username: 'u', password: 'p' })).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('register throws Conflict when no account is available', async () => {
+    (repo.findUserByUsername as any).mockResolvedValue(null);
+    (repo.findCredentialByUsername as any).mockResolvedValue(null);
+    (repo.deleteOrphanCredentials as any).mockResolvedValue(0);
+    (repo.findAvailableAccountId as any).mockResolvedValue(null);
+    await expect(svc.register({ username: 'u', password: 'p' })).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('register success path', async () => {
     (repo.findUserByUsername as any).mockResolvedValue(null);
-    (repo.accountExists as any).mockResolvedValue(true);
-    (repo.findUserByAccountId as any).mockResolvedValue(null);
+    (repo.findCredentialByUsername as any).mockResolvedValue(null);
+    (repo.deleteOrphanCredentials as any).mockResolvedValue(0);
+    (repo.findAvailableAccountId as any).mockResolvedValue(1);
     (repo.createCredential as any).mockResolvedValue({});
     (repo.createUser as any).mockResolvedValue({ id: 'u1', username: 'u', accountId: 1, roles: ['CUSTOMER'], createdOn: new Date().toISOString() });
 
-    const out = await svc.register({ username: 'u', password: 'p', accountId: 1 });
+    const out = await svc.register({ username: 'u', password: 'p' });
     expect(out.username).toBe('u');
     expect(out.id).toBe('u1');
+  });
+
+  it('register retries when account allocation races on unique constraint', async () => {
+    (repo.findUserByUsername as any).mockResolvedValue(null);
+    (repo.findCredentialByUsername as any).mockResolvedValue(null);
+    (repo.deleteOrphanCredentials as any).mockResolvedValue(0);
+    (repo.findAvailableAccountId as any).mockResolvedValueOnce(1).mockResolvedValueOnce(2);
+    (repo.createCredential as any).mockResolvedValue({});
+    (repo.createUser as any)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'u2', username: 'u2', accountId: 2, roles: ['CUSTOMER'], createdOn: new Date().toISOString() });
+    (repo.deleteCredentialByUsername as any).mockResolvedValue(undefined);
+
+    const out = await svc.register({ username: 'u2', password: 'p' });
+    expect(out.accountId).toBe(2);
+    expect(repo.findAvailableAccountId).toHaveBeenCalledTimes(2);
+    expect(repo.createCredential).toHaveBeenCalledTimes(2);
+    expect(repo.deleteCredentialByUsername).toHaveBeenCalledWith('u2');
   });
 
   it('login throws Unauthorized on bad password', async () => {

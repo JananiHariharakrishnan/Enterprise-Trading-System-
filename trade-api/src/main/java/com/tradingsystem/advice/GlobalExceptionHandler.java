@@ -83,6 +83,42 @@ public class GlobalExceptionHandler {
     }
 
     // =========================================================
+    // WATCHLIST EXCEPTIONS
+    // =========================================================
+
+    @ExceptionHandler(WatchlistNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleWatchlistNotFound(
+            WatchlistNotFoundException ex) {
+
+        log.warn(
+                "Watchlist lookup failed: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.NOT_FOUND,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(WatchlistConflictException.class)
+    public ResponseEntity<ErrorResponse> handleWatchlistConflict(
+            WatchlistConflictException ex) {
+
+        log.warn(
+                "Watchlist conflict: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.CONFLICT,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    // =========================================================
     // ORDER BUSINESS EXCEPTIONS
     // =========================================================
 

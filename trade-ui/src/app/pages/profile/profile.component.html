@@ -1,0 +1,147 @@
+<div class="profile-container">
+  <div class="profile-header">
+    <h1>My Profile</h1>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="loading-spinner">
+    <p>Loading profile...</p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage()" class="error-message" data-testid="profile-error">
+    <strong>Error:</strong> {{ errorMessage() }}
+  </div>
+
+  <!-- Success Message -->
+  <div *ngIf="successMessage()" class="success-message" data-testid="profile-success">
+    <strong>Success!</strong> {{ successMessage() }}
+  </div>
+
+  <!-- Profile Form -->
+  <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading() && currentUser()" class="profile-form">
+    <div class="form-group">
+      <label for="username">Username</label>
+      <input
+        id="username"
+        type="text"
+        formControlName="username"
+        class="form-input"
+        data-testid="profile-username-input"
+      />
+      <small class="form-note">(Read-only)</small>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="firstName">First Name</label>
+        <input
+          id="firstName"
+          type="text"
+          formControlName="firstName"
+          class="form-input"
+          data-testid="profile-firstName-input"
+          [readonly]="isSaving()"
+        />
+        <div *ngIf="profileForm.get('firstName')?.hasError('required') && profileForm.get('firstName')?.touched" class="form-error" data-testid="profile-firstName-error-required">
+          First name is required
+        </div>
+        <div *ngIf="profileForm.get('firstName')?.hasError('maxlength') && profileForm.get('firstName')?.touched" class="form-error" data-testid="profile-firstName-error-maxlength">
+          First name cannot exceed 100 characters
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="lastName">Last Name</label>
+        <input
+          id="lastName"
+          type="text"
+          formControlName="lastName"
+          class="form-input"
+          data-testid="profile-lastName-input"
+          [readonly]="isSaving()"
+        />
+        <div *ngIf="profileForm.get('lastName')?.hasError('required') && profileForm.get('lastName')?.touched" class="form-error" data-testid="profile-lastName-error-required">
+          Last name is required
+        </div>
+        <div *ngIf="profileForm.get('lastName')?.hasError('maxlength') && profileForm.get('lastName')?.touched" class="form-error" data-testid="profile-lastName-error-maxlength">
+          Last name cannot exceed 100 characters
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input
+        id="email"
+        type="email"
+        formControlName="email"
+        class="form-input"
+        data-testid="profile-email-input"
+        [readonly]="isSaving()"
+      />
+      <small class="form-note">We'll never share your email</small>
+      <div *ngIf="profileForm.get('email')?.hasError('required') && profileForm.get('email')?.touched" class="form-error" data-testid="profile-email-error-required">
+        Email is required
+      </div>
+      <div *ngIf="profileForm.get('email')?.hasError('email') && profileForm.get('email')?.touched" class="form-error" data-testid="profile-email-error-invalid">
+        Please enter a valid email address
+      </div>
+      <div *ngIf="profileForm.get('email')?.hasError('maxlength') && profileForm.get('email')?.touched" class="form-error" data-testid="profile-email-error-maxlength">
+        Email cannot exceed 255 characters
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="phoneNo">Phone Number</label>
+      <input
+        id="phoneNo"
+        type="tel"
+        formControlName="phoneNo"
+        class="form-input"
+        data-testid="profile-phoneNo-input"
+        [readonly]="isSaving()"
+        placeholder="+1 (555) 123-4567"
+      />
+      <small class="form-note">(Optional) 5-20 characters</small>
+      <div *ngIf="profileForm.get('phoneNo')?.hasError('minlength') && profileForm.get('phoneNo')?.touched" class="form-error" data-testid="profile-phoneNo-error-minlength">
+        Phone number must be at least 5 characters
+      </div>
+      <div *ngIf="profileForm.get('phoneNo')?.hasError('maxlength') && profileForm.get('phoneNo')?.touched" class="form-error" data-testid="profile-phoneNo-error-maxlength">
+        Phone number cannot exceed 20 characters
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="accountId">Account ID</label>
+      <input
+        id="accountId"
+        type="text"
+        formControlName="accountId"
+        class="form-input"
+        data-testid="profile-accountid-input"
+      />
+      <small class="form-note">(Read-only)</small>
+    </div>
+
+    <div class="form-actions">
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="profileForm.invalid || isSaving()"
+        data-testid="profile-save-button"
+      >
+        {{ isSaving() ? 'Saving...' : 'Save Changes' }}
+      </button>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="goBack()"
+        [disabled]="isSaving()"
+        data-testid="profile-back-button"
+      >
+        Back to Dashboard
+      </button>
+    </div>
+  </form>
+</div>

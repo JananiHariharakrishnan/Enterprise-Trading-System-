@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { CommonModule, ViewportScroller } from '@angular/common';
 import { AppHeaderComponent } from './components/app-header/app-header.component';
 import { AuthSessionService } from './services/auth-session.service';
 
@@ -11,5 +11,7 @@ import { AuthSessionService } from './services/auth-session.service';
   styleUrl: './app.css'
 })
 export class App {
-  constructor(readonly authSession: AuthSessionService) {}
+  constructor(readonly authSession: AuthSessionService, viewportScroller: ViewportScroller) {
+    viewportScroller.setOffset([0, 160]);
+  }
 }

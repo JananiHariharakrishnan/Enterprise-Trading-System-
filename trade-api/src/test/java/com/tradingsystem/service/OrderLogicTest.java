@@ -42,6 +42,7 @@ class OrderLogicTest {
         Account a = new Account();
         a.setStatus(AccountStatus.ACTIVE);
         a.setCashBalance(BigDecimal.TEN);
+        a.setBuyingPower(BigDecimal.TEN);
         Order o = new Order();
         o.setQuantity(1);
         o.setPrice(BigDecimal.ONE);
@@ -56,6 +57,7 @@ class OrderLogicTest {
         Account a = new Account();
         a.setStatus(AccountStatus.ACTIVE);
         a.setCashBalance(BigDecimal.TEN);
+        a.setBuyingPower(BigDecimal.TEN);
         Instrument inst = new Instrument();
         inst.setTradable(true);
         Order o = new Order();
@@ -71,6 +73,7 @@ class OrderLogicTest {
         Account a = new Account();
         a.setStatus(AccountStatus.ACTIVE);
         a.setCashBalance(new BigDecimal("1.00"));
+        a.setBuyingPower(new BigDecimal("1.00"));
         Instrument inst = new Instrument();
         inst.setTradable(true);
         Order o = new Order();
@@ -87,6 +90,7 @@ class OrderLogicTest {
         Account a = new Account();
         a.setStatus(AccountStatus.ACTIVE);
         a.setCashBalance(BigDecimal.TEN);
+        a.setBuyingPower(BigDecimal.TEN);
         Instrument inst = new Instrument();
         inst.setTradable(true);
         Order o = new Order();

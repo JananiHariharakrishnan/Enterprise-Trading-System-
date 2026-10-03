@@ -48,6 +48,36 @@ export function createInMemoryDb() {
         return { rows: found ? [{ '?column?': 1 }] : [], rowCount: found ? 1 : 0 };
       }
 
+      if (
+        normalized.startsWith('SELECT A.ID')
+        && normalized.includes('FROM ACCOUNTS A')
+        && normalized.includes('WHERE NOT EXISTS ( SELECT 1 FROM USERS U WHERE U.ACCOUNT_ID = A.ID )')
+      ) {
+        const allocatedAccountIds = new Set(credentials.map((row) => Number(row.account_id)));
+        const linkedUserAccountIds = new Set(users.map((row) => Number(row.account_id)));
+        const available = accounts
+          .map((row) => Number(row.id))
+          .filter((id) => !allocatedAccountIds.has(id) && !linkedUserAccountIds.has(id));
+
+        const randomIndex = available.length === 0 ? -1 : Math.floor(Math.random() * available.length);
+        const selected = randomIndex >= 0 ? available[randomIndex] : undefined;
+
+        if (selected === undefined) {
+          return { rows: [], rowCount: 0 };
+        }
+
+        return { rows: [{ id: selected }], rowCount: 1 };
+      }
+
+      if (normalized.startsWith('DELETE FROM CREDENTIALS C') && normalized.includes('WHERE NOT EXISTS ( SELECT 1 FROM USERS U WHERE U.ACCOUNT_ID = C.ACCOUNT_ID )')) {
+        const linkedUserAccountIds = new Set(users.map((row) => Number(row.account_id)));
+        const before = credentials.length;
+        const retained = credentials.filter((row) => linkedUserAccountIds.has(Number(row.account_id)));
+        credentials.length = 0;
+        credentials.push(...retained);
+        return { rows: [], rowCount: before - retained.length };
+      }
+
       if (normalized.startsWith('SELECT ID, USERNAME') && normalized.includes('FROM USERS') && normalized.includes('WHERE USERNAME = $1')) {
         const found = users.find((row) => row.username === params[0]);
         return { rows: found ? [found] : [], rowCount: found ? 1 : 0 };

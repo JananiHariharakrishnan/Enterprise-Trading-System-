@@ -33,6 +33,30 @@ export interface UserResponse {
     username: string;
     /**
      * 
+     * @type {string}
+     * @memberof UserResponse
+     */
+    email?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserResponse
+     */
+    firstName?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserResponse
+     */
+    lastName?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserResponse
+     */
+    phoneNo?: string;
+    /**
+     * 
      * @type {number}
      * @memberof UserResponse
      */
@@ -85,6 +109,10 @@ export function UserResponseFromJSONTyped(json: any, ignoreDiscriminator: boolea
         
         'id': json['id'],
         'username': json['username'],
+        'email': json['email'] == null ? undefined : json['email'],
+        'firstName': json['firstName'] == null ? undefined : json['firstName'],
+        'lastName': json['lastName'] == null ? undefined : json['lastName'],
+        'phoneNo': json['phoneNo'] == null ? undefined : json['phoneNo'],
         'accountId': json['accountId'],
         'roles': json['roles'],
         'createdOn': json['createdOn'] == null ? undefined : (new Date(json['createdOn'])),
@@ -99,6 +127,10 @@ export function UserResponseToJSON(value?: UserResponse | null): any {
         
         'id': value['id'],
         'username': value['username'],
+        'email': value['email'],
+        'firstName': value['firstName'],
+        'lastName': value['lastName'],
+        'phoneNo': value['phoneNo'],
         'accountId': value['accountId'],
         'roles': value['roles'],
         'createdOn': value['createdOn'] == null ? undefined : ((value['createdOn']).toISOString()),

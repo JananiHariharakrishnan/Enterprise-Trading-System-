@@ -1,0 +1,325 @@
+<section class="watchlists-page">
+  <!-- Page header + create form -->
+  <header class="page-head">
+    <div class="page-title">
+      <h2>Watchlists</h2>
+      <p>Group the instruments you follow, then jump straight into a trade.</p>
+    </div>
+
+    <form class="watchlist-form create-form" [formGroup]="createWatchlistForm" (ngSubmit)="createWatchlist()">
+      <input
+        type="text"
+        formControlName="name"
+        placeholder="Create a watchlist (e.g. Tech Stocks, Blue Chips)"
+        aria-label="New watchlist name"
+        autocomplete="off"
+      />
+      <button type="submit" class="btn-primary" [disabled]="createWatchlistForm.invalid || isSavingWatchlist()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        {{ isSavingWatchlist() ? 'Creating...' : 'Create Watchlist' }}
+      </button>
+    </form>
+  </header>
+
+  <!-- Loading & status messages -->
+  <div *ngIf="isLoading()" class="status status-loading" role="status">
+    <span class="spinner" aria-hidden="true"></span>
+    Loading watchlists...
+  </div>
+
+  <div *ngIf="loadError()" class="status status-error" role="alert">
+    <span class="status-icon" aria-hidden="true">!</span>
+    {{ loadError() }}
+  </div>
+
+  <!-- Watchlist cards -->
+  <ul *ngIf="watchlists().length > 0" class="watchlist-list">
+    <li *ngFor="let wl of watchlists(); trackBy: trackById" class="watchlist-summary-item">
+      <button
+        type="button"
+        class="watchlist-open-button"
+        [ngClass]="toneClass(wl.id)"
+        [class.active]="wl.id === selectedWatchlist()?.id"
+        [attr.aria-pressed]="wl.id === selectedWatchlist()?.id"
+        (click)="openWatchlist(wl.id)"
+      >
+        <span class="wl-avatar" aria-hidden="true">{{ watchlistInitial(wl.name) }}</span>
+        <span class="wl-meta">
+          <strong>{{ wl.name }}</strong>
+          <span class="wl-count">{{ wl.entryCount }} instrument<span *ngIf="wl.entryCount !== 1">s</span></span>
+        </span>
+      </button>
+    </li>
+  </ul>
+
+  <div *ngIf="!isLoading() && watchlists().length === 0" class="empty-state">
+    <strong>No watchlists yet</strong>
+    <span>Create one above to get started!</span>
+  </div>
+
+  <!-- Watchlist detail -->
+  <section *ngIf="selectedWatchlist() as watchlist" class="watchlist-detail" [ngClass]="toneClass(watchlist.id)">
+    <!-- Header -->
+    <div class="watchlist-detail-header">
+      <span class="wl-avatar large" aria-hidden="true">{{ watchlistInitial(watchlist.name) }}</span>
+
+      <div class="wl-title">
+        <h3>{{ watchlist.name }}</h3>
+        <p class="wl-dates">
+          <span *ngIf="watchlist.createdOn">Created {{ watchlist.createdOn | date:'mediumDate' }}</span>
+          <span *ngIf="watchlist.updatedOn">Updated {{ watchlist.updatedOn | date:'medium' }}</span>
+        </p>
+      </div>
+
+      <div class="watchlist-actions">
+        <button
+          type="button"
+          class="btn-danger-outline"
+          (click)="deleteWatchlist(watchlist.id)"
+          [disabled]="isSavingWatchlist()"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18" />
+            <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6M14 11v6" />
+          </svg>
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <!-- Watchlist analysis -->
+    <div class="stats" *ngIf="watchlistStats() as stats">
+      <div class="stat">
+        <span class="stat-label">Instruments</span>
+        <span class="stat-value">{{ stats.total }}</span>
+      </div>
+      <div class="stat up">
+        <span class="stat-label">Gainers</span>
+        <span class="stat-value">▲ {{ stats.gainers }}</span>
+      </div>
+      <div class="stat down">
+        <span class="stat-label">Losers</span>
+        <span class="stat-value">▼ {{ stats.losers }}</span>
+      </div>
+      <div class="stat" *ngIf="stats.avg !== null">
+        <span class="stat-label">Average move</span>
+        <span class="stat-value" [ngClass]="getChangeClass(stats.avg)">{{ formatPercent(stats.avg) }}</span>
+      </div>
+      <div class="stat" *ngIf="stats.best as best">
+        <span class="stat-label">Top performer</span>
+        <span class="stat-value">
+          {{ best.symbol }}
+          <small [ngClass]="getChangeClass(best.pct)">{{ formatPercent(best.pct) }}</small>
+        </span>
+      </div>
+      <div class="stat" *ngIf="stats.worst as worst">
+        <span class="stat-label">Weakest performer</span>
+        <span class="stat-value">
+          {{ worst.symbol }}
+          <small [ngClass]="getChangeClass(worst.pct)">{{ formatPercent(worst.pct) }}</small>
+        </span>
+      </div>
+      <div class="stat warn" *ngIf="stats.stale > 0">
+        <span class="stat-label">Stale quotes</span>
+        <span class="stat-value">{{ stats.stale }}</span>
+      </div>
+    </div>
+
+    <div class="breadth" *ngIf="watchlistStats() as stats">
+      <ng-container *ngIf="stats.pricedTotal > 0">
+        <div
+          class="breadth-bar"
+          role="img"
+          [attr.aria-label]="stats.gainers + ' up, ' + stats.losers + ' down, ' + stats.flat + ' unchanged'"
+        >
+          <span class="seg gain" [style.width.%]="stats.gainersPct"></span>
+          <span class="seg flat" [style.width.%]="stats.flatPct"></span>
+          <span class="seg loss" [style.width.%]="stats.losersPct"></span>
+        </div>
+        <p class="breadth-caption">
+          {{ stats.gainers }} up, {{ stats.losers }} down<span *ngIf="stats.flat > 0">, {{ stats.flat }} unchanged</span>
+        </p>
+      </ng-container>
+    </div>
+
+    <!-- Add instrument form -->
+    <form class="watchlist-form" [formGroup]="addInstrumentForm" (ngSubmit)="addInstrument()">
+      <input
+        type="text"
+        formControlName="symbol"
+        placeholder="Add symbol (e.g. AAPL, GOOGL, MSFT)"
+        aria-label="Instrument symbol"
+        autocomplete="off"
+      />
+      <button type="submit" class="btn-primary" [disabled]="addInstrumentForm.invalid || isSavingWatchlist()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        {{ isSavingWatchlist() ? 'Adding...' : 'Add' }}
+      </button>
+    </form>
+
+    <!-- Empty state -->
+    <div *ngIf="watchlist.instruments.length === 0" class="empty-state">
+      <strong>No instruments added yet</strong>
+      <span>Add one to start tracking.</span>
+    </div>
+
+    <!-- Instruments table -->
+    <div class="table-wrap" *ngIf="watchlist.instruments.length > 0">
+      <table>
+        <thead>
+        <tr>
+          <th>Symbol</th>
+          <th class="num">Latest Price</th>
+          <th class="num">Change</th>
+          <th class="col-added">Added On</th>
+          <th class="col-action"><span class="sr-only">Action</span></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr
+          *ngFor="let instrument of watchlist.instruments; trackBy: trackBySymbol"
+          class="instrument-row"
+          tabindex="0"
+          [class.selected]="selectedSymbol() === instrument.symbol"
+          (click)="selectInstrument(instrument)"
+          (keydown.enter)="selectInstrument(instrument)"
+        >
+          <td>
+              <span class="symbol-cell">
+                <span class="symbol-avatar" [style.--hue]="symbolHue(instrument.symbol)" aria-hidden="true">
+                  {{ instrument.symbol.slice(0, 2) }}
+                </span>
+                <strong>{{ instrument.symbol }}</strong>
+              </span>
+          </td>
+          <td class="num">${{ formatPrice(instrument.latestPrice?.price) }}</td>
+          <td class="num">
+              <span class="change-pill" [ngClass]="getChangeClass(instrument.latestPrice?.change)">
+                {{ changeArrow(instrument.latestPrice?.change) }}
+                {{ formatPercent(instrument.latestPrice?.changePercent) }}
+              </span>
+          </td>
+          <td class="col-added">{{ instrument.addedOn | date:'short' }}</td>
+          <td class="col-action">
+            <button
+              type="button"
+              class="icon-btn-danger"
+              [attr.aria-label]="'Remove ' + instrument.symbol"
+              [attr.title]="'Remove ' + instrument.symbol"
+              (click)="removeInstrument(instrument.symbol); $event.stopPropagation()"
+              (keydown)="$event.stopPropagation()"
+              [disabled]="isSavingWatchlist()"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 6h18" />
+                <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6M14 11v6" />
+              </svg>
+            </button>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+
+<!-- Instrument popup -->
+<div *ngIf="selectedInstrument() as instrument" class="modal-layer">
+  <div class="modal-backdrop" (click)="selectInstrument(null)"></div>
+
+  <div class="instrument-detail-panel" role="dialog" aria-modal="true" [attr.aria-label]="instrument.symbol + ' details'">
+    <div class="detail-header">
+      <span class="symbol-avatar large" [style.--hue]="symbolHue(instrument.symbol)" aria-hidden="true">
+        {{ instrument.symbol.slice(0, 2) }}
+      </span>
+      <div class="detail-title">
+        <h4>{{ instrument.symbol }}</h4>
+        <p>Added {{ instrument.addedOn | date:'mediumDate' }}</p>
+      </div>
+      <button type="button" class="close-btn" aria-label="Close" (click)="selectInstrument(null)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="detail-hero" [ngClass]="getChangeClass(instrument.latestPrice?.change)">
+      <div class="hero-price">
+        <span class="hero-value">${{ formatPrice(instrument.latestPrice?.price) }}</span>
+        <span class="currency-badge" *ngIf="instrument.latestPrice?.currency">{{ instrument.latestPrice?.currency }}</span>
+      </div>
+      <span class="change-pill" [ngClass]="getChangeClass(instrument.latestPrice?.change)">
+        {{ changeArrow(instrument.latestPrice?.change) }}
+        {{ formatChange(instrument.latestPrice?.change) }}
+        ({{ formatPercent(instrument.latestPrice?.changePercent) }})
+      </span>
+    </div>
+
+    <dl class="detail-grid">
+      <div class="detail-card">
+        <dt>Previous close</dt>
+        <dd>${{ formatPrice(instrument.latestPrice?.previousClose) }}</dd>
+      </div>
+
+      <div class="detail-card">
+        <dt>Market state</dt>
+        <dd>
+          <span class="market-badge" [ngClass]="'state-' + (instrument.latestPrice?.marketState ?? 'unknown' | lowercase)">
+            <span class="dot" aria-hidden="true"></span>
+            {{ instrument.latestPrice?.marketState ?? 'unknown' }}
+          </span>
+        </dd>
+      </div>
+
+      <div class="detail-card">
+        <dt>Quote time</dt>
+        <dd class="quote-time">{{ (instrument.latestPrice?.quoteAsOf | date:'medium') ?? 'N/A' }}</dd>
+      </div>
+
+      <div class="detail-card">
+        <dt>Data</dt>
+        <dd>
+          <span class="status-badge" [class.fresh]="!instrument.latestPrice?.stale" [class.stale]="instrument.latestPrice?.stale">
+            {{ instrument.latestPrice?.stale ? '⚠ Stale' : '✓ Fresh' }}
+          </span>
+        </dd>
+      </div>
+    </dl>
+
+    <div class="detail-actions">
+      <button type="button" class="btn-trade buy" (click)="trade(instrument, 'buy')">Buy</button>
+      <button type="button" class="btn-trade sell" (click)="trade(instrument, 'sell')">Sell</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toast-stack">
+  <div
+    *ngFor="let toast of toasts(); trackBy: trackById"
+    class="toast"
+    [ngClass]="'toast-' + toast.type"
+    [attr.role]="toast.type === 'error' ? 'alert' : 'status'"
+  >
+    <span class="toast-icon" aria-hidden="true">
+      <svg *ngIf="toast.type === 'success'" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+      <ng-container *ngIf="toast.type === 'error'">!</ng-container>
+    </span>
+    <span class="toast-text">{{ toast.text }}</span>
+    <button type="button" class="toast-close" aria-label="Dismiss message" (click)="dismissToast(toast.id)">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
+  </div>
+</div>

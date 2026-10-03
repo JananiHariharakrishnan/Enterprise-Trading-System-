@@ -1,16 +1,55 @@
 :host {
-	display: block;
-	min-height: 100dvh;
-	background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
-	color: #0f172a;
+  display: block;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
 }
 
 .app-shell {
-	min-height: 100dvh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell:not(.authenticated) {
+  justify-content: center;
+  align-items: center;
 }
 
 .app-main {
-	margin: 0 auto;
-	max-width: 56rem;
-	padding: 2rem 1rem;
+  flex: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.app-main-authenticated {
+  /* The sidebar is offset with margin-left, so the width must NOT be 100%:
+     100% + margin-left is wider than the window and causes the sideways scroll.
+     "auto" lets the flex column stretch the area into the space that's left. */
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  margin-left: 265px;
+  margin-right: 0; /* an auto margin here would stop the stretch */
+  padding: 146px 34px 40px;
+  justify-content: flex-start;
+}
+
+@media (max-width: 768px) {
+  .app-main {
+    padding: 16px;
+    justify-content: flex-start;
+  }
+
+  .app-main-authenticated {
+    margin-left: 68px;
+    padding: 86px 15px 24px;
+  }
+
 }

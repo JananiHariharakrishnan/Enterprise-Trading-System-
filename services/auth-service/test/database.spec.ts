@@ -31,6 +31,47 @@ describe('createInMemoryDb', () => {
     expect(res.rowCount).toBe(1);
   });
 
+  it('finds next available account not linked in credentials', async () => {
+    const isolatedDb = createInMemoryDb();
+
+    const available = await isolatedDb.query(
+      `
+      SELECT a.id
+      FROM accounts a
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM users u
+        WHERE u.account_id = a.id
+      )
+      ORDER BY random()
+      LIMIT 1
+      `,
+      [],
+    );
+
+    expect(available.rowCount).toBe(1);
+    expect(available.rows[0].id).toBe(1);
+
+    await isolatedDb.query('INSERT INTO credentials (account_id, username, password_hash, params, created_at, updated_at) VALUES ($1,$2,$3,$4,NOW(),NOW())', [1, 'used-account', 'h', JSON.stringify({})]);
+
+    const noneAvailable = await isolatedDb.query(
+      `
+      SELECT a.id
+      FROM accounts a
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM users u
+        WHERE u.account_id = a.id
+      )
+      ORDER BY random()
+      LIMIT 1
+      `,
+      [],
+    );
+
+    expect(noneAvailable.rowCount).toBe(0);
+  });
+
   it('refresh tokens lifecycle', async () => {
     await db.query('INSERT INTO refresh_tokens (id, session_id, user_id, token_hash, algorithm, expires_at, consumed_at, revoked_at, replaced_by, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,NULL,NULL,NULL,NOW(),NOW())', ['t1', 's1', 'u1', 'h', 'bcrypt', new Date(Date.now() + 10000).toISOString()]);
     const get = await db.query('SELECT id, session_id FROM refresh_tokens WHERE id = $1 LIMIT 1', ['t1']);

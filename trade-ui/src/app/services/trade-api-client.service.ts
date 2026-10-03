@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@angular/core';
-import { AccountsApi, Configuration, OrdersApi } from '../generated/trade';
+import { AccountsApi, Configuration, OrdersApi, WatchlistsApi } from '../generated/trade';
 import { PLATFORM_AUTH_MIDDLEWARE } from './platform-auth-middleware.provider';
 import { Middleware } from '../generated/trade/runtime';
 
@@ -9,14 +9,17 @@ import { Middleware } from '../generated/trade/runtime';
 export class TradeApiClientService {
   readonly accounts: AccountsApi;
   readonly orders: OrdersApi;
+  readonly watchlists: WatchlistsApi;
 
   constructor(@Inject(PLATFORM_AUTH_MIDDLEWARE) platformAuthMiddleware: Middleware) {
+    const baseHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
     const configuration = new Configuration({
-      basePath: 'http://localhost:8080',
+      basePath: `http://${baseHost}:8888`,
       middleware: [platformAuthMiddleware]
     });
 
     this.accounts = new AccountsApi(configuration);
     this.orders = new OrdersApi(configuration);
+    this.watchlists = new WatchlistsApi(configuration);
   }
 }

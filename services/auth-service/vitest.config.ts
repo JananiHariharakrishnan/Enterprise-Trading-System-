@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     globals: true,
     root: './',
-    include: ['**/*.spec.ts'],
+    include: ['**/*.spec.ts','test/**/*.spec.ts', 'src/**/*.spec.ts', 'src/**/*.unit.spec.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'json'],
@@ -21,7 +21,8 @@ export default defineConfig({
           'src/main.ts',
           'src/app/configure-app.ts',
           'src/app/auth/role.enum.ts',
-          'src/app/auth/decorators/current-user.decorator.ts'
+          'src/app/auth/decorators/current-user.decorator.ts',
+          'src/app/auth/dto/**', 'src/app/auth/interfaces/**'
         ],
     },
   },

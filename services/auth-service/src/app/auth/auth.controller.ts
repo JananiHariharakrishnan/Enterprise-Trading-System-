@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Patch, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service.js';
@@ -42,7 +42,7 @@ export class AuthController {
     return this.authService.me(user);
   }
 
-  @Put('profile')
+  @Patch('profile')
   @Throttle({ default: { limit: 100, ttl: 3600000 } }) // 100 updates per hour (very permissive)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

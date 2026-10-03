@@ -129,11 +129,23 @@ public class OrderServiceImpl implements OrderService {
                 position
         );
 
-         // Note: Balance and position are NOT updated at order placement time.
-         // Updates happen only during order execution (in ExecutionProcessingService).
-         // This prevents double-charging/duplicate updates and maintains clear separation of concerns.
-         // By deferring balance updates until execution, we use the actual executed price
-         // rather than the order price, ensuring accurate cash balance calculations.
+        if (order.getSide() == com.tradingsystem.enums.OrderSide.BUY) {
+            BigDecimal reservedValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
+            BigDecimal reservedBuyingPower = account.getBuyingPower().subtract(reservedValue);
+
+            int accountRows = orderDataMapper.updateAccountBalancesWithVersion(
+                account.getAccountId(),
+                account.getCashBalance(),
+                reservedBuyingPower,
+                account.getVersion()
+            );
+
+            if (accountRows != 1) {
+            throw new OrderStateConflictException(
+                "Concurrent account update prevented order placement"
+            );
+            }
+        }
 
         try {
             int affectedRows = orderDataMapper.insertOrder(order);
@@ -203,6 +215,30 @@ public class OrderServiceImpl implements OrderService {
             throw new OrderStateConflictException(
                     "Cannot cancel order that is not in NEW state"
             );
+        }
+
+        Order existingOrder = orderDataMapper.findOrderById(uuid);
+        if (existingOrder == null) {
+            throw new OrderNotFoundException("Order not found");
+        }
+
+        if (existingOrder.getSide() == com.tradingsystem.enums.OrderSide.BUY) {
+            Account account = getAuthorizedAccount(existingOrder.getAccountId());
+            BigDecimal reservedValue = existingOrder.getPrice().multiply(BigDecimal.valueOf(existingOrder.getQuantity()));
+            BigDecimal restoredBuyingPower = account.getBuyingPower().add(reservedValue);
+
+            int accountRows = orderDataMapper.updateAccountBalancesWithVersion(
+                    account.getAccountId(),
+                    account.getCashBalance(),
+                    restoredBuyingPower,
+                    account.getVersion()
+            );
+
+            if (accountRows != 1) {
+                throw new OrderStateConflictException(
+                        "Concurrent account update prevented order cancellation"
+                );
+            }
         }
 
         OrderResponse response = new OrderResponse();

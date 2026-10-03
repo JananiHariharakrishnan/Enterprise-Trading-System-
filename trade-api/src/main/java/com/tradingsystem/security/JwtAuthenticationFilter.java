@@ -31,6 +31,19 @@ public class JwtAuthenticationFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
+        // Skip authentication for CORS preflight requests
+        if ("OPTIONS".equalsIgnoreCase(httpRequest.getMethod())) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // Skip authentication for internal service-to-service user management endpoints
+        String requestPath = httpRequest.getRequestURI();
+        if (requestPath != null && requestPath.startsWith("/api/v1/users")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         String header = httpRequest.getHeader(AUTHORIZATION);
         String token = extractBearerToken(header);
 

@@ -20,6 +20,7 @@ import type {
   RefreshRequest,
   RegisterRequest,
   TokenResponse,
+  UpdateProfileRequest,
   UserResponse,
 } from '../models/index';
 import {
@@ -33,12 +34,18 @@ import {
     RegisterRequestToJSON,
     TokenResponseFromJSON,
     TokenResponseToJSON,
+    UpdateProfileRequestFromJSON,
+    UpdateProfileRequestToJSON,
     UserResponseFromJSON,
     UserResponseToJSON,
 } from '../models/index';
 
 export interface AuthLoginPostRequest {
     loginRequest: LoginRequest;
+}
+
+export interface AuthProfilePatchRequest {
+    updateProfileRequest: UpdateProfileRequest;
 }
 
 export interface AuthRefreshPostRequest {
@@ -84,6 +91,21 @@ export interface DefaultApiInterface {
      * Get the authenticated user
      */
     authMeGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserResponse>;
+
+    /**
+     * 
+     * @summary Update user profile (email, firstName, lastName, phoneNo)
+     * @param {UpdateProfileRequest} updateProfileRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof DefaultApiInterface
+     */
+    authProfilePatchRaw(requestParameters: AuthProfilePatchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UserResponse>>;
+
+    /**
+     * Update user profile (email, firstName, lastName, phoneNo)
+     */
+    authProfilePatch(requestParameters: AuthProfilePatchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserResponse>;
 
     /**
      * 
@@ -189,6 +211,50 @@ export class DefaultApi extends runtime.BaseAPI implements DefaultApiInterface {
      */
     async authMeGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserResponse> {
         const response = await this.authMeGetRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Update user profile (email, firstName, lastName, phoneNo)
+     */
+    async authProfilePatchRaw(requestParameters: AuthProfilePatchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UserResponse>> {
+        if (requestParameters['updateProfileRequest'] == null) {
+            throw new runtime.RequiredError(
+                'updateProfileRequest',
+                'Required parameter "updateProfileRequest" was null or undefined when calling authProfilePatch().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+        const response = await this.request({
+            path: `/auth/profile`,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: UpdateProfileRequestToJSON(requestParameters['updateProfileRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => UserResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Update user profile (email, firstName, lastName, phoneNo)
+     */
+    async authProfilePatch(requestParameters: AuthProfilePatchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserResponse> {
+        const response = await this.authProfilePatchRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

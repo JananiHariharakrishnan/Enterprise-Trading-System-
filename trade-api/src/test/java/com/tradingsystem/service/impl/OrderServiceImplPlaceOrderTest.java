@@ -75,7 +75,6 @@ class OrderServiceImplPlaceOrderTest {
         when(orderDataMapper.existsByIdempotencyKey(anyString())).thenReturn(false);
         when(orderDataMapper.updateAccountBalancesWithVersion(anyLong(), any(), any(), anyInt())).thenReturn(1);
         when(orderDataMapper.insertOrder(any())).thenReturn(1);
-        when(orderDataMapper.insertPosition(anyLong(), anyString(), anyInt(), any())).thenReturn(1);
 
         // Make transaction synchronization active so publishAfterCommit can register
         TransactionSynchronizationManager.initSynchronization();
@@ -91,6 +90,12 @@ class OrderServiceImplPlaceOrderTest {
         // Assert
         assertNotNull(response);
         assertEquals(com.tradingsystem.enums.OrderStatus.NEW, response.getStatus());
+        verify(orderDataMapper, times(1)).updateAccountBalancesWithVersion(
+            1001L,
+            new BigDecimal("100000.00"),
+            new BigDecimal("99000.00"),
+            1
+        );
         verify(orderEventPublisher, times(1)).publishOrderPlaced(any());
     }
 }

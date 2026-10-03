@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tradingsystem.mapper.PriceAlertDataMapper">
+
+    <resultMap id="priceAlertResultMap" type="com.tradingsystem.model.PriceAlert">
+        <id property="id" column="id"/>
+        <result property="accountId" column="account_id"/>
+        <result property="watchlistId" column="watchlist_id"/>
+        <result property="symbol" column="symbol"/>
+        <result property="direction" column="direction"/>
+        <result property="threshold" column="threshold"/>
+        <result property="status" column="status"/>
+        <result property="lastConditionMet" column="last_condition_met"/>
+        <result property="lastEvaluatedPrice" column="last_evaluated_price"/>
+        <result property="lastQuoteAsOf" column="last_quote_as_of"/>
+        <result property="triggeredOn" column="triggered_on"/>
+        <result property="notificationStatus" column="notification_status"/>
+        <result property="notificationAttempts" column="notification_attempts"/>
+        <result property="lastNotificationError" column="last_notification_error"/>
+        <result property="createdOn" column="created_on"/>
+        <result property="updatedOn" column="updated_on"/>
+    </resultMap>
+
+    <insert id="insertPriceAlert" parameterType="com.tradingsystem.model.PriceAlert"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO price_alerts (
+            account_id,
+            watchlist_id,
+            symbol,
+            direction,
+            threshold,
+            status,
+            last_condition_met,
+            last_evaluated_price,
+            last_quote_as_of,
+            triggered_on,
+            notification_status,
+            notification_attempts,
+            last_notification_error,
+            created_on,
+            updated_on
+        ) VALUES (
+            #{accountId},
+            #{watchlistId},
+            #{symbol},
+            #{direction},
+            #{threshold},
+            #{status},
+            #{lastConditionMet},
+            #{lastEvaluatedPrice},
+            #{lastQuoteAsOf},
+            #{triggeredOn},
+            #{notificationStatus},
+            #{notificationAttempts},
+            #{lastNotificationError},
+            COALESCE(#{createdOn}, CURRENT_TIMESTAMP),
+            COALESCE(#{updatedOn}, CURRENT_TIMESTAMP)
+        )
+    </insert>
+
+    <select id="findAlertsByAccountId" resultMap="priceAlertResultMap">
+        SELECT
+            id,
+            account_id,
+            watchlist_id,
+            symbol,
+            direction,
+            threshold,
+            status,
+            last_condition_met,
+            last_evaluated_price,
+            last_quote_as_of,
+            triggered_on,
+            notification_status,
+            notification_attempts,
+            last_notification_error,
+            created_on,
+            updated_on
+        FROM price_alerts
+        WHERE account_id = #{accountId}
+        <if test="watchlistId != null">
+            AND watchlist_id = #{watchlistId}
+        </if>
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        ORDER BY created_on DESC, id DESC
+    </select>
+
+    <select id="findAlertById" resultMap="priceAlertResultMap">
+        SELECT
+            id,
+            account_id,
+            watchlist_id,
+            symbol,
+            direction,
+            threshold,
+            status,
+            last_condition_met,
+            last_evaluated_price,
+            last_quote_as_of,
+            triggered_on,
+            notification_status,
+            notification_attempts,
+            last_notification_error,
+            created_on,
+            updated_on
+        FROM price_alerts
+        WHERE id = #{alertId}
+    </select>
+
+    <select id="findAlertByAccountIdAndId" resultMap="priceAlertResultMap">
+        SELECT
+            id,
+            account_id,
+            watchlist_id,
+            symbol,
+            direction,
+            threshold,
+            status,
+            last_condition_met,
+            last_evaluated_price,
+            last_quote_as_of,
+            triggered_on,
+            notification_status,
+            notification_attempts,
+            last_notification_error,
+            created_on,
+            updated_on
+        FROM price_alerts
+        WHERE account_id = #{accountId}
+          AND id = #{alertId}
+    </select>
+
+    <delete id="deleteAlert">
+        DELETE FROM price_alerts
+        WHERE account_id = #{accountId}
+          AND id = #{alertId}
+    </delete>
+
+    <select id="countActiveAlertsByAccountId" resultType="int">
+        SELECT COUNT(*)
+        FROM price_alerts
+        WHERE account_id = #{accountId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="findActiveAlertsBySymbol" resultMap="priceAlertResultMap">
+        SELECT
+            id,
+            account_id,
+            watchlist_id,
+            symbol,
+            direction,
+            threshold,
+            status,
+            last_condition_met,
+            last_evaluated_price,
+            last_quote_as_of,
+            triggered_on,
+            notification_status,
+            notification_attempts,
+            last_notification_error,
+            created_on,
+            updated_on
+        FROM price_alerts
+        WHERE symbol = #{symbol}
+          AND status = 'ACTIVE'
+        ORDER BY id ASC
+    </select>
+
+</mapper>
+

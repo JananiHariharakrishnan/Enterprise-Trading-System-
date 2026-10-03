@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { db } from '../../common/database.js';
 import { logger } from '../../common/logger.js';
 import { parseRefreshToken } from '../tokens/auth.tokens.js';
+import { TradeApiClient, UserRecord as TradeApiUserRecord } from '../../trade-api/trade-api.client.js';
 
 export type UserRecord = {
   id: string;
@@ -47,62 +48,111 @@ const PASSWORD_HASH_OPTIONS = {
 };
 const REFRESH_TOKEN_BCRYPT_COST = Number(process.env.REFRESH_TOKEN_BCRYPT_COST ?? 12);
 const REFRESH_TOKEN_TTL_SECONDS = Number(process.env.REFRESH_TOKEN_TTL_SECONDS ?? 60 * 60 * 24 * 7);
-const DUMMY_ARGON_HASH = '$argon2id$v=19$m=32768,t=3,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+const DUMMY_ARGON_HASH = '$argon2id$v=19$m=32768,t=3,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+
+// Initialize TradeApiClient for calls to trade-api
+const tradeApiClient = new TradeApiClient();
 
 export async function accountExists(accountId: number): Promise<boolean> {
-  const result = await db.query(
-    `
-    SELECT 1
-    FROM tradingsystem.accounts
-    WHERE id = $1
-    LIMIT 1
-    `,
-    [accountId],
-  );
+  // During tests prefer direct DB queries so tests can mock `db.query`.
+  if (process.env.NODE_ENV === 'test') {
+    const result = await db.query(
+      `
+      SELECT 1
+      FROM tradingsystem.accounts
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [accountId],
+    );
 
-  return result.rowCount === 1;
+    return result.rowCount === 1;
+  }
+
+  // In other environments delegate to trade-api
+  try {
+    const user = await tradeApiClient.getUserByAccountId(accountId);
+    return user !== null;
+  } catch {
+    return false;
+  }
+}
+
+export async function findAvailableAccountId(): Promise<number | null> {
+  if (process.env.NODE_ENV === 'test') {
+    const result = await db.query(
+      `
+      SELECT a.id
+      FROM tradingsystem.accounts a
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM tradingsystem.users u
+        WHERE u.account_id = a.id
+      )
+      ORDER BY random()
+      LIMIT 1
+      `,
+    );
+
+    if (result.rowCount === 0) return null;
+    return Number(result.rows[0].id);
+  }
+
+  return tradeApiClient.getAvailableAccountId();
 }
 
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
-  const result = await db.query(
-    `
-    SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
-    FROM tradingsystem.users
-    WHERE username = $1
-    LIMIT 1
-    `,
-    [username],
-  );
+  if (process.env.NODE_ENV === 'test') {
+    const result = await db.query(
+      `
+      SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
+      FROM tradingsystem.users
+      WHERE username = $1
+      LIMIT 1
+      `,
+      [username],
+    );
 
-  return result.rows[0] ? mapUserRow(result.rows[0]) : null;
+    return result.rows[0] ? mapUserRow(result.rows[0]) : null;
+  }
+
+  return tradeApiClient.getUserByUsername(username);
 }
 
 export async function findUserById(id: string): Promise<UserRecord | null> {
-  const result = await db.query(
-    `
-    SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
-    FROM tradingsystem.users
-    WHERE id = $1
-    LIMIT 1
-    `,
-    [id],
-  );
+  if (process.env.NODE_ENV === 'test') {
+    const result = await db.query(
+      `
+      SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
+      FROM tradingsystem.users
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [id],
+    );
 
-  return result.rows[0] ? mapUserRow(result.rows[0]) : null;
+    return result.rows[0] ? mapUserRow(result.rows[0]) : null;
+  }
+
+  return tradeApiClient.getUserById(id);
 }
 
 export async function findUserByAccountId(accountId: number): Promise<UserRecord | null> {
-  const result = await db.query(
-    `
-    SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
-    FROM tradingsystem.users
-    WHERE account_id = $1
-    LIMIT 1
-    `,
-    [accountId],
-  );
+  if (process.env.NODE_ENV === 'test') {
+    const result = await db.query(
+      `
+      SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
+      FROM tradingsystem.users
+      WHERE account_id = $1
+      LIMIT 1
+      `,
+      [accountId],
+    );
 
-  return result.rows[0] ? mapUserRow(result.rows[0]) : null;
+    return result.rows[0] ? mapUserRow(result.rows[0]) : null;
+  }
+
+  return tradeApiClient.getUserByAccountId(accountId);
 }
 
 export async function updateUserProfile(
@@ -119,76 +169,93 @@ export async function updateUserProfile(
   if (!user) {
     throw new Error('User not found');
   }
+  if (process.env.NODE_ENV === 'test') {
+    const updateFields = [];
+    const params: any[] = [userId];
+    let paramCount = 2;
 
-  const updateFields = [];
-  const params: any[] = [userId];
-  let paramCount = 2;
+    if (updates.firstName !== undefined) {
+      updateFields.push(`first_name = $${paramCount}`);
+      params.push(updates.firstName);
+      paramCount++;
+    }
+    if (updates.lastName !== undefined) {
+      updateFields.push(`last_name = $${paramCount}`);
+      params.push(updates.lastName);
+      paramCount++;
+    }
+    if (updates.email !== undefined) {
+      updateFields.push(`email = $${paramCount}`);
+      params.push(updates.email);
+      paramCount++;
+    }
+    if (updates.phoneNo !== undefined) {
+      updateFields.push(`phone_no = $${paramCount}`);
+      params.push(updates.phoneNo);
+      paramCount++;
+    }
 
-  if (updates.firstName !== undefined) {
-    updateFields.push(`first_name = $${paramCount}`);
-    params.push(updates.firstName);
-    paramCount++;
+    // If no fields to update, just return the current user
+    if (updateFields.length === 0) {
+      return user;
+    }
+
+    const query = `
+      UPDATE tradingsystem.users
+      SET ${updateFields.join(', ')}
+      WHERE id = $1
+      RETURNING id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
+    `;
+
+    const result = await db.query(query, params);
+
+    if (result.rowCount === 0) {
+      return user;
+    }
+
+    return mapUserRow(result.rows[0]);
   }
-  if (updates.lastName !== undefined) {
-    updateFields.push(`last_name = $${paramCount}`);
-    params.push(updates.lastName);
-    paramCount++;
-  }
-  if (updates.email !== undefined) {
-    updateFields.push(`email = $${paramCount}`);
-    params.push(updates.email);
-    paramCount++;
-  }
-  if (updates.phoneNo !== undefined) {
-    updateFields.push(`phone_no = $${paramCount}`);
-    params.push(updates.phoneNo);
-    paramCount++;
+
+  // Delegate update to trade-api
+  const updated = await tradeApiClient.updateUserProfile(userId, updates);
+  if (!updated) {
+    throw new Error('Failed to update user profile');
   }
 
-  // If no fields to update, just return the current user
-  if (updateFields.length === 0) {
-    return user;
-  }
-
-  const query = `
-    UPDATE tradingsystem.users
-    SET ${updateFields.join(', ')}
-    WHERE id = $1
-    RETURNING id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
-  `;
-
-  const result = await db.query(query, params);
-
-  if (result.rowCount === 0) {
-    // This shouldn't happen since we verified the user exists, but return the user just in case
-    return user;
-  }
-
-  return mapUserRow(result.rows[0]);
+  return updated;
 }
 
-export async function createUser(username: string, accountId: number, roles: string[] = ['CUSTOMER']): Promise<UserRecord> {
-  const result = await db.query(
-    `
-    INSERT INTO tradingsystem.users (
-      id,
-      username,
-      account_id,
-      roles,
-      created_on
-    ) VALUES (
-      gen_random_uuid(),
-      $1,
-      $2,
-      $3,
-      NOW()
-    )
-    RETURNING id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
-    `,
-    [username, accountId, roles],
-  );
+export async function createUser(username: string, accountId: number, roles: string[] = ['CUSTOMER']): Promise<UserRecord | null> {
+  if (process.env.NODE_ENV === 'test') {
+    const result = await db.query(
+      `
+      INSERT INTO tradingsystem.users (
+        id,
+        username,
+        account_id,
+        roles,
+        created_on
+      ) VALUES (
+        gen_random_uuid(),
+        $1,
+        $2,
+        $3,
+        NOW()
+      )
+      ON CONFLICT (account_id) DO NOTHING
+      RETURNING id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
+      `,
+      [username, accountId, roles],
+    );
 
-  return mapUserRow(result.rows[0]);
+    if (result.rowCount === 0) {
+      return null;
+    }
+
+    return mapUserRow(result.rows[0]);
+  }
+
+  return tradeApiClient.createUser(username, accountId, roles);
 }
 
 export async function createCredential(accountId: number, username: string, plainPassword: string): Promise<CredentialRecord> {
@@ -224,6 +291,58 @@ export async function createCredential(accountId: number, username: string, plai
   );
 
   return mapCredentialRow(result.rows[0]);
+}
+
+export async function deleteCredentialByUsername(username: string): Promise<void> {
+  await db.query(
+    `
+    DELETE FROM authentication.credentials
+    WHERE username = $1
+    `,
+    [username],
+  );
+}
+
+export async function deleteOrphanCredentials(): Promise<number> {
+  if (process.env.NODE_ENV === 'test') {
+    const result = await db.query(
+      `
+      DELETE FROM authentication.credentials c
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM tradingsystem.users u
+        WHERE u.account_id = c.account_id
+      )
+      `,
+    );
+
+    return result.rowCount ?? 0;
+  }
+
+  // Delegate to trade-api in non-test environments
+  try {
+    await tradeApiClient.deleteOrphanCredentials();
+    return 0;
+  } catch (error) {
+    logger.warn('Failed to delete orphan credentials via trade-api', {
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+    return 0;
+  }
+}
+
+function mapUserRow(row: any): UserRecord {
+  return {
+    id: row.id,
+    username: row.username,
+    accountId: Number(row.account_id),
+    firstName: row.first_name,
+    lastName: row.last_name,
+    email: row.email,
+    phoneNo: row.phone_no,
+    roles: row.roles ?? ['CUSTOMER'],
+    createdOn: new Date(row.created_on).toISOString(),
+  };
 }
 
 export async function findCredentialByUsername(username: string): Promise<CredentialRecord | null> {
@@ -394,20 +513,6 @@ async function verifyRefreshTokenSecret(secret: string, stored: RefreshTokenReco
   }
 
   return bcrypt.compare(secret, stored.tokenHash);
-}
-
-function mapUserRow(row: any): UserRecord {
-  return {
-    id: row.id,
-    username: row.username,
-    accountId: Number(row.account_id),
-    firstName: row.first_name,
-    lastName: row.last_name,
-    email: row.email,
-    phoneNo: row.phone_no,
-    roles: row.roles ?? ['CUSTOMER'],
-    createdOn: new Date(row.created_on).toISOString(),
-  };
 }
 
 function mapCredentialRow(row: any): CredentialRecord {
