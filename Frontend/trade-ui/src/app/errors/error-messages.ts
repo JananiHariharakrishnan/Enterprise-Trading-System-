@@ -20,13 +20,13 @@ const tradeErrorMap: Record<string, string> = {
 };
 
 export const authMappingComplete =
-  Object.values(AuthErrorEnum).every((c) => Object.prototype.hasOwnProperty.call(authErrorMap, c));
+  Object.values(AuthErrorEnum).every((c) => Object.prototype.hasOwnProperty.call(authErrorMap, c as string));
 
 export const tradeMappingComplete =
-  Object.values(TradeErrorEnum).every((c) => Object.prototype.hasOwnProperty.call(tradeErrorMap, c));
+  Object.values(TradeErrorEnum).every((c) => Object.prototype.hasOwnProperty.call(tradeErrorMap, c as string));
 
 export function mapErrorCodeToMessage(code?: string | null, serverMessage?: string | null): string {
-  if (!code || code === null) {
+  if (!code) {
     if (serverMessage && serverMessage.trim().length > 0) return serverMessage;
     return 'An unexpected error occurred — please try again or contact support.';
   }
@@ -46,10 +46,3 @@ export function mapErrorCodeToMessage(code?: string | null, serverMessage?: stri
   return `Unknown error (${code}). Please contact support.`;
 }
 
-export default {
-  authErrorMap,
-  tradeErrorMap,
-  authMappingComplete,
-  tradeMappingComplete,
-  mapErrorCodeToMessage
-};

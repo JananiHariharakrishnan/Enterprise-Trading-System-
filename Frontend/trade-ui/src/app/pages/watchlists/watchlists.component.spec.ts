@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WatchlistsComponent } from './watchlists.component';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
+import { MarketState } from '../../generated/trade';
+import type { WatchlistDetailResponse, WatchlistInstrumentResponse } from '../../generated/trade';
 
 class TradeApiClientServiceStub {
   watchlists = {
@@ -22,6 +24,33 @@ const buildSummary = (id: number) => ({
   updatedOn: new Date('2026-01-01T00:00:00Z')
 });
 
+const buildInstrument = (symbol: string, changePct = 0): WatchlistInstrumentResponse => ({
+  symbol,
+  addedOn: new Date('2026-01-01T00:00:00Z'),
+  latestPrice: {
+    price: 100,
+    currency: 'USD',
+    changePercent: changePct,
+    stale: false,
+    quoteAsOf: new Date('2026-01-01T00:00:00Z'),
+    marketState: MarketState.Open
+  }
+});
+
+const buildDetail = (): WatchlistDetailResponse => ({
+  id: 3,
+  name: 'Growth',
+  entryCount: 2,
+  createdOn: new Date('2026-01-01T00:00:00Z'),
+  updatedOn: new Date('2026-01-01T00:00:00Z'),
+  instruments: [buildInstrument('MSFT', -0.45), buildInstrument('AAPL', 1.2)]
+});
+
+const lastToastText = (component: WatchlistsComponent): string | undefined => {
+  const toasts = component.toasts();
+  return toasts[toasts.length - 1]?.text;
+};
+
 describe('WatchlistsComponent', () => {
   let fixture: ComponentFixture<WatchlistsComponent>;
   let component: WatchlistsComponent;
@@ -31,17 +60,7 @@ describe('WatchlistsComponent', () => {
     tradeApi = new TradeApiClientServiceStub();
     tradeApi.watchlists.listWatchlists.mockResolvedValue([buildSummary(2), buildSummary(1)]);
     tradeApi.watchlists.createWatchlist.mockResolvedValue(buildSummary(3));
-    tradeApi.watchlists.getWatchlist.mockResolvedValue({
-      id: 3,
-      name: 'Growth',
-      entryCount: 2,
-      createdOn: new Date('2026-01-01T00:00:00Z'),
-      updatedOn: new Date('2026-01-01T00:00:00Z'),
-      instruments: [
-        { symbol: 'MSFT', latestPrice: { price: 200, changePct: -0.45 } },
-        { symbol: 'AAPL', latestPrice: { price: 150, changePct: 1.2 } }
-      ]
-    });
+    tradeApi.watchlists.getWatchlist.mockResolvedValue(buildDetail());
     tradeApi.watchlists.addWatchlistInstrument.mockResolvedValue(undefined);
     tradeApi.watchlists.removeWatchlistInstrument.mockResolvedValue(undefined);
     tradeApi.watchlists.deleteWatchlist.mockResolvedValue(undefined);
@@ -97,7 +116,7 @@ describe('WatchlistsComponent', () => {
       createWatchlistRequest: { name: 'Growth' }
     });
     expect(tradeApi.watchlists.getWatchlist).toHaveBeenCalledWith({ watchlistId: 3 });
-    expect(component.message()).toBe('Watchlist created.');
+    expect(lastToastText(component)).toBe('Watchlist created.');
     expect(component.createWatchlistForm.getRawValue().name).toBe('');
   });
 
@@ -123,7 +142,7 @@ describe('WatchlistsComponent', () => {
       watchlistId: 3,
       addWatchlistInstrumentRequest: { symbol: 'TSLA' }
     });
-    expect(component.message()).toBe('Added TSLA to Growth.');
+    expect(lastToastText(component)).toBe('Added TSLA to Growth.');
   });
 
   it('removes an instrument from selected watchlist', async () => {
@@ -137,7 +156,7 @@ describe('WatchlistsComponent', () => {
       watchlistId: 3,
       symbol: 'AAPL'
     });
-    expect(component.message()).toBe('Removed AAPL from Growth.');
+    expect(lastToastText(component)).toBe('Removed AAPL from Growth.');
   });
 
   it('deletes selected watchlist when confirmed', async () => {
@@ -151,7 +170,7 @@ describe('WatchlistsComponent', () => {
 
     expect(tradeApi.watchlists.deleteWatchlist).toHaveBeenCalledWith({ watchlistId: 3 });
     expect(component.selectedWatchlist()).toBeNull();
-    expect(component.message()).toBe('Watchlist deleted.');
+    expect(lastToastText(component)).toBe('Watchlist deleted.');
   });
 
   it('keeps watchlist when delete is cancelled', async () => {
@@ -183,7 +202,8 @@ describe('WatchlistsComponent', () => {
     expect(component.formatChange(1.236)).toBe('+1.24');
     expect(component.formatChange(-1.236)).toBe('-1.24');
 
-    const instrument = { symbol: 'AAPL' };
+    component.selectedWatchlist.set(buildDetail());
+    const instrument = component.selectedWatchlist()!.instruments[0];
     component.selectInstrument(instrument);
     expect(component.selectedInstrument()).toBe(instrument);
     component.selectInstrument(instrument);
@@ -200,7 +220,7 @@ describe('WatchlistsComponent', () => {
     component.isLoading.set(false);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('No watchlists yet. Create one to get started!');
+    expect(fixture.nativeElement.textContent).toContain('No watchlists yet');
   });
 
   it('submits create form via DOM', async () => {

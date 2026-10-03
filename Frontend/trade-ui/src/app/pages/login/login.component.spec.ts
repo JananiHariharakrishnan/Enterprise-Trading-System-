@@ -126,6 +126,6 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
 
     const error = fixture.nativeElement.querySelector('[data-testid="auth-error-invalid-credentials"]') as HTMLElement;
-    expect(error?.textContent).toContain('Invalid username or password.');
+    expect(error?.textContent).toContain('Wrong username or password!');
   });
 });

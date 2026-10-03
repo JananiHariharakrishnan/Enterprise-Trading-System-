@@ -6,7 +6,7 @@
     "generators": {
       "auth-client": {
         "generatorName": "typescript-fetch",
-        "inputSpec": "../contracts/auth-api.yaml",
+        "inputSpec": "../../Contracts/auth-api.yaml",
         "output": "src/app/generated/auth",
         "skipValidateSpec": true,
         "additionalProperties": {
@@ -17,7 +17,7 @@
       },
       "trade-client": {
         "generatorName": "typescript-fetch",
-        "inputSpec": "../trade-api/src/main/resources/trade-api.yaml",
+        "inputSpec": "../../Services/trade-api/src/main/resources/trade-api.yaml",
         "output": "src/app/generated/trade",
         "skipValidateSpec": true,
         "additionalProperties": {

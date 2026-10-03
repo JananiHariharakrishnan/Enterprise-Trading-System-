@@ -24,7 +24,6 @@ class ThemeServiceStub {
 }
 
 class UiEventsServiceStub {
-  emitRefresh = vi.fn();
 }
 
 describe('AppHeaderComponent', () => {
@@ -102,7 +101,7 @@ describe('AppHeaderComponent', () => {
     openProfileMenu();
 
     const buttons = fixture.nativeElement.querySelectorAll('.profile-dropdown button') as NodeListOf<HTMLButtonElement>;
-    const button = buttons[2];
+    const button = buttons[1];
 
     button.click();
     await fixture.whenStable();
@@ -135,8 +134,7 @@ describe('AppHeaderComponent', () => {
     const buttons = fixture.nativeElement.querySelectorAll('.profile-dropdown button') as NodeListOf<HTMLButtonElement>;
     buttons[1].click();
 
-    expect(uiEvents.emitRefresh).toHaveBeenCalledTimes(1);
-    expect(fixture.componentInstance.menuOpen).toBe(false);
+    expect(authSession.logout).toHaveBeenCalledTimes(1);
   });
 
   it('navigates to profile from sidebar user card', async () => {
@@ -155,11 +153,12 @@ describe('AppHeaderComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('U');
   });
 
-  it('emits refresh from topbar refresh button', () => {
-    const refreshButtons = fixture.nativeElement.querySelectorAll('.text-btn') as NodeListOf<HTMLButtonElement>;
-    refreshButtons[1].click();
+  it('toggles the profile menu from the topbar button', () => {
+    const profileButton = fixture.nativeElement.querySelector('.profile-button') as HTMLButtonElement;
 
-    expect(uiEvents.emitRefresh).toHaveBeenCalledTimes(1);
+    profileButton.click();
+
+    expect(fixture.componentInstance.menuOpen).toBe(true);
   });
 
   it('opens asset search modal and renders instrument rows', async () => {
@@ -192,7 +191,7 @@ describe('AppHeaderComponent', () => {
       if (url.includes('finance.yahoo.com')) {
         return of({ quoteResponse: { result: [] } });
       }
-      return throwError(() => new Error('network')); 
+      return throwError(() => new Error('network'));
     });
 
     await fixture.componentInstance.openAssetSearch();

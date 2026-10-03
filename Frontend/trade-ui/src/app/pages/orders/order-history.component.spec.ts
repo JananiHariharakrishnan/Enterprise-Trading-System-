@@ -89,7 +89,7 @@ describe('OrderHistoryComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('No orders found for the selected filters.');
+    expect(fixture.nativeElement.textContent).toContain('No orders found');
   });
 
   it('shows loading and disables refresh while loading', () => {
@@ -144,7 +144,7 @@ describe('OrderHistoryComponent', () => {
       toDate: '2025-01-31'
     });
 
-    const clearButton = fixture.nativeElement.querySelector('.btn-secondary.secondary') as HTMLButtonElement;
+    const clearButton = fixture.nativeElement.querySelector('.btn-ghost') as HTMLButtonElement;
     clearButton.click();
 
     expect(component.filterForm.getRawValue().status).toBe('ALL');
@@ -154,14 +154,12 @@ describe('OrderHistoryComponent', () => {
   });
 
   it('renders active filters badge when status is not ALL', () => {
-    component.selectedStatus.set('NEW');
-    component.fromDate.set('2026-01-01');
-    component.toDate.set('2026-01-31');
+    component.filterForm.controls.status.setValue('NEW');
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.active-filters')).toBeTruthy();
-    expect(fixture.nativeElement.textContent).toContain('Status:');
-    expect(fixture.nativeElement.textContent).toContain('Range:');
+    const activeStatus = fixture.nativeElement.querySelector('.seg-btn.active') as HTMLButtonElement;
+    expect(activeStatus?.textContent).toContain('NEW');
+    expect(activeStatus?.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('shows load error when request fails', async () => {

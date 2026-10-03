@@ -1,6 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { Router } from '@angular/router';
 import { provideRouter } from '@angular/router';
 import { routes } from '../../app.routes';
@@ -84,7 +82,8 @@ describe('RegisterComponent', () => {
     expect(navigateSpy).not.toHaveBeenCalled();
 
     const success = fixture.nativeElement.querySelector('[data-testid="register-success"]') as HTMLElement;
-    expect(success?.textContent).toContain('account ID is 123');
+    expect(success?.textContent).toContain('Your account ID is');
+    expect(fixture.nativeElement.querySelector('[data-testid="register-account-id"]')?.textContent).toBe('123');
   });
 
   it('registration error shows a readable error', async () => {
