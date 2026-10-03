@@ -19,6 +19,12 @@ public class FauxnanceWebClient implements FauxnanceClient {
             @Value("${fauxnance.api.quote-endpoint}") String quoteEndpoint,
             @Value("${fauxnance.api.key}") String apiKey) {
 
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException(
+                    "FAUXNANCE_API_KEY is missing. Set it in the executor's .env or process environment before starting trade-executor."
+            );
+        }
+
         this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
                 .build();
