@@ -48,7 +48,7 @@ services:
   auth-stub:
     build:
       context: .
-      dockerfile: services/auth-stub/Dockerfile
+      dockerfile: Services/auth-stub/Dockerfile
     container_name: auth-stub
     networks:
       - trading-net
@@ -67,7 +67,7 @@ services:
   auth-service:
     build:
       context: .
-      dockerfile: services/auth-service/Dockerfile
+      dockerfile: Services/auth-service/Dockerfile
     container_name: auth-service
     networks:
       - trading-net
