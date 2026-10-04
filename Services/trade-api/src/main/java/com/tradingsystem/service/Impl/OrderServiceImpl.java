@@ -113,6 +113,23 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.NEW);
         order.setCreatedOn(LocalDateTime.now(ZoneId.of("UTC")));
 
+        // CURRENCY CONVERSION: Handle .NS (INR) stocks
+        // Frontend always sends price in USD
+        // For .NS stocks: multiply by 96 for executor, keep as USD for account deduction
+        BigDecimal priceForExecutor = order.getPrice();
+        
+        if (command.getSymbol() != null && command.getSymbol().endsWith(".NS")) {
+            // Indian stock - multiply price by 96 for executor
+            priceForExecutor = order.getPrice().multiply(BigDecimal.valueOf(96));
+            
+            order.setOriginalCurrency("INR");
+            order.setOriginalPrice(priceForExecutor); // Store the INR price for display
+            order.setExecutorPrice(priceForExecutor); // Send INR price to executor
+        } else {
+            // US stock - no conversion
+            order.setExecutorPrice(order.getPrice());
+        }
+
         /*
          * OrderLogic validates:
          * - account status
@@ -173,7 +190,13 @@ public class OrderServiceImpl implements OrderService {
         response.setSymbol(order.getSymbol());
         response.setSide(order.getSide());
         response.setQuantity(order.getQuantity());
-        response.setPrice(order.getPrice());
+        response.setPrice(order.getPrice());  // USD amount after conversion
+        
+        // Include conversion details in response
+        if ("INR".equals(instrument.getCurrency())) {
+            response.setOriginalCurrency("INR");
+            response.setOriginalPrice(order.getOriginalPrice());
+        }
 
         return response;
     }
@@ -274,7 +297,7 @@ public class OrderServiceImpl implements OrderService {
                                 order.getSide() != null ? order.getSide().name() : null,
                                 order.getOrderType() != null ? order.getOrderType().name() : null,
                                 BigDecimal.valueOf(order.getQuantity()),
-                                order.getPrice(),
+                                order.getExecutorPrice() != null ? order.getExecutorPrice() : order.getPrice(), // Use executor price
                                 order.getStatus() != null ? order.getStatus().name() : null,
                                 order.getIdempotencyKey(),
                                 createdOn

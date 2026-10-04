@@ -2,3 +2,65 @@
 .orders-page { display: grid; gap: 16px; }
 .place-order-header { margin-bottom: 16px; }
 .order-form { display: grid; gap: 10px; }
+
+.conversion-details {
+  margin: 16px 0;
+  padding: 14px;
+  background: linear-gradient(135deg, #f0f8ff 0%, #e8f4f8 100%);
+  border-left: 5px solid #0066cc;
+  border-radius: 6px;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0, 102, 204, 0.1);
+}
+
+.conversion-header {
+  font-weight: 600;
+  color: #0066cc;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid rgba(0, 102, 204, 0.2);
+}
+
+.conversion-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  gap: 16px;
+}
+
+.conversion-row .label {
+  font-weight: 500;
+  color: #333;
+  flex: 1;
+}
+
+.conversion-row .value {
+  color: #666;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+  text-align: right;
+  min-width: 120px;
+}
+
+.conversion-row .value.highlight {
+  font-weight: bold;
+  color: #0066cc;
+  font-size: 15px;
+  background: rgba(0, 102, 204, 0.08);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.conversion-row.exchange-rate {
+  font-size: 12px;
+  color: #999;
+  border-top: 1px solid rgba(0, 102, 204, 0.2);
+  padding-top: 10px;
+  margin-top: 8px;
+}
+
+.conversion-row.exchange-rate .value {
+  color: #0066cc;
+  font-weight: 600;
+}

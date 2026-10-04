@@ -16,6 +16,10 @@ public class OrderResponse {
     private Integer quantity;
     private BigDecimal price;
 
+    // Currency conversion tracking
+    private String originalCurrency;  // e.g., "INR" if conversion occurred
+    private BigDecimal originalPrice; // Price before USD conversion
+
     public OrderResponse() {
         // Empty Constructor
     }
@@ -75,5 +79,20 @@ public class OrderResponse {
     public void setPrice(BigDecimal price) {
         this.price = price;
     }
-}
 
+    public String getOriginalCurrency() {
+        return originalCurrency;
+    }
+
+    public void setOriginalCurrency(String originalCurrency) {
+        this.originalCurrency = originalCurrency;
+    }
+
+    public BigDecimal getOriginalPrice() {
+        return originalPrice;
+    }
+
+    public void setOriginalPrice(BigDecimal originalPrice) {
+        this.originalPrice = originalPrice;
+    }
+}

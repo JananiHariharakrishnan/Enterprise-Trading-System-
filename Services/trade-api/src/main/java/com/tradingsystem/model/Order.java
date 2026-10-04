@@ -20,6 +20,13 @@ public class Order {
     private OrderStatus status;
     private String idempotencyKey;
     private LocalDateTime createdOn;
+    
+    // Temporary field for executor price (not persisted)
+    private transient BigDecimal executorPrice;
+
+    // Currency conversion tracking (for frontend display)
+    private String originalCurrency;  // e.g., "INR" if conversion occurred
+    private BigDecimal originalPrice; // Price before USD conversion
 
     public UUID getId() {
         return id;
@@ -99,6 +106,30 @@ public class Order {
 
     public void setCreatedOn(LocalDateTime createdOn) {
         this.createdOn = createdOn;
+    }
+
+    public String getOriginalCurrency() {
+        return originalCurrency;
+    }
+
+    public void setOriginalCurrency(String originalCurrency) {
+        this.originalCurrency = originalCurrency;
+    }
+
+    public BigDecimal getOriginalPrice() {
+        return originalPrice;
+    }
+
+    public void setOriginalPrice(BigDecimal originalPrice) {
+        this.originalPrice = originalPrice;
+    }
+
+    public BigDecimal getExecutorPrice() {
+        return executorPrice;
+    }
+
+    public void setExecutorPrice(BigDecimal executorPrice) {
+        this.executorPrice = executorPrice;
     }
 
     public void validateOrderValue() throws ArithmeticException {

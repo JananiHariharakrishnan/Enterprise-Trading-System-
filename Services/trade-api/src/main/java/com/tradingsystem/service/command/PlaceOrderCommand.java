@@ -14,6 +14,7 @@ public class PlaceOrderCommand {
     private Integer quantity;
     private BigDecimal price;
     private String idempotencyKey;
+    private String priceCurrency; // "USD" or "INR" - what currency the price was entered in
 
     public Long getAccountId() {
         return accountId;
@@ -70,5 +71,12 @@ public class PlaceOrderCommand {
     public void setIdempotencyKey(String idempotencyKey) {
         this.idempotencyKey = idempotencyKey;
     }
-}
 
+    public String getPriceCurrency() {
+        return priceCurrency;
+    }
+
+    public void setPriceCurrency(String priceCurrency) {
+        this.priceCurrency = priceCurrency;
+    }
+}

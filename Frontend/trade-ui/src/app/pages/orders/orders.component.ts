@@ -22,6 +22,7 @@ export class OrdersComponent {
   readonly account = signal<AccountResponse | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  readonly lastOrderResponse = signal<OrderResponse | null>(null);
 
   readonly form = this.fb.group({
     symbol: ['', [Validators.required]],
@@ -63,6 +64,7 @@ export class OrdersComponent {
 
     try {
       const result: OrderResponse = await this.api.orders.placeOrder({ placeOrderRequest: payload });
+      this.lastOrderResponse.set(result);  // Store for conversion display
       // show success message including returned status when available
       const status = (result as any)?.status ?? (result as any)?.order?.status ?? 'UNKNOWN';
       this.successMessage.set(`Order placed — status: ${status}`);

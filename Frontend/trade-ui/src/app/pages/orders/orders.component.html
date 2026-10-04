@@ -86,6 +86,24 @@
 
       <!-- Status Messages -->
       <div *ngIf="successMessage()" class="status status-success" data-testid="order-success">✓ {{ successMessage() }}</div>
+
+      <!-- Conversion Details (if applicable) -->
+      <div *ngIf="lastOrderResponse()?.originalCurrency" class="conversion-details" data-testid="order-conversion-info">
+        <div class="conversion-header">💱 Currency Conversion Details</div>
+        <div class="conversion-row">
+          <span class="label">Original Price ({{ lastOrderResponse()?.originalCurrency }}):</span>
+          <span class="value">₹{{ lastOrderResponse()?.originalPrice | number: '1.2-2' }}</span>
+        </div>
+        <div class="conversion-row">
+          <span class="label">USD Deducted from Account:</span>
+          <span class="value highlight">${{ lastOrderResponse()?.price | number: '1.2-2' }}</span>
+        </div>
+        <div class="conversion-row exchange-rate">
+          <span class="label">Exchange Rate Used:</span>
+          <span class="value">1 USD = ₹96.00</span>
+        </div>
+      </div>
+
       <div *ngIf="errorMessage()" class="status status-error" data-testid="order-error">✕ {{ errorMessage() }}</div>
 
       <!-- Submit Button -->
