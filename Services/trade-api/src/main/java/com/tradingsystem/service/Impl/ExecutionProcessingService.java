@@ -147,13 +147,25 @@ public class ExecutionProcessingService {
                 throw new MalformedExecutionException("executedPrice is required for FILLED");
             }
 
+            // CURRENCY CONVERSION: For .NS stocks, convert executed price from INR to USD
+            // Executor sends INR price for .NS stocks, we need to convert to USD for account deduction
+            BigDecimal executedPriceInAccountCurrency = executedPrice;
+            if (order.getSymbol() != null && order.getSymbol().endsWith(".NS")) {
+                // .NS stock: executedPrice is in INR, convert to USD for account deduction
+                executedPriceInAccountCurrency = executedPrice.divide(
+                    BigDecimal.valueOf(96),
+                    2,
+                    java.math.RoundingMode.HALF_UP
+                );
+            }
+
             // 3) Account update: optimistic version check
             Account account = orderDataMapper.findAccountById(order.getAccountId());
             if (account == null) {
                 throw new MalformedExecutionException("Account not found: " + order.getAccountId());
             }
 
-            BigDecimal orderValue = executedPrice.multiply(BigDecimal.valueOf(order.getQuantity()));
+            BigDecimal orderValue = executedPriceInAccountCurrency.multiply(BigDecimal.valueOf(order.getQuantity()));
             BigDecimal reservedValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
 
             BigDecimal newCashBalance = account.getCashBalance();
