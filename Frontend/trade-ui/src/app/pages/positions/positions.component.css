@@ -193,3 +193,13 @@ th:last-child, td:last-child { padding-right: 8px; }
   .sk { animation: none; }
   .alloc-seg, tbody tr { transition: none; }
 }
+
+/* Currency display for .NS stocks */
+.currency-inr {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--pos-muted);
+  font-weight: 400;
+  margin-top: 2px;
+}
+

@@ -11,7 +11,9 @@ interface PositionRow {
   symbol: string;
   quantity: number;
   averageCost: number;
-  value: number;            // cost basis = quantity x average cost
+  averageCostInr?: number;    // Original INR cost for .NS stocks
+  value: number;            // cost basis in USD
+  valueInr?: number;        // cost basis in INR for .NS stocks
   weight: number;           // share of total cost basis (0..1)
   pnl: number | null;       // unrealized P&L, only when the API provides price/P&L
   pnlPct: number | null;    // pnl / cost basis
@@ -49,12 +51,28 @@ export class PositionsComponent implements OnInit {
     const base = this.positions().map(p => {
       const a = p as any;
       const quantity = Number(p.quantity) || 0;
-      const averageCost = Number(p.averageCost) || 0;
+      let averageCost = Number(p.averageCost) || 0;
+      const symbol = String(p.symbol ?? '');
+
+      // CURRENCY CONVERSION: For .NS stocks, convert from INR to USD
+      let averageCostInr: number | undefined;
+      let valueInr: number | undefined;
+
+      if (this.isIndianStock(symbol)) {
+        // .NS stock: averageCost is in INR, convert to USD
+        averageCostInr = averageCost;
+        averageCost = averageCost / 96;
+      }
+
       const value = quantity * averageCost;
+      if (averageCostInr !== undefined) {
+        valueInr = quantity * averageCostInr;
+      }
+
       // P&L is only known if the API sends a price or a P&L figure
       const price = this.num(a.currentPrice ?? a.marketPrice ?? a.lastPrice);
       const pnl = this.num(a.unrealizedPnl ?? a.unrealizedPnL) ?? (price !== null ? (price - averageCost) * quantity : null);
-      return { symbol: String(p.symbol ?? ''), quantity, averageCost, value, pnl, pnlPct: pnl !== null && value > 0 ? pnl / value : null };
+      return { symbol, quantity, averageCost, averageCostInr, value, valueInr, pnl, pnlPct: pnl !== null && value > 0 ? pnl / value : null };
     });
     const total = base.reduce((sum, r) => sum + r.value, 0);
     return base.map(r => ({ ...r, weight: total > 0 ? r.value / total : 0 }));
@@ -141,6 +159,29 @@ export class PositionsComponent implements OnInit {
     if (v === null || v === undefined || v === '') return null;
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
+  }
+
+  /** Check if symbol is an Indian stock (.NS) */
+  isIndianStock(symbol: string): boolean {
+    return symbol.endsWith('.NS') || symbol.endsWith('.BO');
+  }
+
+  /** Format currency value: show USD first, then INR for .NS stocks */
+  formatCurrency(valueUsd: number, symbol: string): string {
+    if (this.isIndianStock(symbol)) {
+      const valueInr = valueUsd * 96;
+      return `$${valueUsd.toFixed(2)} (₹${valueInr.toFixed(2)})`;
+    }
+    return `$${valueUsd.toFixed(2)}`;
+  }
+
+  /** Format currency value without currency symbol for table display */
+  formatValue(valueUsd: number, symbol: string): { display: string; inr?: string } {
+    if (this.isIndianStock(symbol)) {
+      const valueInr = valueUsd * 96;
+      return { display: valueUsd.toFixed(2), inr: valueInr.toFixed(2) };
+    }
+    return { display: valueUsd.toFixed(2) };
   }
 
   private async loadPositions(): Promise<void> {

@@ -148,8 +148,14 @@
                       </span>
             </td>
             <td class="num">{{ row.quantity | number }}</td>
-            <td class="num">{{ row.averageCost | number:'1.2-2' }}</td>
-            <td class="num">{{ row.value | currency:'USD':'symbol':'1.2-2' }}</td>
+            <td class="num">
+              {{ row.averageCost | number:'1.2-2' }}
+              <span *ngIf="row.averageCostInr" class="currency-inr">(₹{{ row.averageCostInr | number:'1.2-2' }})</span>
+            </td>
+            <td class="num">
+              {{ row.value | currency:'USD':'symbol':'1.2-2' }}
+              <span *ngIf="row.valueInr" class="currency-inr">(₹{{ row.valueInr | number:'1.2-2' }})</span>
+            </td>
             @if (hasPnl()) {
             <td class="num pnl" [class.tone-gain-text]="(row.pnl ?? 0) > 0" [class.tone-loss-text]="(row.pnl ?? 0) < 0">
               {{ (row.pnl ?? 0) >= 0 ? '+' : '−' }}{{ ((row.pnl ?? 0) < 0 ? -(row.pnl ?? 0) : (row.pnl ?? 0)) | currency:'USD':'symbol':'1.2-2' }}
