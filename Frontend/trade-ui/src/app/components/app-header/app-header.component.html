@@ -5,15 +5,6 @@
       <span>Firodha<span class="dot">.</span></span>
     </div>
 
-    <div class="workspace-switcher">
-      <div class="workspace-icon">♜</div>
-      <div>
-        <strong>Personal workspace</strong>
-        <small>Individual brokerage</small>
-      </div>
-      <span class="chevron">⌄</span>
-    </div>
-
     <nav>
       <div class="nav-group">
         <div class="nav-label">WORKSPACE</div>
@@ -39,12 +30,10 @@
     </nav>
 
     <div class="sidebar-footer">
-      <div class="connection"><span></span> Paper trading connected <b>♢</b></div>
       <button class="user-card" type="button" (click)="goToProfile()">
         <span class="avatar">{{ authSession.currentUser()?.username?.charAt(0)?.toUpperCase() || 'U' }}</span>
         <span>
           <strong>{{ authSession.currentUser()?.username || 'Trader' }}</strong>
-          <small>Demo account</small>
         </span>
         <span>›</span>
       </button>
@@ -52,7 +41,6 @@
   </aside>
 
   <header class="topbar">
-    <div class="crumbs"><span>Workspace</span><b>›</b><strong>Trading Platform</strong></div>
     <div class="search-wrap">
       <span>⌕</span>
       <button

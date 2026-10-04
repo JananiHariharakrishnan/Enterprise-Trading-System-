@@ -26,7 +26,7 @@ class ExecutionServiceTest {
         executionRule = mock(ExecutionRule.class);
         fauxnanceClient = mock(com.tradingsystem.poller.FauxnanceClient.class);
         restTemplate = mock(RestTemplate.class);
-        service = new ExecutionService(executionRule, fauxnanceClient, restTemplate, "http://localhost:8888");
+        service = new ExecutionService(executionRule, fauxnanceClient, restTemplate, "http://localhost:8081");
         
         // Setup default mock response for all REST calls
         ResponseEntity<Object> mockResponse = new ResponseEntity<>("OK", HttpStatus.OK);

@@ -18,7 +18,7 @@ It also accepts either the module-local `DB_*` variables or the shared
 
 ```properties
 SPRING_APPLICATION_NAME=trade-api
-SERVER_PORT=8888
+SERVER_PORT=8081
 DB_URL=jdbc:postgresql://localhost:5432/trading
 DB_USER=postgres
 DB_PASSWORD=your_password_here

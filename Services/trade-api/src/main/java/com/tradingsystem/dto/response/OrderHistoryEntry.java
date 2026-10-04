@@ -20,6 +20,7 @@ public class OrderHistoryEntry {
     private BigDecimal executedPrice;
     private OrderStatus status;
     private String idempotencyKey;
+    private String currency;
     private OffsetDateTime createdOn;
 
     public OrderHistoryEntry() {
@@ -96,6 +97,14 @@ public class OrderHistoryEntry {
 
     public void setIdempotencyKey(String idempotencyKey) {
         this.idempotencyKey = idempotencyKey;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
     }
 
     public OffsetDateTime getCreatedOn() {

@@ -52,7 +52,7 @@ public class ExecutionService {
             ExecutionRule executionRule,
             FauxnanceClient fauxnanceClient,
             RestTemplate restTemplate,
-            @Value("${trade.api.base-url:http://localhost:8888}") String tradeApiBaseUrl
+            @Value("${trade.api.base-url:http://localhost:8081}") String tradeApiBaseUrl
     ) {
         this.executionRule = executionRule;
         this.fauxnanceClient = fauxnanceClient;

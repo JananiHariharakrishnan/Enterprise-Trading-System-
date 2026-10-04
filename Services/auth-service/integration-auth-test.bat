@@ -20,8 +20,8 @@ if errorlevel 1 (
 )
 echo [PASS] Auth service is running
 
-echo [2/3] Checking Trade API at http://localhost:8888...
-curl -s http://localhost:8888/api/v1/health > NUL 2>&1
+echo [2/3] Checking Trade API at http://localhost:8081...
+curl -s http://localhost:8081/api/v1/health > NUL 2>&1
 if errorlevel 1 (
   echo [FAIL] Trade API is not running
   exit /b 1
@@ -70,7 +70,7 @@ echo Stage 3: Testing protected route WITH valid token...
 echo.
 
 echo [1/1] GET /api/v1/accounts/9/positions (with valid Bearer token)
-curl -s -X GET http://localhost:8888/api/v1/accounts/9/positions ^
+curl -s -X GET http://localhost:8081/api/v1/accounts/9/positions ^
   -H "Authorization: Bearer !TOKEN!" ^
   -H "Content-Type: application/json" > valid_token_response.json 2>&1
 
@@ -86,7 +86,7 @@ echo Stage 4: Testing protected route WITHOUT token...
 echo.
 
 echo [1/1] GET /api/v1/accounts/9/positions (no Authorization header)
-curl -s -w "\nHTTP_STATUS:%%{http_code}" -X GET http://localhost:8888/api/v1/accounts/9/positions ^
+curl -s -w "\nHTTP_STATUS:%%{http_code}" -X GET http://localhost:8081/api/v1/accounts/9/positions ^
   -H "Content-Type: application/json" > no_token_response.json 2>&1
 
 echo [PASS] Request completed
@@ -103,7 +103,7 @@ echo.
 set MALFORMED_TOKEN=malformed.invalid.token
 
 echo [1/1] GET /api/v1/accounts/9/positions (with malformed Bearer token)
-curl -s -w "\nHTTP_STATUS:%%{http_code}" -X GET http://localhost:8888/api/v1/accounts/9/positions ^
+curl -s -w "\nHTTP_STATUS:%%{http_code}" -X GET http://localhost:8081/api/v1/accounts/9/positions ^
   -H "Authorization: Bearer %MALFORMED_TOKEN%" ^
   -H "Content-Type: application/json" > malformed_token_response.json 2>&1
 
@@ -121,7 +121,7 @@ echo.
 set INVALID_SIG_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.invalid_signature_here
 
 echo [1/1] GET /api/v1/accounts/9/positions (with invalid signature Bearer token)
-curl -s -w "\nHTTP_STATUS:%%{http_code}" -X GET http://localhost:8888/api/v1/accounts/9/positions ^
+curl -s -w "\nHTTP_STATUS:%%{http_code}" -X GET http://localhost:8081/api/v1/accounts/9/positions ^
   -H "Authorization: Bearer %INVALID_SIG_TOKEN%" ^
   -H "Content-Type: application/json" > invalid_sig_response.json 2>&1
 

@@ -1,9 +1,10 @@
-import { Component, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, computed, inject, signal, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
 import type { WatchlistSummaryResponse, WatchlistDetailResponse } from '../../generated/trade';
+import { InstrumentSearchComponent, type InstrumentListItem } from '../../components/instrument-search/instrument-search.component';
 
 type WatchlistInstrument = NonNullable<WatchlistDetailResponse['instruments']>[number];
 type TradeSide = 'buy' | 'sell';
@@ -27,7 +28,7 @@ const TONE_COUNT = 6;
 @Component({
   selector: 'app-watchlists',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, InstrumentSearchComponent],
   templateUrl: './watchlists.component.html',
   styleUrls: ['./watchlists.component.css']
 })
@@ -44,6 +45,8 @@ export class WatchlistsComponent implements OnInit, OnDestroy {
   readonly watchlists = signal<WatchlistSummaryResponse[]>([]);
   readonly selectedWatchlist = signal<WatchlistDetailResponse | null>(null);
   readonly isSavingWatchlist = signal(false);
+  readonly isRefreshing = signal(false);
+  readonly lastRefreshedAt = signal<Date | null>(null);
 
   /**
    * The popup is driven by the symbol, not the object, so it keeps working
@@ -55,6 +58,10 @@ export class WatchlistsComponent implements OnInit, OnDestroy {
     if (!symbol) return null;
     return this.selectedWatchlist()?.instruments?.find((i) => i.symbol === symbol) ?? null;
   });
+
+  readonly existingSymbols = computed(() =>
+    (this.selectedWatchlist()?.instruments ?? []).map((i) => i.symbol)
+  );
 
   /** Performance summary for the open watchlist, shown inside the watchlist card. */
   readonly watchlistStats = computed(() => {
@@ -86,12 +93,10 @@ export class WatchlistsComponent implements OnInit, OnDestroy {
     };
   });
 
+  @ViewChild(InstrumentSearchComponent) instrumentSearchComponent?: InstrumentSearchComponent;
+
   readonly createWatchlistForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]]
-  });
-
-  readonly addInstrumentForm = this.fb.nonNullable.group({
-    symbol: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(32)]]
   });
 
   ngOnInit(): void {
@@ -181,6 +186,7 @@ export class WatchlistsComponent implements OnInit, OnDestroy {
         this.selectedSymbol.set(null);
       }
       this.selectedWatchlist.set(detail);
+      this.lastRefreshedAt.set(new Date());
     } catch {
       this.showToast('error', 'Unable to load watchlist');
     } finally {
@@ -188,21 +194,38 @@ export class WatchlistsComponent implements OnInit, OnDestroy {
     }
   }
 
-  async addInstrument(): Promise<void> {
+  /** Re-fetches the open watchlist so prices update without reloading the page. */
+  async refreshWatchlist(): Promise<void> {
+    const current = this.selectedWatchlist();
+    if (!current || this.isRefreshing()) return;
+
+    this.isRefreshing.set(true);
+    try {
+      const detail = await this.api.watchlists.getWatchlist({ watchlistId: current.id });
+      detail.instruments?.sort((a, b) => a.symbol.localeCompare(b.symbol));
+      // The user may have opened a different watchlist while this was loading
+      if (this.selectedWatchlist()?.id === current.id) {
+        this.selectedWatchlist.set(detail);
+        this.lastRefreshedAt.set(new Date());
+      }
+    } catch {
+      this.showToast('error', 'Unable to refresh prices right now.');
+    } finally {
+      this.isRefreshing.set(false);
+    }
+  }
+
+  async addInstrument(instrument: InstrumentListItem): Promise<void> {
     const watchlist = this.selectedWatchlist();
     if (!watchlist) return;
-    if (this.addInstrumentForm.invalid) {
-      this.addInstrumentForm.markAllAsTouched();
-      return;
-    }
 
     this.isSavingWatchlist.set(true);
     try {
-      const symbol = this.addInstrumentForm.getRawValue().symbol.trim().toUpperCase();
+      const symbol = instrument.symbol.trim().toUpperCase();
       await this.api.watchlists.addWatchlistInstrument({ watchlistId: watchlist.id, addWatchlistInstrumentRequest: { symbol } });
       await this.openWatchlist(watchlist.id);
       await this.load();
-      this.addInstrumentForm.reset({ symbol: '' });
+      this.instrumentSearchComponent?.resetSearch();
       this.showToast('success', `Added ${symbol} to ${watchlist.name}.`);
     } catch {
       this.showToast('error', 'Unable to add instrument right now.');

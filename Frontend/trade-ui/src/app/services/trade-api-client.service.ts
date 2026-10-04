@@ -14,7 +14,7 @@ export class TradeApiClientService {
   constructor(@Inject(PLATFORM_AUTH_MIDDLEWARE) platformAuthMiddleware: Middleware) {
     const baseHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
     const configuration = new Configuration({
-      basePath: `http://${baseHost}:8888`,
+      basePath: `http://${baseHost}:8081`,
       middleware: [platformAuthMiddleware]
     });
 

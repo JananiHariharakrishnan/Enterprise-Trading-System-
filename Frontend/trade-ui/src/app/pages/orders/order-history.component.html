@@ -165,7 +165,8 @@
           <th>Side</th>
           <th>Status</th>
           <th class="num">Quantity</th>
-          <th class="num">Price</th>
+          <th class="num">Price (USD)</th>
+          <th class="num">Executed Price</th>
           <th>Created</th>
         </tr>
         </thead>
@@ -187,7 +188,13 @@
             <span class="pill" [ngClass]="'pill-' + statusKey(o.status)">{{ o.status }}</span>
           </td>
           <td class="num">{{ o.quantity }}</td>
-          <td class="num">{{ o.price != null ? ('$' + (o.price | number:'1.2-2')) : '—' }}</td>
+          <td class="num">${{ o.price != null ? (o.price | number:'1.2-2') : '—' }}</td>
+          <td class="num">
+            <span *ngIf="o.status === 'FILLED'">
+              {{ getCurrencySymbol(instrumentCurrency(o)) }}{{ o.executedPrice != null ? (o.executedPrice | number:'1.2-2') : '—' }}
+            </span>
+            <span *ngIf="o.status !== 'FILLED'">—</span>
+          </td>
           <td class="created">{{ o.createdOn | date:'short' }}</td>
         </tr>
         </tbody>

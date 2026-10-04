@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, inject, computed, OnDestroy, OnInit, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { avgCostInUsd, quoteCurrency } from '../../utils/currency.util';
 import {
   AccountResponse,
   BalanceResponse,
@@ -20,7 +22,7 @@ import { UiEventsService } from '../../services/ui-events.service';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -69,6 +71,72 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly addInstrumentForm = this.formBuilder.nonNullable.group({
     symbol: ['', [Validators.required, Validators.maxLength(32)]]
   });
+ readonly today = new Date();
+
+ readonly greeting = computed(() => {
+   const hour = new Date().getHours();
+   return hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+ });
+
+ readonly currency = computed(() =>
+   String((this.balance() as any)?.currency ?? (this.account() as any)?.currency ?? 'USD')
+ );
+
+ readonly isActive = computed(() => String(this.account()?.status ?? '').toUpperCase() === 'ACTIVE');
+
+ readonly statusLabel = computed(() => {
+   const s = String(this.account()?.status ?? '').toLowerCase();
+   return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Unknown';
+ });
+
+ // ---- portfolio snapshot: same USD conversion as the Positions page ----
+ /** Cost of one position in USD. .NS / .BO positions are stored in INR, so they are converted. */
+ private positionValueUsd(p: PositionResponse): number {
+   const quantity = Number(p.quantity) || 0;
+   return quantity * avgCostInUsd(Number(p.averageCost) || 0, String(p.symbol ?? ''));
+ }
+
+ readonly cash = computed(() => Number(this.account()?.cashBalance) || 0);
+
+ readonly costBasis = computed(() =>
+   this.positions().reduce((sum, p) => sum + this.positionValueUsd(p), 0)
+ );
+
+ readonly totalAtCost = computed(() => this.cash() + this.costBasis());
+
+ readonly cashPct = computed(() => (this.totalAtCost() > 0 ? this.cash() / this.totalAtCost() : 1));
+
+ readonly largestPosition = computed(() => {
+   const total = this.costBasis();
+   const rows = this.positions()
+     .map(p => ({ symbol: String(p.symbol ?? ''), value: this.positionValueUsd(p) }))
+     .sort((a, b) => b.value - a.value);
+   return rows.length && total > 0 ? { symbol: rows[0].symbol, pct: rows[0].value / total } : null;
+ });
+
+ // ---- recent orders: INR symbols show their price in INR (₹), not USD ----
+ readonly recentOrders = computed(() =>
+   this.orders().slice(0, 3).map(o => {
+     const a = o as any;
+     const symbol = String(a.symbol ?? '—');
+     return {
+       symbol,
+       side: String(a.side ?? '').toUpperCase(),
+       quantity: a.quantity,
+       price: a.price ?? a.limitPrice ?? null,
+       currency: quoteCurrency(symbol, this.currency()),
+       status: String(a.status ?? '').toUpperCase(),
+       time: a.createdAt ?? a.placedAt ?? a.timestamp ?? null
+     };
+   })
+ );
+
+ orderStatusClass(status: string): string {
+   if (status === 'FILLED') return 'ok';
+   if (status === 'REJECTED' || status === 'CANCELLED') return 'bad';
+   if (status === 'NEW' || status === 'PENDING') return 'pending';
+   return '';
+ }
 
   ngOnInit(): void {
     void this.loadDashboard();

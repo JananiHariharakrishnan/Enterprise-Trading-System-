@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createPlatformAuthMiddleware } from './platform-auth-middleware.provider';
 import { TokenStorageService } from './token-storage.service';
 
@@ -13,7 +13,7 @@ describe('platform auth middleware provider', () => {
   it('attaches bearer token for protected platform routes', async () => {
     const middleware = createPlatformAuthMiddleware(new MockTokenStorage());
     const out = await middleware.pre?.({
-      url: 'http://localhost:8888/api/v1/accounts',
+      url: 'http://localhost:8081/api/v1/accounts',
       init: { headers: {} }
     } as any);
 
@@ -31,4 +31,33 @@ describe('platform auth middleware provider', () => {
     const headers = (out?.init as any).headers;
     expect(headers['Authorization'] || headers['authorization']).toBeUndefined();
   });
+
+  it('reloads page on 401 response', async () => {
+    const mockTokenStorage = new MockTokenStorage();
+    const clearSpy = vi.spyOn(mockTokenStorage, 'clear');
+    const reloadSpy = vi.spyOn(window.location, 'reload');
+    
+    const middleware = createPlatformAuthMiddleware(mockTokenStorage);
+    const response = new Response('Unauthorized', { status: 401 });
+    
+    await middleware.post?.({ response } as any);
+    
+    expect(clearSpy).toHaveBeenCalled();
+    expect(reloadSpy).toHaveBeenCalled();
+  });
+
+  it('reloads page on 403 response', async () => {
+    const mockTokenStorage = new MockTokenStorage();
+    const clearSpy = vi.spyOn(mockTokenStorage, 'clear');
+    const reloadSpy = vi.spyOn(window.location, 'reload');
+    
+    const middleware = createPlatformAuthMiddleware(mockTokenStorage);
+    const response = new Response('Forbidden', { status: 403 });
+    
+    await middleware.post?.({ response } as any);
+    
+    expect(clearSpy).toHaveBeenCalled();
+    expect(reloadSpy).toHaveBeenCalled();
+  });
 });
+

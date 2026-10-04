@@ -153,7 +153,7 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
     try {
       const baseHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
       const trimmedQuery = query.trim();
-      const url = new URL(`http://${baseHost}:8888/api/v1/instruments`);
+      const url = new URL(`http://${baseHost}:8081/api/v1/instruments`);
 
       if (trimmedQuery.length > 0) {
         url.searchParams.set('query', trimmedQuery);

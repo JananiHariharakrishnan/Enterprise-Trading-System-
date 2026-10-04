@@ -94,16 +94,15 @@ public class ExecutionProcessingService {
                 }
 
                 BigDecimal reservedValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
-                int accountRows = orderDataMapper.updateAccountBalancesWithVersion(
+                BigDecimal restoredBuyingPower = account.getBuyingPower().add(reservedValue);
+                
+                // Use retry logic to handle optimistic locking conflicts
+                updateAccountWithRetry(
                         account.getAccountId(),
                         account.getCashBalance(),
-                        account.getBuyingPower().add(reservedValue),
+                        restoredBuyingPower,
                         account.getVersion()
                 );
-
-                if (accountRows != 1) {
-                    throw new OrderStateConflictException();
-                }
             }
 
             TradeEventPayload payload = new TradeEventPayload();
@@ -179,17 +178,13 @@ public class ExecutionProcessingService {
                 newBuyingPower = newBuyingPower.add(orderValue);
             }
 
-            int accountRows = orderDataMapper.updateAccountBalancesWithVersion(
+            // Use retry logic to handle optimistic locking conflicts
+            updateAccountWithRetry(
                     account.getAccountId(),
                     newCashBalance,
                     newBuyingPower,
                     account.getVersion()
             );
-
-            if (accountRows != 1) {
-                log.error("Account optimistic update failed for account {} (version mismatch)", account.getAccountId());
-                throw new OrderStateConflictException();
-            }
 
             // 4) Position update (insert or update) with RETRY LOGIC
             Position position = orderDataMapper.findPosition(order.getAccountId(), order.getSymbol());
@@ -326,6 +321,66 @@ public class ExecutionProcessingService {
         throw new OptimisticLockException(
             "Failed to update position after " + MAX_RETRY_ATTEMPTS + " retries for account=" + 
             accountId + " symbol=" + symbol + ". Concurrent updates may be blocking this transaction."
+        );
+    }
+
+    /**
+     * Update account with optimistic locking and retry logic.
+     * 
+     * Retries up to MAX_RETRY_ATTEMPTS times with exponential backoff.
+     * On each retry, re-reads the account version and attempts update again.
+     * 
+     * This fixes the race condition where the executor was offline while the order was placed,
+     * and other transactions may have modified the account before the executor processes the filled order.
+     * 
+     * If all retries fail: throws OptimisticLockException (permanent failure, to DLT).
+     */
+    private void updateAccountWithRetry(Long accountId, BigDecimal cashBalance, 
+                                        BigDecimal buyingPower, int initialVersion) {
+        int currentVersion = initialVersion;
+        
+        for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+            try {
+                int updated = orderDataMapper.updateAccountBalancesWithVersion(
+                        accountId, cashBalance, buyingPower, currentVersion
+                );
+                
+                if (updated == 1) {
+                    // Success!
+                    log.info("Account update succeeded for account={} on attempt {}", accountId, attempt);
+                    return;
+                }
+                
+                // Version mismatch - concurrent update detected
+                log.warn("Account update failed due to version mismatch (concurrent update), attempt {}/{}", 
+                    attempt, MAX_RETRY_ATTEMPTS);
+                
+                if (attempt < MAX_RETRY_ATTEMPTS) {
+                    // Wait before retrying (exponential backoff)
+                    long backoffMs = BACKOFF_BASE_MS * attempt; // 50ms, 100ms, ...
+                    log.info("Retrying account update in {}ms...", backoffMs);
+                    Thread.sleep(backoffMs);
+                    
+                    // Re-read account to get updated version
+                    Account latestAccount = orderDataMapper.findAccountById(accountId);
+                    if (latestAccount != null) {
+                        currentVersion = latestAccount.getVersion();
+                        log.info("Re-read account version: {} (was: {})", currentVersion, initialVersion);
+                    } else {
+                        throw new MalformedExecutionException("Account disappeared during retry for account=" + accountId);
+                    }
+                }
+                
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new OptimisticLockException("Account update interrupted: " + ie.getMessage(), ie);
+            }
+        }
+        
+        // All retries exhausted
+        throw new OptimisticLockException(
+            "Failed to update account after " + MAX_RETRY_ATTEMPTS + " retries for account=" + accountId + 
+            ". Concurrent updates may be blocking this transaction."
         );
     }
 }

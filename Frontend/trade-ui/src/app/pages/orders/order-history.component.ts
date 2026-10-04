@@ -179,6 +179,22 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
     return this.fromDate() === this.dateDaysAgo(days) && this.toDate() === this.getDefaultToDate();
   }
 
+  /** Get the currency symbol for display */
+  getCurrencySymbol(currency: string | undefined): string {
+    if (!currency) return '$'; // Default to USD
+    if (currency.toUpperCase() === 'INR') return '₹';
+    if (currency.toUpperCase() === 'USD') return '$';
+    return '$'; // Default fallback
+  }
+
+  /** Currency the symbol trades in: the order's own currency, else guessed from the exchange suffix. */
+  instrumentCurrency(order: OrderHistoryEntry): string {
+    const explicit = (order as unknown as Record<string, unknown>)['currency'];
+    if (explicit) return String(explicit).toUpperCase();
+    const symbol = (order.symbol ?? '').toUpperCase();
+    return symbol.endsWith('.NS') || symbol.endsWith('.BO') ? 'INR' : 'USD';
+  }
+
   private async loadOrders(): Promise<void> {
     this.isLoading.set(true);
     this.loadError.set(null);

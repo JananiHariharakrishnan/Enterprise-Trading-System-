@@ -37,8 +37,10 @@
         <result property="side" column="side"/>
         <result property="quantity" column="qty"/>
         <result property="price" column="price"/>
+        <result property="executedPrice" column="executed_price"/>
         <result property="status" column="status"/>
         <result property="idempotencyKey" column="idempotency_key"/>
+        <result property="currency" column="currency"/>
         <result property="createdOn" column="created_on"/>
     </resultMap>
 
@@ -213,27 +215,32 @@
 
     <select id="findOrderHistory" resultMap="orderHistoryResultMap">
         SELECT
-        CAST(id AS VARCHAR) AS id,
-        account_id,
-        symbol,
-        side,
-        qty,
-        price,
-        status,
-        idempotency_key,
-        created_on
-        FROM orders
-        WHERE account_id = #{accountId}
+        CAST(o.id AS VARCHAR) AS id,
+        o.account_id,
+        o.symbol,
+        o.side,
+        o.qty,
+        o.price,
+        e.price AS executed_price,
+        o.status,
+        o.idempotency_key,
+        i.currency,
+        o.created_on
+        FROM orders o
+        LEFT JOIN executions e ON o.id = e.order_id
+            AND e.id = (SELECT id FROM executions WHERE order_id = o.id ORDER BY created_at DESC LIMIT 1)
+        LEFT JOIN instruments i ON o.symbol = i.symbol
+        WHERE o.account_id = #{accountId}
         <if test="status != null and status != ''">
-            AND status = #{status}
+            AND o.status = #{status}
         </if>
         <if test="from != null">
-            AND created_on &gt;= #{from}
+            AND o.created_on &gt;= #{from}
         </if>
         <if test="to != null">
-            AND created_on &lt;= #{to}
+            AND o.created_on &lt;= #{to}
         </if>
-        ORDER BY created_on DESC
+        ORDER BY o.created_on DESC
     </select>
 
     <resultMap id="orderResultMap" type="com.tradingsystem.model.Order">

@@ -1,13 +1,15 @@
 import { TokenStorageService } from './token-storage.service';
 
 export interface TokenInterceptorOptions {
-  allowedOrigins: string[]; // exact origins: "https://host:port" or "http://host:port"
-  unauthenticatedPaths?: string[]; // paths (absolute, starting with /) to never attach token even on allowed origins
+  allowedOrigins: string[];
+  unauthenticatedPaths?: string[];
+  sessionExpiryDelaySeconds?: number; // Delay before reloading on session expiry (default: 0)
 }
 
 export function createTokenInterceptor(tokenStorage: TokenStorageService, opts: TokenInterceptorOptions) {
   const allowed = new Set(opts.allowedOrigins || []);
   const unauthPaths = new Set(opts.unauthenticatedPaths || []);
+  const expiryDelay = (opts.sessionExpiryDelaySeconds ?? 0) * 1000; // Convert to ms
 
   function headersToRecord(h: HeadersInit | undefined): Record<string, string> {
     const out: Record<string, string> = {};
@@ -25,13 +27,12 @@ export function createTokenInterceptor(tokenStorage: TokenStorageService, opts: 
     return { ...(h as Record<string, string>) };
   }
 
-  return async function pre(context: any) {
+  const pre = async function (context: any) {
     try {
       const url = new URL(context.url);
       const origin = url.origin;
       if (!allowed.has(origin)) return { url: context.url, init: context.init };
 
-      // path-level exclusion (e.g. /auth/login)
       if (unauthPaths.has(url.pathname)) return { url: context.url, init: context.init };
 
       const token = tokenStorage.getAccessToken();
@@ -46,8 +47,30 @@ export function createTokenInterceptor(tokenStorage: TokenStorageService, opts: 
       const init = { ...context.init, headers: currentHeaders };
       return { url: context.url, init };
     } catch (e) {
-      // on error, do not attach token
       return { url: context.url, init: context.init };
     }
   };
+
+  const post = async function (context: any): Promise<Response | void> {
+    try {
+      const response = context.response as Response;
+
+      // Handle session expiration: 401 or 403
+      if (response.status === 401 || response.status === 403) {
+        tokenStorage.clear();
+        // Reload page after configured delay
+        setTimeout(() => {
+          window.location.reload();
+        }, expiryDelay);
+      }
+
+      return response;
+    } catch (e) {
+      return context.response instanceof Response ? context.response : undefined;
+    }
+  };
+
+  return { pre, post };
 }
+
+

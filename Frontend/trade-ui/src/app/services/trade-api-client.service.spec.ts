@@ -9,7 +9,7 @@ describe('TradeApiClientService', () => {
     const accountsConfig = (service.accounts as any).configuration;
     const ordersConfig = (service.orders as any).configuration;
 
-    expect(accountsConfig.basePath).toBe('http://localhost:8888');
+    expect(accountsConfig.basePath).toBe('http://localhost:8081');
     expect(accountsConfig.middleware).toEqual([middleware]);
     expect(ordersConfig).toBe(accountsConfig);
   });
