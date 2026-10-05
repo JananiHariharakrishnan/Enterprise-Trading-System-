@@ -209,7 +209,7 @@
                 <strong>{{ instrument.symbol }}</strong>
               </span>
           </td>
-          <td class="num">${{ formatPrice(instrument.latestPrice?.price) }}</td>
+          <td class="num">{{ getCurrencySymbol(instrument.symbol) }}{{ formatPrice(instrument.latestPrice?.price) }}</td>
           <td class="num">
               <span class="change-pill" [ngClass]="getChangeClass(instrument.latestPrice?.change)">
                 {{ changeArrow(instrument.latestPrice?.change) }}
@@ -271,7 +271,7 @@
 
     <div class="detail-hero" [ngClass]="getChangeClass(instrument.latestPrice?.change)">
       <div class="hero-price">
-        <span class="hero-value">${{ formatPrice(instrument.latestPrice?.price) }}</span>
+        <span class="hero-value">{{ getCurrencySymbol(instrument.symbol) }}{{ formatPrice(instrument.latestPrice?.price) }}</span>
         <span class="currency-badge" *ngIf="instrument.latestPrice?.currency">{{ instrument.latestPrice?.currency }}</span>
       </div>
       <span class="change-pill" [ngClass]="getChangeClass(instrument.latestPrice?.change)">
@@ -282,10 +282,10 @@
     </div>
 
     <dl class="detail-grid">
-      <div class="detail-card">
-        <dt>Previous close</dt>
-        <dd>${{ formatPrice(instrument.latestPrice?.previousClose) }}</dd>
-      </div>
+       <div class="detail-card">
+         <dt>Previous close</dt>
+         <dd>{{ getCurrencySymbol(instrument.symbol) }}{{ formatPrice(instrument.latestPrice?.previousClose) }}</dd>
+       </div>
 
       <div class="detail-card">
         <dt>Market state</dt>
