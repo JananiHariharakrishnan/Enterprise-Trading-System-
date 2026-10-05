@@ -1,0 +1,243 @@
+<section class="dashboard" data-testid="dashboard-home">
+  <header class="dash-header">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="dash-sub" *ngIf="authSession.currentUser() as user">
+        {{ greeting() }}, <strong>{{ user.username }}</strong>
+      </p>
+    </div>
+    <div class="dash-meta">
+      <button
+        type="button"
+        class="btn-refresh"
+        [class.spinning]="isLoading()"
+        [disabled]="isLoading()"
+        (click)="refresh()"
+        aria-label="Refresh dashboard data"
+        data-testid="dashboard-refresh-button"
+      >
+        <svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+        <span>{{ isLoading() ? 'Refreshing' : 'Refresh' }}</span>
+      </button>
+      <span class="dash-date">{{ today | date:'EEEE, d MMMM y' }}</span>
+    </div>
+  </header>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading()" class="loading" data-testid="dashboard-loading" aria-busy="true">
+    <span class="sr-only">Loading your account data...</span>
+    <div class="kpis">
+      <div class="kpi" *ngFor="let i of [1, 2, 3, 4, 5]"><span class="sk sk-sm"></span><span class="sk sk-lg"></span></div>
+    </div>
+    <div class="split">
+      <div class="panel"><span class="sk sk-block"></span></div>
+      <div class="panel"><span class="sk sk-block"></span></div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="loadError() as error" class="error-card" role="alert" data-testid="dashboard-error">
+    <span class="error-icon">!</span>
+    <div class="error-text">
+      <strong>Couldn't load your dashboard</strong>
+      <p>{{ error }}</p>
+    </div>
+    <button type="button" class="btn-ghost" (click)="refresh()">Retry</button>
+  </div>
+
+  <ng-container *ngIf="!isLoading() && !loadError()">
+
+    <!-- Account cards: one line -->
+    <section class="kpis" data-testid="account-summary" *ngIf="account() as acct">
+      <article class="kpi">
+        <div class="kpi-top">
+          <span class="kpi-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg></span>
+          <span class="kpi-label">Account number</span>
+        </div>
+        <strong class="kpi-value" [title]="acct.accountId">{{ acct.accountId }}</strong>
+      </article>
+
+      <article class="kpi">
+        <div class="kpi-top">
+          <span class="kpi-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <span class="kpi-label">Account holder</span>
+        </div>
+        <strong class="kpi-value" [title]="acct.holderName">{{ acct.holderName }}</strong>
+      </article>
+
+      <article class="kpi">
+        <div class="kpi-top">
+          <span class="kpi-icon"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="15" r="1"/></svg></span>
+          <span class="kpi-label">Account balance</span>
+        </div>
+        <strong class="kpi-value num">{{ acct.cashBalance | currency:currency():'symbol':'1.2-2' }}</strong>
+      </article>
+
+      <article class="kpi">
+        <div class="kpi-top">
+          <span class="kpi-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>
+          <span class="kpi-label">Buying power</span>
+        </div>
+        <strong class="kpi-value num">{{ acct.buyingPower | currency:currency():'symbol':'1.2-2' }}</strong>
+      </article>
+
+      <article class="kpi">
+        <div class="kpi-top">
+          <span class="kpi-icon" [class.warn]="!isActive()"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.5 3 8 7 9 4-1 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/></svg></span>
+          <span class="kpi-label">Status</span>
+        </div>
+        <span class="acct-status" [class.inactive]="!isActive()"><i></i>{{ statusLabel() }}</span>
+      </article>
+    </section>
+
+    <!-- Portfolio snapshot + recent orders -->
+    <div class="split">
+      <section class="panel" data-testid="portfolio-snapshot">
+        <header class="panel-head">
+          <h2><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Portfolio snapshot</h2>
+          <a routerLink="/positions" class="panel-link">View positions</a>
+        </header>
+
+        <div class="alloc-bar" role="img" aria-label="Cash versus invested capital">
+          <span class="seg-cash" [style.width.%]="cashPct() * 100"></span>
+          <span class="seg-invested" [style.width.%]="(1 - cashPct()) * 100"></span>
+        </div>
+        <ul class="alloc-legend">
+          <li><i class="dot cash"></i>Cash <strong>{{ cash() | currency:currency():'symbol':'1.0-0' }}</strong> <span>{{ cashPct() | percent:'1.0-1' }}</span></li>
+          <li><i class="dot invested"></i>Invested at cost <strong>{{ costBasis() | currency:currency():'symbol':'1.0-0' }}</strong> <span>{{ 1 - cashPct() | percent:'1.0-1' }}</span></li>
+        </ul>
+
+        <dl class="mini-stats">
+          <div><dt>Open positions</dt><dd>{{ positions().length }}</dd></div>
+          <div><dt>Largest holding</dt><dd>{{ largestPosition()?.symbol || '—' }}<small *ngIf="largestPosition() as lp">{{ lp.pct | percent:'1.0-1' }}</small></dd></div>
+          <div><dt>Total at cost</dt><dd>{{ totalAtCost() | currency:currency():'symbol':'1.0-0' }}</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel" data-testid="recent-orders">
+        <header class="panel-head">
+          <h2><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Recent orders</h2>
+          <a routerLink="/orders/history" class="panel-link">View all</a>
+        </header>
+
+        <p class="empty-note" *ngIf="recentOrders().length === 0">No orders yet. Place your first trade from the Orders page.</p>
+
+        <ul class="order-list" *ngIf="recentOrders().length > 0">
+          <li *ngFor="let o of recentOrders()">
+            <span class="side-chip" [class.sell]="o.side === 'SELL'">{{ o.side || '—' }}</span>
+            <div class="order-main">
+              <strong>{{ o.symbol }}</strong>
+              <small>{{ o.quantity }} <ng-container *ngIf="o.price != null">@ {{ o.price | currency:o.currency:'symbol':'1.2-2' }}</ng-container></small>
+            </div>
+            <div class="order-end">
+              <span class="order-status" [ngClass]="orderStatusClass(o.status)">{{ o.status || '—' }}</span>
+              <small *ngIf="o.time">{{ o.time | date:'MMM d, h:mm a' }}</small>
+            </div>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- Market analytics -->
+    <section class="panel analytics-card" data-testid="analytics-charts">
+      <div class="analytics-title-row">
+        <h2><svg class="ico" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>Market analytics</h2>
+        <div class="live-controls">
+          <label class="refresh-label" for="refresh-frequency">Refresh</label>
+          <select
+            id="refresh-frequency"
+            class="refresh-select"
+            [value]="refreshSeconds()"
+            (change)="onRefreshFrequencyChange($event)"
+            aria-label="Analytics refresh interval"
+          >
+            <option value="15">15s</option>
+            <option value="30">30s</option>
+            <option value="60">60s</option>
+          </select>
+          <span class="live-pill"><i></i>Live feed</span>
+        </div>
+      </div>
+      <p class="analytics-updated" *ngIf="lastAnalyticsUpdated()">Last updated {{ lastAnalyticsUpdated() }}</p>
+      <p *ngIf="analyticsLoading()" class="note">Loading top-performing assets and candle analytics...</p>
+      <p *ngIf="analyticsError() as error" class="note note-error">{{ error }}</p>
+      <p *ngIf="analyticsNotice() as notice" class="note">{{ notice }}</p>
+
+      <div *ngIf="!analyticsLoading() && !analyticsError()" class="analytics-grid">
+        <article class="chart-panel">
+          <header class="chart-head">
+            <h3>Top 5 movers trend (24H)</h3>
+            <small>Composite line from top daily movers</small>
+          </header>
+
+          <svg viewBox="0 0 680 220" class="line-chart" aria-label="Portfolio trend line chart">
+            <polyline [attr.points]="portfolioLinePoints()" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          </svg>
+
+          <div class="chart-scale" *ngIf="portfolioLinePoints()">
+            <span>{{ portfolioTrendMin() | number:'1.2-2' }}</span>
+            <span>{{ portfolioTrendMax() | number:'1.2-2' }}</span>
+          </div>
+        </article>
+
+        <article class="chart-panel">
+          <header class="chart-head">
+            <h3>Assets daily change</h3>
+            <small>Top five movers, last 24 hours</small>
+          </header>
+
+          <div class="bar-chart" *ngIf="stockBars().length > 0">
+            <div class="bar" *ngFor="let stock of stockBars()" [class.neg]="stock.changePct < 0">
+              <i [style.height.%]="stock.heightPct"></i>
+              <strong>{{ stock.symbol }}</strong>
+              <small>{{ stock.changePct >= 0 ? '+' : '' }}{{ stock.changePct | number:'1.2-2' }}%</small>
+            </div>
+          </div>
+        </article>
+
+        <article class="chart-panel candle-panel">
+          <header class="chart-head">
+            <h3>Candlestick view</h3>
+            <small>{{ selectedCandleSymbol() }} (recent sessions)</small>
+          </header>
+
+          <div class="candle-tabs" *ngIf="topPerformers().length > 0">
+            <button
+              type="button"
+              class="candle-tab"
+              *ngFor="let performer of topPerformers()"
+              [class.active]="performer.symbol === selectedCandleSymbol()"
+              (click)="selectCandleSymbol(performer.symbol)"
+            >
+              {{ performer.symbol }}
+            </button>
+          </div>
+
+          <svg viewBox="0 0 640 240" class="candle-chart" aria-label="Candlestick chart">
+            <g *ngFor="let candle of candleBars()">
+              <line
+                [attr.x1]="candle.x"
+                [attr.y1]="candle.wickTop"
+                [attr.x2]="candle.x"
+                [attr.y2]="candle.wickBottom"
+                [attr.class]="candle.up ? 'wick up' : 'wick down'"
+              ></line>
+              <rect
+                [attr.x]="candle.x - 4"
+                [attr.y]="candle.bodyY"
+                width="8"
+                [attr.height]="candle.bodyHeight"
+                [attr.class]="candle.up ? 'body up' : 'body down'"
+              ></rect>
+            </g>
+          </svg>
+
+          <div class="chart-scale" *ngIf="candleBars().length > 0">
+            <span>{{ candleMin() | number:'1.2-2' }}</span>
+            <span>{{ candleMax() | number:'1.2-2' }}</span>
+          </div>
+        </article>
+      </div>
+    </section>
+  </ng-container>
+</section>

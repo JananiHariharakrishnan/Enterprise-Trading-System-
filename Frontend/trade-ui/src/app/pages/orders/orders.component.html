@@ -1,0 +1,184 @@
+<section class="orders-page">
+  <header class="page-head">
+    <h2>Place order</h2>
+    <p>Choose an instrument, set the size and price, then confirm.</p>
+  </header>
+
+  <div class="order-layout">
+    <!-- Left: pick the instrument -->
+    <div class="instrument-column">
+      <section class="panel">
+        <h3 class="panel-title">Instrument</h3>
+        <app-instrument-search
+          placeholder="Search by ticker or company name"
+          actionLabel="Select"
+          [closeOnSelect]="true"
+          [selectedSymbol]="selectedInstrument()?.symbol ?? null"
+          [disabled]="submitting()"
+          (instrumentAdded)="onInstrumentSelected($event)"
+        ></app-instrument-search>
+      </section>
+
+      <section class="panel selected-card" *ngIf="selectedInstrument() as instrument; else noInstrument">
+        <div class="selected-head">
+          <span class="avatar" [style.--hue]="symbolHue(instrument.symbol)" aria-hidden="true">
+            {{ instrument.symbol.slice(0, 2) }}
+          </span>
+          <div class="selected-title">
+            <h3>{{ instrument.symbol }}</h3>
+            <p>{{ instrument.name }}</p>
+          </div>
+          <button type="button" class="link-btn" (click)="clearInstrument()">Clear</button>
+        </div>
+
+        <dl class="facts">
+          <div>
+            <dt>Asset class</dt>
+            <dd>{{ formatAssetClass(instrument.assetClass) }}</dd>
+          </div>
+          <div>
+            <dt>Currency</dt>
+            <dd>{{ instrument.currency || 'USD' }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <ng-template #noInstrument>
+        <div class="empty-state">
+          <strong>{{ prefilling() ? 'Loading instrument...' : 'No instrument selected' }}</strong>
+          <span>Search above to choose what you want to trade.</span>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Right: order ticket -->
+    <aside class="ticket" [class.is-sell]="side() === 'SELL'">
+      <form [formGroup]="form" (ngSubmit)="submit()" class="ticket-form" novalidate>
+        <div class="ticket-head">
+          <h3>Order ticket</h3>
+          <span class="ticket-symbol" *ngIf="selectedInstrument() as instrument">{{ instrument.symbol }}</span>
+        </div>
+
+        <!-- Side -->
+        <div class="seg" role="radiogroup" aria-label="Order side">
+          <label class="seg-option buy">
+            <input type="radio" formControlName="side" value="BUY" data-testid="order-side-buy" />
+            <span>Buy</span>
+          </label>
+          <label class="seg-option sell">
+            <input type="radio" formControlName="side" value="SELL" data-testid="order-side-sell" />
+            <span>Sell</span>
+          </label>
+        </div>
+
+        <!-- Quantity -->
+        <div class="field">
+          <label class="field-label" for="quantity-input">Quantity</label>
+          <div class="input-wrap" [class.invalid]="quantityError()">
+            <button type="button" class="step" aria-label="Decrease quantity" (click)="changeQuantity(-1)">&minus;</button>
+            <input
+              id="quantity-input"
+              class="input center"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              step="1"
+              formControlName="quantity"
+              data-testid="order-quantity-input"
+            />
+            <button type="button" class="step" aria-label="Increase quantity" (click)="changeQuantity(1)">+</button>
+          </div>
+          <p class="field-error" *ngIf="quantityError() as message" role="alert">{{ message }}</p>
+          <p class="field-hint" *ngIf="!quantityError()">Number of shares</p>
+        </div>
+
+        <!-- Order type -->
+        <div class="field">
+          <span class="field-label" id="order-type-label">Order type</span>
+          <div class="seg seg-small" role="radiogroup" aria-labelledby="order-type-label">
+            <label class="seg-option neutral">
+              <input type="radio" formControlName="orderType" value="MARKET" data-testid="order-type-market" />
+              <span>Market</span>
+            </label>
+            <label class="seg-option neutral">
+              <input type="radio" formControlName="orderType" value="LIMIT" data-testid="order-type-limit" />
+              <span>Limit</span>
+            </label>
+          </div>
+          <p class="field-hint">
+            {{ orderType() === 'LIMIT' ? 'Fills only at your price or better.' : 'Executes immediately.' }}
+          </p>
+        </div>
+
+        <!-- Price -->
+        <div class="field">
+          <label class="field-label" for="price-input">Price per share</label>
+          <div class="input-wrap" [class.invalid]="priceError()">
+            <span class="prefix" aria-hidden="true">$</span>
+            <input
+              id="price-input"
+              class="input"
+              type="number"
+              inputmode="decimal"
+              step="0.01"
+              min="0.01"
+              placeholder="0.00"
+              formControlName="price"
+              data-testid="order-price-input"
+            />
+            <span class="suffix" aria-hidden="true">USD</span>
+          </div>
+          <p class="field-error" *ngIf="priceError() as message" role="alert">{{ message }}</p>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary">
+          <div class="summary-row">
+            <span>Estimated total</span>
+            <strong class="summary-total">{{ estimatedTotal() === null ? '–' : '$' + (estimatedTotal() | number: '1.2-2') }}</strong>
+          </div>
+          <p class="summary-note">Quantity &times; price per share</p>
+        </div>
+
+        <!-- Status -->
+        <div *ngIf="successMessage()" class="banner banner-success" role="status" data-testid="order-success">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+          <span>{{ successMessage() }}</span>
+        </div>
+
+        <div *ngIf="errorMessage()" class="banner banner-error" role="alert" data-testid="order-error">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 7v6M12 17h.01" /><circle cx="12" cy="12" r="9" /></svg>
+          <span>{{ errorMessage() }}</span>
+        </div>
+
+        <div *ngIf="lastOrderResponse()?.originalCurrency" class="conversion" data-testid="order-conversion-info">
+          <h4>Currency conversion</h4>
+          <dl>
+            <div>
+              <dt>Original price ({{ lastOrderResponse()?.originalCurrency }})</dt>
+              <dd>₹{{ lastOrderResponse()?.originalPrice | number: '1.2-2' }}</dd>
+            </div>
+            <div>
+              <dt>Deducted from account</dt>
+              <dd class="strong">${{ lastOrderResponse()?.price | number: '1.2-2' }}</dd>
+            </div>
+            <div *ngIf="conversionRate() as rate">
+              <dt>Exchange rate</dt>
+              <dd>1 USD = ₹{{ rate | number: '1.2-2' }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <button
+          type="submit"
+          class="submit"
+          [disabled]="form.invalid || !selectedInstrument() || submitting()"
+          data-testid="place-order-button"
+        >
+          <span class="spinner" *ngIf="submitting()" aria-hidden="true"></span>
+          {{ submitLabel() }}
+        </button>
+      </form>
+    </aside>
+  </div>
+</section>
