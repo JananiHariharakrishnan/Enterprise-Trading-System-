@@ -290,6 +290,11 @@ export class WatchlistsComponent implements OnInit, OnDestroy {
     return Math.abs(price) >= 1 ? price.toFixed(2) : price.toFixed(4);
   }
 
+  /** Get currency symbol for a given instrument symbol */
+  getCurrencySymbol(symbol: string): string {
+    return symbol.toUpperCase().endsWith('.NS') ? '₹' : '$';
+  }
+
   getPriceClass(price?: number | null): string {
     return price != null ? 'price-available' : 'price-unavailable';
   }

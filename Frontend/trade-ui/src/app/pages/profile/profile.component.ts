@@ -6,6 +6,11 @@ import { UserResponse } from '../../generated/auth';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { AuthApiClientService } from '../../services/auth-api-client.service';
 
+interface CountryCode {
+  code: string;
+  country: string;
+}
+
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -25,7 +30,15 @@ export class ProfileComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly currentUser = signal<UserResponse | null>(null);
 
+  readonly countryCodes: CountryCode[] = [
+    { code: '+1', country: 'United States' },
+    { code: '+91', country: 'India' }
+  ];
+
   profileForm: FormGroup;
+
+  // Mobile number regex: accepts exactly 10 digits, no special characters
+  private readonly phonePattern = /^[0-9]{10}$/;
 
   constructor() {
     this.profileForm = this.formBuilder.group({
@@ -33,7 +46,8 @@ export class ProfileComponent implements OnInit {
       firstName: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]],
       lastName: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]],
       email: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
-      phoneNo: ['', [Validators.minLength(5), Validators.maxLength(20)]],
+      countryCode: ['+1'],
+      phoneNo: ['', [Validators.minLength(10), Validators.maxLength(10), Validators.pattern(this.phonePattern)]],
       accountId: [{ value: '', disabled: true }, Validators.required]
     });
   }
@@ -54,12 +68,28 @@ export class ProfileComponent implements OnInit {
       }
 
       this.currentUser.set(user);
+
+      // Parse phone number to extract country code and number
+      let countryCode = '+1';
+      let phoneNo = user.phoneNo || '';
+
+      if (phoneNo) {
+        if (phoneNo.startsWith('+91')) {
+          countryCode = '+91';
+          phoneNo = phoneNo.substring(3);
+        } else if (phoneNo.startsWith('+1')) {
+          countryCode = '+1';
+          phoneNo = phoneNo.substring(2);
+        }
+      }
+
       this.profileForm.patchValue({
         username: user.username,
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         email: user.email || '',
-        phoneNo: user.phoneNo || '',
+        countryCode,
+        phoneNo,
         accountId: user.accountId
       });
     } catch {
@@ -82,13 +112,16 @@ export class ProfileComponent implements OnInit {
 
     try {
       const formValue = this.profileForm.getRawValue();
+      // Combine country code with phone number
+      const fullPhoneNo = formValue.phoneNo ? `${formValue.countryCode}${formValue.phoneNo}` : '';
+
       // Call backend endpoint to update profile via PATCH /auth/profile
       await this.authApi.client.authProfilePatch({
         updateProfileRequest: {
           firstName: formValue.firstName,
           lastName: formValue.lastName,
           email: formValue.email,
-          phoneNo: formValue.phoneNo
+          phoneNo: fullPhoneNo
         }
       });
 

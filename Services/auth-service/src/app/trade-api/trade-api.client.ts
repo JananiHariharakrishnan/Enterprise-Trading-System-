@@ -11,7 +11,7 @@ export class TradeApiClient {
   private baseURL: string;
 
   constructor(baseURL?: string) {
-    this.baseURL = baseURL || process.env.TRADE_API_URL || 'http://localhost:8080/api/v1';
+    this.baseURL = baseURL || process.env.TRADE_API_URL || 'http://localhost:8081/api/v1';
     this.client = axios.create({
       baseURL: this.baseURL,
       timeout: 10000,

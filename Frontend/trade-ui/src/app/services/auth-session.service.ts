@@ -127,8 +127,14 @@ export class AuthSessionService {
         }
 
         // Specific 401 semantics for login
-        if (error.response.status === 401 && !code) {
-          return 'Invalid username or password.';
+        if (error.response.status === 401) {
+          // Check if the server message indicates user not found
+          if (serverMessage && /user.*not.*found|account.*not.*found|no.{0,5}user|does.*not.*exist/i.test(serverMessage)) {
+            return serverMessage; // Pass through the "user not found" message
+          }
+          if (!code) {
+            return 'Invalid username or password.';
+          }
         }
 
         if (code) {

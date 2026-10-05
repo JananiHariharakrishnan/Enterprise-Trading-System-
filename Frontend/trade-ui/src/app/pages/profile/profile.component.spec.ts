@@ -93,7 +93,7 @@ describe('ProfileComponent', () => {
 
   it('should validate firstName field', () => {
     const firstNameControl = component.profileForm.get('firstName');
-    
+
     firstNameControl?.setValue('');
     expect(firstNameControl?.hasError('required')).toBe(true);
 
@@ -106,7 +106,7 @@ describe('ProfileComponent', () => {
 
   it('should validate lastName field', () => {
     const lastNameControl = component.profileForm.get('lastName');
-    
+
     lastNameControl?.setValue('');
     expect(lastNameControl?.hasError('required')).toBe(true);
 
@@ -119,7 +119,7 @@ describe('ProfileComponent', () => {
 
   it('should validate email field', () => {
     const emailControl = component.profileForm.get('email');
-    
+
     emailControl?.setValue('');
     expect(emailControl?.hasError('required')).toBe(true);
 
@@ -132,8 +132,8 @@ describe('ProfileComponent', () => {
 
   it('should validate phoneNo field (optional)', () => {
     const phoneControl = component.profileForm.get('phoneNo');
-    
-    // Empty phone is valid (optional)
+
+    // Empty phone is valid (optional, no required validator)
     phoneControl?.setValue('');
     expect(phoneControl?.valid).toBe(true);
 
@@ -145,8 +145,8 @@ describe('ProfileComponent', () => {
     phoneControl?.setValue('A'.repeat(21));
     expect(phoneControl?.hasError('maxlength')).toBe(true);
 
-    // Valid
-    phoneControl?.setValue('+1 (555) 123-4567');
+    // Valid: 10 digits only (no special chars or spaces)
+    phoneControl?.setValue('5551234567');
     expect(phoneControl?.valid).toBe(true);
   });
 
@@ -157,7 +157,7 @@ describe('ProfileComponent', () => {
       firstName: 'John',
       lastName: 'Doe',
       email: 'john@example.com',
-      phoneNo: '+1234567890',
+      phoneNo: '5551234567',
       accountId: 8,
       roles: [],
       createdOn: new Date('2024-01-01')
@@ -173,7 +173,7 @@ describe('ProfileComponent', () => {
 
     const submitButton = fixture.debugElement.nativeElement.querySelector('[data-testid="profile-save-button"]') as HTMLButtonElement;
 
-    // Form should be valid when all fields are populated
+    // Form should be valid when all fields are populated correctly
     expect(submitButton.disabled).toBe(false);
 
     // Clear a required field to make form invalid
@@ -192,7 +192,7 @@ describe('ProfileComponent', () => {
       firstName: 'John',
       lastName: 'Doe',
       email: 'john@example.com',
-      phoneNo: '+1234567890',
+      phoneNo: '+15551234567',
       accountId: 8,
       roles: [],
       createdOn: new Date('2024-01-01')
@@ -209,7 +209,7 @@ describe('ProfileComponent', () => {
       firstName: 'Jane',
       lastName: 'Smith',
       email: 'jane@example.com',
-      phoneNo: '+1 (555) 987-6543'
+      phoneNo: '5559876543'
     });
 
     await component.onSubmit();
@@ -219,7 +219,7 @@ describe('ProfileComponent', () => {
         firstName: 'Jane',
         lastName: 'Smith',
         email: 'jane@example.com',
-        phoneNo: '+1 (555) 987-6543'
+        phoneNo: '+15559876543'
       }
     });
     expect(component.successMessage()).toBeTruthy();

@@ -1,3 +1,31 @@
 :host { display: block; }
 .profile-container { display: grid; gap: 14px; }
 .form-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+
+.phone-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.country-code-select {
+  flex: 0 0 auto;
+  min-width: 120px;
+  width: 120px;
+}
+
+.phone-number-input {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .phone-input-group {
+    flex-direction: column;
+  }
+
+  .country-code-select {
+    width: 100%;
+  }
+}
+

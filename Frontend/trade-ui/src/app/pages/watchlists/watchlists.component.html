@@ -34,33 +34,38 @@
     {{ loadError() }}
   </div>
 
-  <!-- Watchlist cards -->
-  <ul *ngIf="watchlists().length > 0" class="watchlist-list">
-    <li *ngFor="let wl of watchlists(); trackBy: trackById" class="watchlist-summary-item">
-      <button
-        type="button"
-        class="watchlist-open-button"
-        [ngClass]="toneClass(wl.id)"
-        [class.active]="wl.id === selectedWatchlist()?.id"
-        [attr.aria-pressed]="wl.id === selectedWatchlist()?.id"
-        (click)="openWatchlist(wl.id)"
-      >
-        <span class="wl-avatar" aria-hidden="true">{{ watchlistInitial(wl.name) }}</span>
-        <span class="wl-meta">
-          <strong>{{ wl.name }}</strong>
-          <span class="wl-count">{{ wl.entryCount }} instrument<span *ngIf="wl.entryCount !== 1">s</span></span>
-        </span>
-      </button>
-    </li>
-  </ul>
+  <!-- Main content: Two-column layout (sidebar + detail) -->
+  <div class="watchlists-container">
+    <!-- Left sidebar: Watchlist list -->
+    <aside class="watchlist-sidebar">
+      <ul *ngIf="watchlists().length > 0" class="watchlist-list">
+        <li *ngFor="let wl of watchlists(); trackBy: trackById" class="watchlist-summary-item">
+          <button
+            type="button"
+            class="watchlist-open-button"
+            [ngClass]="toneClass(wl.id)"
+            [class.active]="wl.id === selectedWatchlist()?.id"
+            [attr.aria-pressed]="wl.id === selectedWatchlist()?.id"
+            (click)="openWatchlist(wl.id)"
+          >
+            <span class="wl-avatar" aria-hidden="true">{{ watchlistInitial(wl.name) }}</span>
+            <span class="wl-meta">
+              <strong>{{ wl.name }}</strong>
+              <span class="wl-count">{{ wl.entryCount }} instrument<span *ngIf="wl.entryCount !== 1">s</span></span>
+            </span>
+          </button>
+        </li>
+      </ul>
 
-  <div *ngIf="!isLoading() && watchlists().length === 0" class="empty-state">
-    <strong>No watchlists yet</strong>
-    <span>Create one above to get started!</span>
-  </div>
+      <div *ngIf="!isLoading() && watchlists().length === 0" class="empty-state">
+        <strong>No watchlists yet</strong>
+        <span>Create one above to get started!</span>
+      </div>
+    </aside>
 
-  <!-- Watchlist detail -->
-  <section *ngIf="selectedWatchlist() as watchlist" class="watchlist-detail" [ngClass]="toneClass(watchlist.id)">
+    <!-- Right panel: Watchlist detail -->
+    <main class="watchlist-main">
+      <section *ngIf="selectedWatchlist() as watchlist" class="watchlist-detail" [ngClass]="toneClass(watchlist.id)">
     <!-- Header -->
     <div class="watchlist-detail-header">
       <span class="wl-avatar large" aria-hidden="true">{{ watchlistInitial(watchlist.name) }}</span>
@@ -160,14 +165,16 @@
       </ng-container>
     </div>
 
-    <!-- Add instrument search -->
-    <div class="add-instrument-section">
-      <h4>Add Instruments to Watchlist</h4>
-      <app-instrument-search
-        (instrumentAdded)="addInstrument($event)"
-        [disabled]="isSavingWatchlist()"
-      ></app-instrument-search>
-    </div>
+     <!-- Add instrument search -->
+     <div class="add-instrument-section watchlist-form">
+       <h4>Add Instruments to Watchlist</h4>
+       <app-instrument-search
+         placeholder="Add symbol to watchlist"
+         (instrumentAdded)="addInstrument($event)"
+         [disabled]="isSavingWatchlist()"
+         data-testid="watchlist-instrument-search"
+       ></app-instrument-search>
+     </div>
 
     <!-- Empty state -->
     <div *ngIf="watchlist.instruments.length === 0" class="empty-state">
@@ -204,7 +211,7 @@
                 <strong>{{ instrument.symbol }}</strong>
               </span>
           </td>
-          <td class="num">${{ formatPrice(instrument.latestPrice?.price) }}</td>
+          <td class="num">{{ getCurrencySymbol(instrument.symbol) }}{{ formatPrice(instrument.latestPrice?.price) }}</td>
           <td class="num">
               <span class="change-pill" [ngClass]="getChangeClass(instrument.latestPrice?.change)">
                 {{ changeArrow(instrument.latestPrice?.change) }}
@@ -232,9 +239,16 @@
           </td>
         </tr>
         </tbody>
-      </table>
-    </div>
-  </section>
+       </table>
+     </div>
+      </section>
+
+      <div *ngIf="!selectedWatchlist()" class="empty-state">
+        <strong>No watchlist selected</strong>
+        <span>Select a watchlist from the left to view its instruments.</span>
+      </div>
+    </main>
+  </div>
 </section>
 
 <!-- Instrument popup -->
@@ -259,7 +273,7 @@
 
     <div class="detail-hero" [ngClass]="getChangeClass(instrument.latestPrice?.change)">
       <div class="hero-price">
-        <span class="hero-value">${{ formatPrice(instrument.latestPrice?.price) }}</span>
+        <span class="hero-value">{{ getCurrencySymbol(instrument.symbol) }}{{ formatPrice(instrument.latestPrice?.price) }}</span>
         <span class="currency-badge" *ngIf="instrument.latestPrice?.currency">{{ instrument.latestPrice?.currency }}</span>
       </div>
       <span class="change-pill" [ngClass]="getChangeClass(instrument.latestPrice?.change)">
@@ -270,10 +284,10 @@
     </div>
 
     <dl class="detail-grid">
-      <div class="detail-card">
-        <dt>Previous close</dt>
-        <dd>${{ formatPrice(instrument.latestPrice?.previousClose) }}</dd>
-      </div>
+       <div class="detail-card">
+         <dt>Previous close</dt>
+         <dd>{{ getCurrencySymbol(instrument.symbol) }}{{ formatPrice(instrument.latestPrice?.previousClose) }}</dd>
+       </div>
 
       <div class="detail-card">
         <dt>Market state</dt>

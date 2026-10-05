@@ -27,7 +27,7 @@ describe('Token interceptor', () => {
   it('request to platform API carries the bearer token', async () => {
     tokenStorage.setToken('abc-123');
     const ctx = { url: 'http://localhost:8080/api/v1/accounts/1', init: { headers: {} } as RequestInit };
-    const out = await interceptor(ctx as any);
+    const out = await interceptor.pre(ctx as any);
     const headers = (out.init as any).headers;
     expect(headers['Authorization'] || headers['authorization']).toBe(`Bearer abc-123`);
   });
@@ -35,7 +35,7 @@ describe('Token interceptor', () => {
   it('request to third-party origin does not carry the bearer token', async () => {
     tokenStorage.setToken('abc-123');
     const ctx = { url: 'https://third.party.net/data', init: { headers: {} } as RequestInit };
-    const out = await interceptor(ctx as any);
+    const out = await interceptor.pre(ctx as any);
     const headers = (out.init as any).headers;
     expect(headers['Authorization'] || headers['authorization']).toBeUndefined();
   });
@@ -44,7 +44,7 @@ describe('Token interceptor', () => {
     tokenStorage.setToken('abc-123');
     for (const path of ['/auth/login', '/auth/register', '/auth/refresh']) {
       const ctx = { url: `http://localhost:3000${path}`, init: { headers: {} } as RequestInit };
-      const out = await interceptor(ctx as any);
+      const out = await interceptor.pre(ctx as any);
       const headers = (out.init as any).headers;
       expect(headers['Authorization'] || headers['authorization']).toBeUndefined();
     }
@@ -55,7 +55,7 @@ describe('Token interceptor', () => {
       url: 'http://localhost:8080/api/v1/accounts/1',
       init: { headers: { Authorization: 'Bearer existing' } } as RequestInit
     };
-    const out = await interceptor(ctx as any);
+    const out = await interceptor.pre(ctx as any);
     const headers = (out.init as any).headers;
     // interceptor should NOT overwrite an existing Authorization header
     expect(headers['Authorization'] || headers['authorization']).toBe('Bearer existing');
@@ -65,7 +65,7 @@ describe('Token interceptor', () => {
     tokenStorage.setToken('abc-123');
     // this is not a valid URL and will throw inside the interceptor's new URL(...) call
     const ctx = { url: 'not-a-url', init: { headers: {} } as RequestInit };
-    const out = await interceptor(ctx as any);
+    const out = await interceptor.pre(ctx as any);
     const headers = (out.init as any).headers;
     // on error the interceptor returns the original init unchanged (no Authorization added)
     expect(headers['Authorization'] || headers['authorization']).toBeUndefined();
