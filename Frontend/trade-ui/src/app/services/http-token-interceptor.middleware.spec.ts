@@ -12,7 +12,7 @@ describe('createTokenInterceptor', () => {
     const interceptor = createTokenInterceptor(ts as any, { allowedOrigins: ['https://api.example'] });
 
     const ctx = { url: 'https://api.example/path', init: { headers: {} } };
-    const out = await interceptor(ctx);
+    const out = await interceptor.pre(ctx);
     expect((out.init.headers as Record<string,string>)['Authorization']).toBe('Bearer abc123');
   });
 
@@ -21,7 +21,7 @@ describe('createTokenInterceptor', () => {
     const interceptor = createTokenInterceptor(ts as any, { allowedOrigins: ['https://other'] });
 
     const ctx = { url: 'https://api.example/path', init: { headers: {} } };
-    const out = await interceptor(ctx);
+    const out = await interceptor.pre(ctx);
     expect(out.init.headers).toBeDefined();
     expect((out.init.headers as Record<string,string>)['Authorization']).toBeUndefined();
   });
@@ -31,7 +31,7 @@ describe('createTokenInterceptor', () => {
     const interceptor = createTokenInterceptor(ts as any, { allowedOrigins: ['https://api.example'] });
 
     const ctx = { url: 'https://api.example/path', init: { headers: { Authorization: 'Basic xyz' } } };
-    const out = await interceptor(ctx);
+    const out = await interceptor.pre(ctx);
     expect((out.init.headers as Record<string,string>)['Authorization']).toBe('Basic xyz');
   });
 
@@ -41,7 +41,7 @@ describe('createTokenInterceptor', () => {
     const interceptor = createTokenInterceptor(ts as any, { allowedOrigins: ['https://api.example'] });
 
     const ctx = { url: 'https://api.example/path', init: { headers: {} } };
-    const out = await interceptor(ctx);
+    const out = await interceptor.pre(ctx);
     expect((out.init.headers as Record<string,string>)['Authorization']).toBeUndefined();
   });
 
@@ -50,7 +50,7 @@ describe('createTokenInterceptor', () => {
     const interceptor = createTokenInterceptor(ts as any, { allowedOrigins: ['https://api.example'], unauthenticatedPaths: ['/auth/login'] });
 
     const ctx = { url: 'https://api.example/auth/login', init: { headers: {} } };
-    const out = await interceptor(ctx);
+    const out = await interceptor.pre(ctx);
     expect((out.init.headers as Record<string,string>)['Authorization']).toBeUndefined();
   });
 
@@ -61,7 +61,7 @@ describe('createTokenInterceptor', () => {
     const headers = new Headers();
     headers.append('x-test', '1');
     const ctx = { url: 'https://api.example/path', init: { headers } };
-    const out = await interceptor(ctx);
+    const out = await interceptor.pre(ctx);
     expect((out.init.headers as Record<string,string>)['x-test']).toBe('1');
     expect((out.init.headers as Record<string,string>)['Authorization']).toBe('Bearer abc123');
   });

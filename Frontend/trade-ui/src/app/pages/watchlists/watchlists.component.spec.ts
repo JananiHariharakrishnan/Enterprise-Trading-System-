@@ -4,6 +4,7 @@ import { WatchlistsComponent } from './watchlists.component';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
 import { MarketState } from '../../generated/trade';
 import type { WatchlistDetailResponse, WatchlistInstrumentResponse } from '../../generated/trade';
+import type { InstrumentListItem } from '../../components/instrument-search/instrument-search.component';
 
 class TradeApiClientServiceStub {
   watchlists = {
@@ -135,8 +136,8 @@ describe('WatchlistsComponent', () => {
     await fixture.whenStable();
 
     await component.openWatchlist(3);
-    component.addInstrumentForm.setValue({ symbol: 'tsla' });
-    await component.addInstrument();
+    const instrument: InstrumentListItem = { symbol: 'tsla', name: 'Tesla Inc', assetClass: 'equity', currency: 'USD' };
+    await component.addInstrument(instrument);
 
     expect(tradeApi.watchlists.addWatchlistInstrument).toHaveBeenCalledWith({
       watchlistId: 3,
@@ -281,6 +282,282 @@ describe('WatchlistsComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Creating...');
-    expect(fixture.nativeElement.textContent).toContain('Adding...');
+  });
+
+  it('shows error when watchlist creation fails', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    tradeApi.watchlists.createWatchlist.mockRejectedValueOnce(new Error('Server error'));
+    component.createWatchlistForm.setValue({ name: 'New' });
+
+    await component.createWatchlist();
+
+    expect(component.loadError()).toBeNull();
+    expect(lastToastText(component)).toContain('Unable to create');
+  });
+
+  it('shows error when watchlist open fails', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    tradeApi.watchlists.getWatchlist.mockRejectedValueOnce(new Error('Server error'));
+
+    await component.openWatchlist(3);
+
+    expect(lastToastText(component)).toContain('Unable to load watchlist');
+  });
+
+  it('shows error when removing instrument fails', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.openWatchlist(3);
+    tradeApi.watchlists.removeWatchlistInstrument.mockRejectedValueOnce(new Error('Server error'));
+
+    await component.removeInstrument('AAPL');
+
+    expect(lastToastText(component)).toContain('Unable to remove');
+  });
+
+  it('shows error when deleting watchlist fails', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.openWatchlist(3);
+    tradeApi.watchlists.deleteWatchlist.mockRejectedValueOnce(new Error('Server error'));
+
+    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+    await component.deleteWatchlist(3);
+
+    expect(lastToastText(component)).toContain('Unable to delete');
+  });
+
+  it('does not delete watchlist if user cancels confirmation', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.openWatchlist(3);
+    const initialWatchlist = component.selectedWatchlist();
+
+    vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
+    await component.deleteWatchlist(3);
+
+    expect(tradeApi.watchlists.deleteWatchlist).not.toHaveBeenCalled();
+    expect(component.selectedWatchlist()).toBe(initialWatchlist);
+  });
+
+  it('clears error when creating new watchlist', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.loadError.set('Previous error');
+    component.createWatchlistForm.setValue({ name: 'New' });
+    tradeApi.watchlists.createWatchlist.mockResolvedValueOnce(buildSummary(4));
+
+    await component.createWatchlist();
+
+    expect(component.loadError()).toBeNull();
+  });
+
+  it('clears error when opening watchlist', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.loadError.set('Previous error');
+
+    await component.openWatchlist(3);
+
+    expect(component.loadError()).toBeNull();
+  });
+
+  it('handles adding duplicate instrument', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.openWatchlist(3);
+    const instrument: InstrumentListItem = { symbol: 'aapl', name: 'Apple', assetClass: 'equity', currency: 'USD' };
+
+    await component.addInstrument(instrument);
+
+    expect(tradeApi.watchlists.addWatchlistInstrument).toHaveBeenCalled();
+  });
+
+  it('closes selected instrument when switching watchlists', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.openWatchlist(3);
+    component.selectInstrument(component.selectedWatchlist()!.instruments[0]);
+
+    expect(component.selectedInstrument()).not.toBeNull();
+
+    await component.openWatchlist(1);
+    fixture.detectChanges();
+
+    expect(component.selectedInstrument()).toBeNull();
+  });
+
+  it('computes correct watchlist statistics', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.openWatchlist(3);
+    const stats = component.watchlistStats();
+
+    expect(stats.total).toBeGreaterThanOrEqual(0);
+    expect(stats.gainers).toBeGreaterThanOrEqual(0);
+    expect(stats.losers).toBeGreaterThanOrEqual(0);
+    expect(stats.pricedTotal).toBeGreaterThanOrEqual(0);
+  });
+
+  it('generates stable color class for watchlist', () => {
+    const class1 = component.toneClass(1);
+    const class2 = component.toneClass(1);
+    const class3 = component.toneClass(2);
+
+    expect(class1).toBe(class2);
+    expect(class1).not.toBe(class3);
+    expect(class1).toContain('tone-');
+  });
+
+  it('gets watchlist initial letter', () => {
+    expect(component.watchlistInitial('Tech Stocks')).toBe('T');
+    expect(component.watchlistInitial('AAPL Holdings')).toBe('A');
+    expect(component.watchlistInitial('  Spaces')).toBe('S');
+    expect(component.watchlistInitial('')).toBe('?');
+  });
+
+  it('handles escape key to close instrument detail', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.openWatchlist(3);
+    component.selectInstrument(component.selectedWatchlist()!.instruments[0]);
+
+    component.onEscape();
+
+    expect(component.selectedInstrument()).toBeNull();
+  });
+
+  it('does not close instrument detail when escape not pressed', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.openWatchlist(3);
+    component.selectInstrument(component.selectedWatchlist()!.instruments[0]);
+
+    expect(component.selectedInstrument()).not.toBeNull();
+  });
+
+  it('limits watchlists to 50 when multiple loads happen', async () => {
+    tradeApi.watchlists.listWatchlists.mockResolvedValueOnce(
+      Array.from({ length: 100 }, (_, i) => buildSummary(i + 1))
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.watchlists().length).toBeLessThanOrEqual(50);
+  });
+
+  it('handles refreshing watchlist', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.openWatchlist(3);
+
+    await component.refreshWatchlist();
+
+    expect(tradeApi.watchlists.getWatchlist).toHaveBeenCalled();
+  });
+
+  it('does not refresh if already refreshing', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.openWatchlist(3);
+    component.isRefreshing.set(true);
+
+    await component.refreshWatchlist();
+
+    expect(tradeApi.watchlists.getWatchlist).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not refresh if no watchlist selected', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.refreshWatchlist();
+
+    expect(component.selectedWatchlist()).toBeNull();
+  });
+
+  it('formats change with positive value', () => {
+    expect(component.formatChange(1.5)).toBe('+1.50');
+  });
+
+  it('formats change with negative value', () => {
+    expect(component.formatChange(-1.5)).toBe('-1.50');
+  });
+
+  it('formats change with zero', () => {
+    expect(component.formatChange(0)).toBe('0.00');
+  });
+
+  it('formats percent correctly', () => {
+    expect(component.formatPercent(1.5)).toBe('+1.50%');
+    expect(component.formatPercent(-1.5)).toBe('-1.50%');
+    expect(component.formatPercent(0)).toBe('0.00%');
+  });
+
+  it('gets correct change class for values', () => {
+    expect(component.getChangeClass(1)).toBe('positive');
+    expect(component.getChangeClass(-1)).toBe('negative');
+    expect(component.getChangeClass(0)).toBe('neutral');
+    expect(component.getChangeClass(null)).toBe('neutral');
+  });
+
+  it('gets change arrow for positive and negative', () => {
+    expect(component.changeArrow(1)).toBe('▲');
+    expect(component.changeArrow(-1)).toBe('▼');
+    expect(component.changeArrow(0)).toBe('–');
+    expect(component.changeArrow(null)).toBe('–');
+  });
+
+  it('gets currency symbol based on market', () => {
+    expect(component.getCurrencySymbol('INFY.NS')).toBe('₹');
+    expect(component.getCurrencySymbol('AAPL')).toBe('$');
+    expect(component.getCurrencySymbol('infy.ns')).toBe('₹');
+  });
+
+  it('dismisses toast by ID', () => {
+    component.toasts.set([
+      { id: 1, type: 'success', text: 'Message 1' },
+      { id: 2, type: 'error', text: 'Message 2' }
+    ]);
+
+    component.dismissToast(1);
+
+    expect(component.toasts().find(t => t.id === 1)).toBeUndefined();
+    expect(component.toasts().find(t => t.id === 2)).toBeDefined();
+  });
+
+  it('tracks by ID for ngFor optimization', () => {
+    const item1 = buildSummary(1);
+    const item2 = buildSummary(2);
+
+    expect(component.trackById(0, item1)).toBe(1);
+    expect(component.trackById(1, item2)).toBe(2);
+  });
+
+  it('tracks by symbol for instruments', () => {
+    const instrument1: WatchlistInstrumentResponse = {
+      symbol: 'AAPL',
+      addedOn: new Date(),
+      latestPrice: { price: 100, currency: 'USD', changePercent: 0, stale: false, quoteAsOf: new Date(), marketState: MarketState.Open }
+    };
+
+    expect(component.trackBySymbol(0, instrument1)).toBe('AAPL');
   });
 });

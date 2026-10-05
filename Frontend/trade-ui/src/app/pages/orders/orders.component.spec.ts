@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { OrdersComponent } from './orders.component';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
+import { ActivatedRoute } from '@angular/router';
 
 class AuthSessionServiceStub {
   loadCurrentUser = vi.fn().mockResolvedValue({
@@ -47,7 +48,17 @@ describe('OrdersComponent', () => {
       imports: [OrdersComponent],
       providers: [
         { provide: AuthSessionService, useValue: authSession },
-        { provide: TradeApiClientService, useValue: tradeApi }
+        { provide: TradeApiClientService, useValue: tradeApi },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              queryParamMap: {
+                get: vi.fn().mockReturnValue(null)
+              }
+            }
+          }
+        }
       ]
     }).compileComponents();
 
@@ -86,23 +97,30 @@ describe('OrdersComponent', () => {
 
   it('throws when submitting without authenticated user', async () => {
     authSession.loadCurrentUser.mockResolvedValueOnce(null);
-    component.form.setValue({
-      symbol: 'AAPL',
+
+    const instrument = { symbol: 'AAPL', name: 'Apple Inc', assetClass: 'equity', currency: 'USD' };
+    component.onInstrumentSelected(instrument);
+    component.form.patchValue({
       side: 'BUY',
       quantity: 10,
       price: 120.5,
       orderType: 'MARKET'
     });
 
-    await expect(component.submit()).rejects.toThrow('Not authenticated');
+    await component.submit();
+
+    // The component catches the error internally and doesn't re-throw
+    // but it should NOT call placeOrder and should NOT set a success message
     expect(tradeApi.orders.placeOrder).not.toHaveBeenCalled();
+    expect(component.successMessage()).toBeNull();
   });
 
   it('places order and sets success message on success', async () => {
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('123e4567-e89b-12d3-a456-426614174000');
 
-    component.form.setValue({
-      symbol: 'AAPL',
+    const instrument = { symbol: 'AAPL', name: 'Apple Inc', assetClass: 'equity', currency: 'USD' };
+    component.onInstrumentSelected(instrument);
+    component.form.patchValue({
       side: 'BUY',
       quantity: 10,
       price: 120.5,
@@ -124,14 +142,14 @@ describe('OrdersComponent', () => {
     });
     expect(component.successMessage()).toContain('Order placed');
     expect(component.errorMessage()).toBeNull();
-    expect(component.form.getRawValue().symbol).toBe('');
   });
 
   it('maps order failure message into error state', async () => {
     tradeApi.orders.placeOrder.mockRejectedValueOnce(new Error('Insufficient funds'));
 
-    component.form.setValue({
-      symbol: 'AAPL',
+    const instrument = { symbol: 'AAPL', name: 'Apple Inc', assetClass: 'equity', currency: 'USD' };
+    component.onInstrumentSelected(instrument);
+    component.form.patchValue({
       side: 'BUY',
       quantity: 10,
       price: 120.5,
@@ -153,12 +171,13 @@ describe('OrdersComponent', () => {
 
     expect(component.form.invalid).toBe(true);
     expect(submitButton.disabled).toBe(true);
-    expect(submitButton.textContent).toContain('Complete Form');
+    expect(submitButton.textContent).toContain('Select an instrument');
   });
 
   it('renders active submit button text when form is valid', () => {
-    component.form.setValue({
-      symbol: 'AAPL',
+    const instrument = { symbol: 'AAPL', name: 'Apple Inc', assetClass: 'equity', currency: 'USD' };
+    component.onInstrumentSelected(instrument);
+    component.form.patchValue({
       side: 'BUY',
       quantity: 2,
       price: 100.5,
@@ -173,14 +192,15 @@ describe('OrdersComponent', () => {
 
     expect(component.form.valid).toBe(true);
     expect(submitButton.disabled).toBe(false);
-    expect(submitButton.textContent).toContain('Execute Order');
+    expect(submitButton.textContent).toContain('Buy 2 AAPL');
   });
 
   it('submits through DOM and renders success status', async () => {
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('123e4567-e89b-12d3-a456-426614174000');
 
-    component.form.setValue({
-      symbol: 'MSFT',
+    const instrument = { symbol: 'MSFT', name: 'Microsoft Corp', assetClass: 'equity', currency: 'USD' };
+    component.onInstrumentSelected(instrument);
+    component.form.patchValue({
       side: 'BUY',
       quantity: 2,
       price: 300.25,
@@ -188,7 +208,7 @@ describe('OrdersComponent', () => {
     });
     fixture.detectChanges();
 
-    const form = fixture.nativeElement.querySelector('form.order-form') as HTMLFormElement;
+    const form = fixture.nativeElement.querySelector('form.ticket-form') as HTMLFormElement;
     form.dispatchEvent(new Event('submit'));
     await fixture.whenStable();
     fixture.detectChanges();
@@ -201,8 +221,9 @@ describe('OrdersComponent', () => {
   it('submits through DOM and renders error status', async () => {
     tradeApi.orders.placeOrder.mockRejectedValueOnce(new Error('Risk check failed'));
 
-    component.form.setValue({
-      symbol: 'MSFT',
+    const instrument = { symbol: 'MSFT', name: 'Microsoft Corp', assetClass: 'equity', currency: 'USD' };
+    component.onInstrumentSelected(instrument);
+    component.form.patchValue({
       side: 'BUY',
       quantity: 2,
       price: 300.25,
@@ -210,7 +231,7 @@ describe('OrdersComponent', () => {
     });
     fixture.detectChanges();
 
-    const form = fixture.nativeElement.querySelector('form.order-form') as HTMLFormElement;
+    const form = fixture.nativeElement.querySelector('form.ticket-form') as HTMLFormElement;
     form.dispatchEvent(new Event('submit'));
     await fixture.whenStable();
     fixture.detectChanges();

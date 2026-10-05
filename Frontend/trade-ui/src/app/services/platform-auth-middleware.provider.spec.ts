@@ -35,29 +35,63 @@ describe('platform auth middleware provider', () => {
   it('reloads page on 401 response', async () => {
     const mockTokenStorage = new MockTokenStorage();
     const clearSpy = vi.spyOn(mockTokenStorage, 'clear');
-    const reloadSpy = vi.spyOn(window.location, 'reload');
-    
+    const reloadSpy = vi.fn();
+
     const middleware = createPlatformAuthMiddleware(mockTokenStorage);
     const response = new Response('Unauthorized', { status: 401 });
-    
+
+    // Mock setTimeout and window.location.reload
+    vi.useFakeTimers();
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      value: { ...originalLocation, reload: reloadSpy },
+      writable: true,
+    });
+
     await middleware.post?.({ response } as any);
-    
+
     expect(clearSpy).toHaveBeenCalled();
+
+    vi.runAllTimers();
     expect(reloadSpy).toHaveBeenCalled();
+
+    // Restore
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+    });
+    vi.useRealTimers();
   });
 
   it('reloads page on 403 response', async () => {
     const mockTokenStorage = new MockTokenStorage();
     const clearSpy = vi.spyOn(mockTokenStorage, 'clear');
-    const reloadSpy = vi.spyOn(window.location, 'reload');
-    
+    const reloadSpy = vi.fn();
+
     const middleware = createPlatformAuthMiddleware(mockTokenStorage);
     const response = new Response('Forbidden', { status: 403 });
-    
+
+    // Mock setTimeout and window.location.reload
+    vi.useFakeTimers();
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      value: { ...originalLocation, reload: reloadSpy },
+      writable: true,
+    });
+
     await middleware.post?.({ response } as any);
-    
+
     expect(clearSpy).toHaveBeenCalled();
+
+    vi.runAllTimers();
     expect(reloadSpy).toHaveBeenCalled();
+
+    // Restore
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+    });
+    vi.useRealTimers();
   });
 });
 
