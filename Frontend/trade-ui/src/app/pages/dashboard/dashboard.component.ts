@@ -123,10 +123,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
        symbol,
        side: String(a.side ?? '').toUpperCase(),
        quantity: a.quantity,
-       price: a.price ?? a.limitPrice ?? null,
+       price: a.executedPrice ?? a.price ?? a.limitPrice ?? null,
        currency: quoteCurrency(symbol, this.currency()),
        status: String(a.status ?? '').toUpperCase(),
-       time: a.createdAt ?? a.placedAt ?? a.timestamp ?? null
+       time: a.createdOn ?? a.createdAt ?? a.placedAt ?? a.timestamp ?? null
      };
    })
  );
