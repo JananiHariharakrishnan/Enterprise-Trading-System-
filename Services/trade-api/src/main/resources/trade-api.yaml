@@ -798,24 +798,43 @@ components:
           type: string
           description: The order identifier, displayed with an `ORD-` prefix over the stored UUID.
           example: ORD-6f2b1c2a-6a1e-4a4f-9c0d-2f7a1b3c4d5e
+
         status:
           $ref: '#/components/schemas/OrderStatus'
+
         message:
           type: string
           description: Human-readable outcome. For display only. Never branch on this string.
           example: Order accepted
+
         symbol:
           type: string
           example: ACME
+
         side:
           $ref: '#/components/schemas/OrderSide'
+
         quantity:
           type: integer
           format: int32
           example: 100
+
         price:
           type: number
           format: double
+          example: 25.50
+
+        originalCurrency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code of the original order price.
+          example: USD
+
+        originalPrice:
+          type: number
+          format: double
+          description: Original price submitted before currency conversion.
           example: 25.50
 
     OrderHistoryEntry:

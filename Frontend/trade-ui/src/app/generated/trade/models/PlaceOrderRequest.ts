@@ -2,10 +2,10 @@
 /* eslint-disable */
 /**
  * Trade REST API
- * Binding contract for the Sprint 6 Spring Boot service. Implement it exactly. The Angular UI generates its typed client from this file, so a field renamed here is a compile error there.  ## Identifiers  `accountId` means the numeric surrogate key `ACCOUNTS.id` everywhere in this contract: in the path parameter, in the order request body, and in the JWT `accountId` claim. The string business identifier lives on `ACCOUNTS.account_id` and is returned as `AccountResponse.accountId`, which is the one place the name carries the other meaning. Where any other material uses the name loosely, this contract is the one that binds.  ## Order lifecycle and the Sprint 7 change  In Sprint 6 there is no Trade Executor, so `POST /api/v1/orders` validates, fills and persists inside one request and returns `FILLED` or `REJECTED`.  From Sprint 7 execution is asynchronous. The endpoint validates, persists the order with status `NEW`, publishes it to the `orders` Kafka topic and returns `NEW`. The Trade Executor consumes the order, prices it against a live Fauxnance quote, applies the fill rules, updates the order, the cash balance and the position in one database transaction, and publishes the outcome to `trade-events`.  Both behaviours are valid responses under this contract. Clients must handle an order that is still `NEW` when the response arrives.  ## Business rules  Enforced in the order given. The first failure wins and no later rule is evaluated.  | # | Rule | Error | |---|---|---| | 1 | The account must exist | `ACC-404`, 404 | | 2 | The account must be `ACTIVE` | `ACC-403`, 403 | | 3 | The instrument must exist and be tradable | `INS-404`, 404 | | 4 | Quantity must be greater than zero | `VAL-422`, 422 | | 5 | Price must be greater than zero | `VAL-422`, 422 | | 6 | BUY: cash balance must be at least quantity multiplied by price | `ORD-400`, 400 | | 7 | SELL: held quantity must be at least the order quantity | `ORD-409`, 409 | | 8 | The idempotency key must be unique | `ORD-409`, 409 |  Rules 9 and 10 have no error code. Cash and position update atomically, in one transaction. Every order is recorded, including rejected ones, because the order table is the audit trail.  Rule 8 is enforced by the unique constraint on `orders.idempotency_key`, not by a read followed by a write. A read-then-write check has a race that two concurrent requests will find.  ## Authentication  Every `/api/v1/_**` route requires a valid signed JWT in the `Authorization` header. A missing, malformed, expired or wrongly signed token is `AUTH-401`, 401. A valid token whose `accountId` claim does not match the account being addressed is `ACC-403`, 403: a token proves who you are, not what you may reach.
+ * Binding contract for the Sprint 6 Spring Boot service. Implement it exactly. The Angular UI generates its typed client from this file, so a field renamed here is a compile error there.  ## Identifiers  `accountId` means the numeric surrogate key `ACCOUNTS.id` everywhere in this contract: in the path parameter, in the order request body, and in the JWT `accountId` claim. The string business identifier lives on `ACCOUNTS.account_id` and is returned as `AccountResponse.accountId`, which is the one place the name carries the other meaning. Where any other material uses the name loosely, this contract is the one that binds.  ## Order lifecycle and the Sprint 7 change  In Sprint 6 there is no Trade Executor, so `POST /api/v1/orders` validates, fills and persists inside one request and returns `FILLED` or `REJECTED`.  From Sprint 7 execution is asynchronous. The endpoint validates, persists the order with status `NEW`, publishes it to the `orders` Kafka topic and returns `NEW`. The Trade Executor consumes the order, prices it against a live Fauxnance quote, applies the fill rules, updates the order, the cash balance and the position in one database transaction, and publishes the outcome to `trade-events`.  Both behaviours are valid responses under this contract. Clients must handle an order that is still `NEW` when the response arrives.  ## Business rules  Enforced in the order given. The first failure wins and no later rule is evaluated.  | # | Rule | Error | |---|---|---| | 1 | The account must exist | `ACC-404`, 404 | | 2 | The account must be `ACTIVE` | `ACC-403`, 403 | | 3 | The instrument must exist and be tradable | `INS-404`, 404 | | 4 | Quantity must be greater than zero | `VAL-422`, 422 | | 5 | Price must be greater than zero | `VAL-422`, 422 | | 6 | BUY: cash balance must be at least quantity multiplied by price | `ORD-400`, 400 | | 7 | SELL: held quantity must be at least the order quantity | `ORD-409`, 409 | | 8 | The idempotency key must be unique | `ORD-409`, 409 |  Rules 9 and 10 have no error code. Cash and position update atomically, in one transaction. Every order is recorded, including rejected ones, because the order table is the audit trail.  Rule 8 is enforced by the unique constraint on `orders.idempotency_key`, not by a read followed by a write. A read-then-write check has a race that two concurrent requests will find.  ## Authentication  Every `/api/v1/_**` route requires a valid signed JWT in the `Authorization` header. A missing, malformed, expired or wrongly signed token is `AUTH-401`, 401. A valid token whose `accountId` claim does not match the account being addressed is `ACC-403`, 403: a token proves who you are, not what you may reach. 
  *
  * The version of the OpenAPI document: 1.0.0
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
@@ -21,7 +21,7 @@ import {
 } from './OrderSide';
 
 /**
- *
+ * 
  * @export
  * @interface PlaceOrderRequest
  */
@@ -37,13 +37,13 @@ export interface PlaceOrderRequest {
      * Instrument symbol, matching `INSTRUMENTS.symbol` and the Fauxnance symbol scheme:
      * a plain ticker for US equities, a `.NS` or `.BO` suffix for NSE or BSE, `FX:` for a
      * currency pair, `X:` for crypto.
-     *
+     * 
      * @type {string}
      * @memberof PlaceOrderRequest
      */
     symbol: string;
     /**
-     *
+     * 
      * @type {OrderSide}
      * @memberof PlaceOrderRequest
      */
@@ -58,7 +58,7 @@ export interface PlaceOrderRequest {
      * Limit price per unit, to two decimal places. Must be greater than zero, business rule 5.
      * Serialise as a JSON number and hold it as `BigDecimal` in Java. Never use `double` for
      * money in the domain.
-     *
+     * 
      * @type {number}
      * @memberof PlaceOrderRequest
      */
@@ -66,18 +66,11 @@ export interface PlaceOrderRequest {
     /**
      * Client-generated unique request identifier, normally a UUID. Enforced by a unique
      * constraint on `orders.idempotency_key`. Reuse returns `ORD-409`.
-     *
+     * 
      * @type {string}
      * @memberof PlaceOrderRequest
      */
     idempotencyKey: string;
-    /**
-     * Currency in which the price was entered (USD or INR)
-     *
-     * @type {string}
-     * @memberof PlaceOrderRequest
-     */
-    priceCurrency?: string;
 }
 
 
@@ -104,7 +97,7 @@ export function PlaceOrderRequestFromJSONTyped(json: any, ignoreDiscriminator: b
         return json;
     }
     return {
-
+        
             ...json,
         'accountId': json['accountId'],
         'symbol': json['symbol'],
@@ -112,7 +105,6 @@ export function PlaceOrderRequestFromJSONTyped(json: any, ignoreDiscriminator: b
         'quantity': json['quantity'],
         'price': json['price'],
         'idempotencyKey': json['idempotencyKey'],
-        'priceCurrency': json['priceCurrency'] == null ? undefined : json['priceCurrency'],
     };
 }
 
@@ -121,7 +113,7 @@ export function PlaceOrderRequestToJSON(value?: PlaceOrderRequest | null): any {
         return value;
     }
     return {
-
+        
             ...value,
         'accountId': value['accountId'],
         'symbol': value['symbol'],
@@ -129,7 +121,6 @@ export function PlaceOrderRequestToJSON(value?: PlaceOrderRequest | null): any {
         'quantity': value['quantity'],
         'price': value['price'],
         'idempotencyKey': value['idempotencyKey'],
-        'priceCurrency': value['priceCurrency'],
     };
 }
 
