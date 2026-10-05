@@ -165,14 +165,16 @@
       </ng-container>
     </div>
 
-    <!-- Add instrument search -->
-    <div class="add-instrument-section">
-      <h4>Add Instruments to Watchlist</h4>
-      <app-instrument-search
-        (instrumentAdded)="addInstrument($event)"
-        [disabled]="isSavingWatchlist()"
-      ></app-instrument-search>
-    </div>
+     <!-- Add instrument search -->
+     <div class="add-instrument-section watchlist-form">
+       <h4>Add Instruments to Watchlist</h4>
+       <app-instrument-search
+         placeholder="Add symbol to watchlist"
+         (instrumentAdded)="addInstrument($event)"
+         [disabled]="isSavingWatchlist()"
+         data-testid="watchlist-instrument-search"
+       ></app-instrument-search>
+     </div>
 
     <!-- Empty state -->
     <div *ngIf="watchlist.instruments.length === 0" class="empty-state">

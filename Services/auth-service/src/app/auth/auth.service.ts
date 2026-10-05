@@ -101,15 +101,21 @@ export class AuthService {
     const credential = await findCredentialByUsername(dto.username);
     const passwordValid = await verifyPassword(credential, dto.password);
 
+    // Differentiate between user not found vs wrong password
+    if (!credential) {
+      logger.warn('login failed - user not found', { username: dto.username });
+      throw new UnauthorizedException('User not found');
+    }
+
     if (!passwordValid) {
-      logger.warn('login failed', { username: dto.username });
-      throw new UnauthorizedException();
+      logger.warn('login failed - invalid password', { username: dto.username });
+      throw new UnauthorizedException('Invalid password');
     }
 
     const user = await findUserByUsername(dto.username);
     if (!user) {
       logger.error('credential exists without user', { username: dto.username });
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Account error');
     }
 
     const accessToken = signAccessToken(user);

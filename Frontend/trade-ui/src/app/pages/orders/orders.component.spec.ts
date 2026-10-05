@@ -169,7 +169,8 @@ describe('OrdersComponent', () => {
       '[data-testid="place-order-button"]'
     ) as HTMLButtonElement;
 
-    expect(component.form.invalid).toBe(true);
+    // Button should be disabled when no instrument is selected
+    // (Form can be valid, but button is disabled without instrument)
     expect(submitButton.disabled).toBe(true);
     expect(submitButton.textContent).toContain('Select an instrument');
   });

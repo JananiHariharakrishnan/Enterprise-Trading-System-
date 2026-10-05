@@ -56,12 +56,21 @@ export function createTokenInterceptor(tokenStorage: TokenStorageService, opts: 
       const response = context.response as Response;
 
       // Handle session expiration: 401 or 403
+      // But don't do this for unauthenticated paths (like login, register) where 401 is expected
       if (response.status === 401 || response.status === 403) {
-        tokenStorage.clear();
-        // Reload page after configured delay
-        setTimeout(() => {
-          window.location.reload();
-        }, expiryDelay);
+        try {
+          const url = new URL(context.url);
+          // Only clear tokens and reload if this wasn't an unauthenticated path
+          if (!unauthPaths.has(url.pathname)) {
+            tokenStorage.clear();
+            // Reload page after configured delay
+            setTimeout(() => {
+              window.location.reload();
+            }, expiryDelay);
+          }
+        } catch (e) {
+          // URL parsing failed, be safe and don't clear tokens
+        }
       }
 
       return response;

@@ -57,21 +57,23 @@
         <div class="ticket-head">
           <h3>Order ticket</h3>
           <span class="ticket-symbol" *ngIf="selectedInstrument() as instrument">{{ instrument.symbol }}</span>
-        </div>
+         </div>
 
-        <!-- Side -->
-        <div class="seg" role="radiogroup" aria-label="Order side">
-          <label class="seg-option buy">
-            <input type="radio" formControlName="side" value="BUY" data-testid="order-side-buy" />
-            <span>Buy</span>
-          </label>
-          <label class="seg-option sell">
-            <input type="radio" formControlName="side" value="SELL" data-testid="order-side-sell" />
-            <span>Sell</span>
-          </label>
-        </div>
+         <!-- Side -->
+         <div class="field">
+           <label class="field-label" for="side-select">Order side</label>
+           <select
+             id="side-select"
+             class="select"
+             formControlName="side"
+             data-testid="order-side-select"
+           >
+             <option value="BUY">Buy</option>
+             <option value="SELL">Sell</option>
+           </select>
+         </div>
 
-        <!-- Quantity -->
+         <!-- Quantity -->
         <div class="field">
           <label class="field-label" for="quantity-input">Quantity</label>
           <div class="input-wrap" [class.invalid]="quantityError()">
@@ -90,27 +92,26 @@
           </div>
           <p class="field-error" *ngIf="quantityError() as message" role="alert">{{ message }}</p>
           <p class="field-hint" *ngIf="!quantityError()">Number of shares</p>
-        </div>
+         </div>
 
-        <!-- Order type -->
-        <div class="field">
-          <span class="field-label" id="order-type-label">Order type</span>
-          <div class="seg seg-small" role="radiogroup" aria-labelledby="order-type-label">
-            <label class="seg-option neutral">
-              <input type="radio" formControlName="orderType" value="MARKET" data-testid="order-type-market" />
-              <span>Market</span>
-            </label>
-            <label class="seg-option neutral">
-              <input type="radio" formControlName="orderType" value="LIMIT" data-testid="order-type-limit" />
-              <span>Limit</span>
-            </label>
-          </div>
-          <p class="field-hint">
-            {{ orderType() === 'LIMIT' ? 'Fills only at your price or better.' : 'Executes immediately.' }}
-          </p>
-        </div>
+         <!-- Order type -->
+         <div class="field">
+           <label class="field-label" for="order-type-select">Order type</label>
+           <select
+             id="order-type-select"
+             class="select"
+             formControlName="orderType"
+             data-testid="order-type-select"
+           >
+             <option value="MARKET">Market</option>
+             <option value="LIMIT">Limit</option>
+           </select>
+           <p class="field-hint">
+             {{ orderType() === 'LIMIT' ? 'Fills only at your price or better.' : 'Executes immediately.' }}
+           </p>
+         </div>
 
-        <!-- Price -->
+          <!-- Price -->
         <div class="field">
           <label class="field-label" for="price-input">Price per share</label>
           <div class="input-wrap" [class.invalid]="priceError()">

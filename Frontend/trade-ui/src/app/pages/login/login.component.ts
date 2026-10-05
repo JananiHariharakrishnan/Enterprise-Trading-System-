@@ -67,15 +67,21 @@ export class LoginComponent {
   private state: LockoutState = this.loadState();
   private timerId: ReturnType<typeof setInterval> | null = null;
 
-  constructor() {
-    this.destroyRef.onDestroy(() => this.stopTimer());
+   constructor() {
+     this.destroyRef.onDestroy(() => this.stopTimer());
 
-    // If the page is refreshed during a lock, pick the countdown back up.
-    const { lockedUntil, lockDuration } = this.state;
-    if (lockedUntil && lockedUntil > Date.now()) {
-      this.startLock(lockedUntil, lockDuration);
-    }
-  }
+     // If the page is refreshed during a lock, pick the countdown back up.
+     // But only if the lock time hasn't expired yet
+     const { lockedUntil, lockDuration } = this.state;
+     if (lockedUntil && lockedUntil > Date.now()) {
+       // Lock is still active - restore it
+       this.startLock(lockedUntil, lockDuration);
+     } else if (lockedUntil !== null) {
+       // Lock has expired - clear the state completely
+       this.state = { ...EMPTY_STATE };
+       this.saveState();
+     }
+   }
 
   async onSubmit(): Promise<void> {
     if (this.isLocked() || this.isSubmitting()) {
@@ -105,28 +111,56 @@ export class LoginComponent {
       } else {
         await this.router.navigate(['/dashboard']);
       }
-    } catch (error) {
-      if (this.isCredentialFailure(error)) {
-        this.registerFailedAttempt();
-      } else {
-        // Network/server problems are not the user's fault, so they don't count as attempts.
-        const message =
-          error instanceof Error ? error.message : 'Unable to sign in right now. Please try again.';
-        this.submitError.set(message);
-      }
-    } finally {
-      this.isSubmitting.set(false);
-    }
+     } catch (error) {
+       if (this.isWrongPasswordFailure(error)) {
+         // Only count wrong password attempts toward lockout
+         this.registerFailedAttempt();
+       } else {
+         // Network/server problems or user-not-found are not the user's fault
+         const message =
+           error instanceof Error ? error.message : 'Unable to sign in right now. Please try again.';
+         this.submitError.set(message);
+       }
+     } finally {
+       this.isSubmitting.set(false);
+     }
   }
 
-  /**
-   * Decides whether a login error means "wrong username or password".
-   * Adjust this if your AuthSessionService signals bad credentials differently
-   * (for example with an error code).
-   */
-  private isCredentialFailure(error: unknown): boolean {
-    if (error instanceof HttpErrorResponse) {
-      return error.status === 401 || error.status === 403;
+    /**
+     * Decides whether a login error means "wrong password" (counts toward lockout).
+     * "User not found" errors should NOT count toward lockout.
+     */
+    private isWrongPasswordFailure(error: unknown): boolean {
+      if (error instanceof Error) {
+        const message = error.message.toLowerCase();
+        // "User not found" type errors should NOT count toward lockout
+        if (/user.*not.*found|account.*not.*found|no user|username.*does.*not|doesn't exist/i.test(message)) {
+          return false;
+        }
+        // Backend now explicitly sends "Invalid password" for wrong password
+        if (/invalid password|wrong.*password|incorrect.*password/i.test(message)) {
+          return true;
+        }
+        // If message is generic "Invalid username or password", treat as wrong password
+        if (/invalid username or password|wrong username or password/i.test(message)) {
+          return true;
+        }
+      }
+      if (error instanceof HttpErrorResponse && error.status === 401) {
+        // Generic 401 - check if it might be user not found
+        // (shouldn't happen with updated backend, but keeping for safety)
+        return true;
+      }
+      return false;
+    }
+
+   /**
+    * Decides whether a login error means "wrong username or password".
+    * (Legacy method kept for compatibility)
+    */
+   private isCredentialFailure(error: unknown): boolean {
+     if (error instanceof HttpErrorResponse) {
+       return error.status === 401 || error.status === 403;
     }
     if (error instanceof Error) {
       return /authentication required|invalid (credentials|username|password)|unauthori[sz]ed/i.test(

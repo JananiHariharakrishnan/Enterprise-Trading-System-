@@ -33,7 +33,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   readonly selectedInstrument = signal<InstrumentListItem | null>(null);
 
   readonly form = this.fb.group({
-    symbol: ['', [Validators.required]],
+    symbol: [''], // Not required - validated by selectedInstrument() instead
     side: ['BUY', [Validators.required]],
     quantity: [1, [Validators.required, Validators.min(1), Validators.pattern('^[0-9]+$')]],
     price: [0.01, [Validators.required, Validators.min(0.01), Validators.pattern('^\\d+(\\.\\d{1,2})?$')]],

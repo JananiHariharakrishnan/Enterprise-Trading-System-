@@ -24,6 +24,7 @@
       (focus)="onFocus()"
       (click)="onFocus()"
       (keydown)="onKeydown($event)"
+      data-testid="order-symbol-input"
     />
 
     <span class="spinner" *ngIf="isLoading()" aria-hidden="true"></span>
