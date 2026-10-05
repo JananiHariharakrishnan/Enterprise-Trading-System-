@@ -94,21 +94,34 @@
 
     <div class="form-group">
       <label for="phoneNo">Phone Number</label>
-      <input
-        id="phoneNo"
-        type="tel"
-        formControlName="phoneNo"
-        class="form-input"
-        data-testid="profile-phoneNo-input"
-        [readonly]="isSaving()"
-        placeholder="+1 (555) 123-4567"
-      />
-      <small class="form-note">(Optional) 5-20 characters</small>
+      <div class="phone-input-group">
+        <select
+          id="countryCode"
+          formControlName="countryCode"
+          class="form-input country-code-select"
+          data-testid="profile-countryCode-select"
+          [disabled]="isSaving()"
+        >
+          <option *ngFor="let country of countryCodes" [value]="country.code">
+            {{ country.code }} {{ country.country }}
+          </option>
+        </select>
+        <input
+          id="phoneNo"
+          type="tel"
+          formControlName="phoneNo"
+          class="form-input phone-number-input"
+          data-testid="profile-phoneNo-input"
+          [readonly]="isSaving()"
+          placeholder="9876543210"
+        />
+      </div>
+      <small class="form-note">(Optional) 10 digits only. Examples: 9876543210, 5551234567</small>
       <div *ngIf="profileForm.get('phoneNo')?.hasError('minlength') && profileForm.get('phoneNo')?.touched" class="form-error" data-testid="profile-phoneNo-error-minlength">
-        Phone number must be at least 5 characters
+        Phone number must be exactly 10 digits
       </div>
       <div *ngIf="profileForm.get('phoneNo')?.hasError('maxlength') && profileForm.get('phoneNo')?.touched" class="form-error" data-testid="profile-phoneNo-error-maxlength">
-        Phone number cannot exceed 20 characters
+        Phone number must be exactly 10 digits
       </div>
     </div>
 
