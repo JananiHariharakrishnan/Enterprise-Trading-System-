@@ -60,9 +60,31 @@
   min-width: 0;
 }
 
+.watchlists-container {
+  display: flex;
+  gap: 20px;
+  min-width: 0;
+  min-height: 600px;
+}
+
 .page-head {
   display: grid;
   gap: 18px;
+}
+
+/* ---------- Sidebar layout ---------- */
+
+.watchlist-sidebar {
+  flex: 0 0 280px;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.watchlist-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .page-title h2 {
@@ -306,9 +328,9 @@
 /* ---------- Watchlist cards ---------- */
 
 .watchlist-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -320,7 +342,7 @@
   gap: 12px;
   width: 100%;
   box-sizing: border-box;
-  padding: 14px 16px;
+  padding: 12px 14px;
   font: inherit;
   color: var(--ink);
   text-align: left;
@@ -347,9 +369,9 @@
   flex: none;
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  font-size: 1.0625rem;
+  width: 36px;
+  height: 36px;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: var(--tone);
   background: var(--tone-bg);
@@ -396,6 +418,19 @@
   border-radius: 12px;
 }
 
+.watchlist-main .empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  background: var(--surface);
+  border: 1px solid rgba(14, 27, 44, 0.06);
+  border-radius: 16px;
+}
+
 .empty-state strong {
   color: var(--ink);
   font-weight: 600;
@@ -414,7 +449,9 @@
     0 1px 2px rgba(14, 27, 44, 0.06),
     0 8px 24px rgba(14, 27, 44, 0.08);
   overflow: hidden;
-  container-type: inline-size; /* lets the stats row react to this card's width */
+  container-type: inline-size;
+  min-height: 0;
+  flex: 1;
 }
 
 .watchlist-detail > :not(.watchlist-detail-header) {
@@ -956,6 +993,21 @@ td {
 
 /* ---------- Small screens ---------- */
 
+@media (max-width: 1024px) {
+  .watchlists-container {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .watchlist-sidebar {
+    flex: 0 0 auto;
+  }
+
+  .watchlist-main {
+    flex: 1;
+  }
+}
+
 @media (max-width: 640px) {
   .page-title h2 {
     font-size: 1.625rem;
@@ -968,6 +1020,14 @@ td {
 
   .watchlist-form {
     flex-direction: column;
+  }
+
+  .watchlists-container {
+    gap: 16px;
+  }
+
+  .watchlist-sidebar {
+    flex: 0 0 auto;
   }
 
   .watchlist-detail-header {
