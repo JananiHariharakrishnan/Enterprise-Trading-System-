@@ -3,6 +3,7 @@ package com.tradingsystem.service.impl;
 import com.tradingsystem.dto.response.OrderResponse;
 import com.tradingsystem.enums.OrderSide;
 import com.tradingsystem.model.Account;
+import com.tradingsystem.model.Instrument;
 import com.tradingsystem.service.Impl.OrderServiceImpl;
 import com.tradingsystem.service.command.PlaceOrderCommand;
 import org.junit.jupiter.api.AfterEach;
@@ -70,11 +71,19 @@ class OrderServiceImplPlaceOrderTest {
         account.setStatus(com.tradingsystem.enums.AccountStatus.ACTIVE);
         account.setVersion(1);
 
+        Instrument instrument = new Instrument();
+        instrument.setSymbol("AAPL");
+        instrument.setCurrency("USD");
+        instrument.setTradable(true);
+
         when(accountDataMapper.findAccountById(1001L)).thenReturn(account);
+        when(orderDataMapper.findInstrumentBySymbol("AAPL")).thenReturn(instrument);
+        when(orderDataMapper.findPosition(1001L, "AAPL")).thenReturn(null);
         when(currentUser.getAccountId()).thenReturn(1001L);
         when(orderDataMapper.existsByIdempotencyKey(anyString())).thenReturn(false);
         when(orderDataMapper.updateAccountBalancesWithVersion(anyLong(), any(), any(), anyInt())).thenReturn(1);
         when(orderDataMapper.insertOrder(any())).thenReturn(1);
+        doNothing().when(orderLogic).placeOrder(any(), any(), any(), any());
 
         // Make transaction synchronization active so publishAfterCommit can register
         TransactionSynchronizationManager.initSynchronization();

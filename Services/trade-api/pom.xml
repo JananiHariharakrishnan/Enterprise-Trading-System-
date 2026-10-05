@@ -182,6 +182,13 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>${jacoco.version}</version>
+				<configuration>
+					<excludes>
+						<exclude>com/tradingsystem/dto/**</exclude>
+						<exclude>com/tradingsystem/model/**</exclude>
+						<exclude>com/tradingsystem/exception/**</exclude>
+					</excludes>
+				</configuration>
 
 				<executions>
 
