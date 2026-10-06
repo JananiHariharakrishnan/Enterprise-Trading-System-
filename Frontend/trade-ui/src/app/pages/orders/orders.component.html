@@ -56,12 +56,7 @@
       <form [formGroup]="form" (ngSubmit)="submit()" class="ticket-form" novalidate>
         <div class="ticket-head">
           <h3>Order ticket</h3>
-          <div style="display: flex; flex-direction: column; align-items: flex-end;">
-            <span class="ticket-symbol" *ngIf="selectedInstrument() as instrument">{{ instrument.symbol }}</span>
-            <span *ngIf="latestPrice() !== null" style="font-size: 0.8125rem; font-weight: 500; margin-top: 4px; color: var(--text-2);">
-              {{ latestPrice() | currency:'USD':'symbol':'1.2-2' }}
-            </span>
-          </div>
+          <span class="ticket-symbol" *ngIf="selectedInstrument() as instrument">{{ instrument.symbol }}</span>
         </div>
 
         <!-- Side: sliding Buy / Sell toggle -->
@@ -161,13 +156,13 @@
         <!-- Summary -->
         <div class="summary">
           <div class="summary-row">
-            <span>{{ orderType() === 'MARKET' ? 'Order type' : 'Estimated total' }}</span>
+            <span>{{ orderType() === 'MARKET' && estimatedTotal() === null ? 'Order type' : 'Estimated total' }}</span>
             <strong class="summary-total">
-              {{ orderType() === 'MARKET' ? 'Market Order' : (estimatedTotal() === null ? '–' : '$' + (estimatedTotal() | number: '1.2-2')) }}
+              {{ orderType() === 'MARKET' && estimatedTotal() === null ? 'Market Order' : (estimatedTotal() === null ? '–' : (orderType() === 'MARKET' ? '~$' : '$') + (estimatedTotal() | number: '1.2-2')) }}
             </strong>
           </div>
           <p class="summary-note">
-            {{ orderType() === 'MARKET' ? 'Fills at current market price' : 'Quantity × price per share' }}
+            {{ orderType() === 'MARKET' ? (estimatedTotal() === null ? 'Fills at current market price' : 'Estimated based on current market price') : 'Quantity × price per share' }}
           </p>
         </div>
 

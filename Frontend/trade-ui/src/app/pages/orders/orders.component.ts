@@ -71,13 +71,11 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     });
   }
 
-  /** Quantity x price, or null until both are valid numbers. For MARKET orders, always null. */
   readonly estimatedTotal = computed<number | null>(() => {
     const v = this.formValue();
-    if (v.orderType === 'MARKET') return null; // Market orders don't have a known price until execution
     const quantity = Number(v.quantity);
-    const price = Number(v.price);
-    return Number.isFinite(quantity) && Number.isFinite(price) && quantity > 0 && price > 0
+    const price = v.orderType === 'MARKET' ? this.latestPrice() : Number(v.price);
+    return Number.isFinite(quantity) && price !== null && Number.isFinite(price) && quantity > 0 && price > 0
       ? quantity * price
       : null;
   });
@@ -89,7 +87,15 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     this.formValue(); // re-evaluate when the form changes
     if (this.form.invalid) return 'Fix the highlighted fields';
     const verb = this.side() === 'BUY' ? 'Buy' : 'Sell';
-    return `${verb} ${Number(this.form.value.quantity)} ${instrument.symbol}`;
+    let label = `${verb} ${Number(this.form.value.quantity)} ${instrument.symbol}`;
+
+    const price = this.orderType() === 'LIMIT' ? Number(this.form.value.price) : this.latestPrice();
+    if (price && price > 0) {
+      const formattedPrice = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      label += ` @ ${this.orderType() === 'MARKET' ? '~' : ''}${formattedPrice}`;
+    }
+
+    return label;
   });
 
   /** Exchange rate actually applied, derived from the response instead of being hard-coded. */
