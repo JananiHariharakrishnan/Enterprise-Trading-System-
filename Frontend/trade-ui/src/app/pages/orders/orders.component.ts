@@ -48,6 +48,9 @@ export class OrdersComponent implements OnInit, AfterViewInit {
 
   readonly side = computed<'BUY' | 'SELL'>(() => (this.formValue().side === 'SELL' ? 'SELL' : 'BUY'));
   readonly orderType = computed(() => (this.formValue().orderType === 'LIMIT' ? 'LIMIT' : 'MARKET'));
+  
+  readonly currencySymbol = computed(() => this.selectedInstrument()?.symbol?.endsWith('.NS') ? '₹' : '$');
+  readonly currencyCode = computed(() => this.selectedInstrument()?.symbol?.endsWith('.NS') ? 'INR' : 'USD');
 
   /**
    * Dynamically update price field validation based on order type.
@@ -91,7 +94,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
 
     const price = this.orderType() === 'LIMIT' ? Number(this.form.value.price) : this.latestPrice();
     if (price && price > 0) {
-      const formattedPrice = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const formattedPrice = this.currencySymbol() + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       label += ` @ ${this.orderType() === 'MARKET' ? '~' : ''}${formattedPrice}`;
     }
 
