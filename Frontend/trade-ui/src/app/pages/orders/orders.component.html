@@ -38,7 +38,7 @@
           </div>
           <div>
             <dt>Currency</dt>
-            <dd>{{ instrument.currency || 'USD' }}</dd>
+            <dd>{{ instrument.currency || currencyCode() }}</dd>
           </div>
         </dl>
       </section>
@@ -57,7 +57,7 @@
         <div class="ticket-head">
           <h3>Order ticket</h3>
           <span class="ticket-symbol" *ngIf="selectedInstrument() as instrument">{{ instrument.symbol }}</span>
-          </div>
+        </div>
 
         <!-- Side: sliding Buy / Sell toggle -->
         <div class="field">
@@ -136,7 +136,7 @@
          <div class="field" *ngIf="orderType() === 'LIMIT'">
            <label class="field-label" for="price-input">Price per share</label>
            <div class="input-wrap" [class.invalid]="priceError()">
-             <span class="prefix" aria-hidden="true">$</span>
+             <span class="prefix" aria-hidden="true">{{ currencySymbol() }}</span>
              <input
                id="price-input"
                class="input"
@@ -148,7 +148,7 @@
                formControlName="price"
                data-testid="order-price-input"
              />
-             <span class="suffix" aria-hidden="true">USD</span>
+             <span class="suffix" aria-hidden="true">{{ currencyCode() }}</span>
            </div>
            <p class="field-error" *ngIf="priceError() as message" role="alert">{{ message }}</p>
          </div>
@@ -156,13 +156,13 @@
         <!-- Summary -->
         <div class="summary">
           <div class="summary-row">
-            <span>{{ orderType() === 'MARKET' ? 'Order type' : 'Estimated total' }}</span>
+            <span>{{ orderType() === 'MARKET' && estimatedTotal() === null ? 'Order type' : 'Estimated total' }}</span>
             <strong class="summary-total">
-              {{ orderType() === 'MARKET' ? 'Market Order' : (estimatedTotal() === null ? '–' : '$' + (estimatedTotal() | number: '1.2-2')) }}
+              {{ orderType() === 'MARKET' && estimatedTotal() === null ? 'Market Order' : (estimatedTotal() === null ? '–' : (orderType() === 'MARKET' ? '~' + currencySymbol() : currencySymbol()) + (estimatedTotal() | number: '1.2-2')) }}
             </strong>
           </div>
           <p class="summary-note">
-            {{ orderType() === 'MARKET' ? 'Fills at current market price' : 'Quantity × price per share' }}
+            {{ orderType() === 'MARKET' ? (estimatedTotal() === null ? 'Fills at current market price' : 'Estimated based on current market price') : 'Quantity × price per share' }}
           </p>
         </div>
 

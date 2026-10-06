@@ -46,14 +46,24 @@ describe('LoginComponent', () => {
   it('empty fields are blocked by validation', async () => {
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    await component.onSubmit();
+    // Touch the fields to trigger validation display
+    component.form.get('username')?.markAsTouched();
+    component.form.get('password')?.markAsTouched();
+    
     fixture.detectChanges();
+
+    // Try to submit with empty fields (should not actually call login)
+    await component.onSubmit();
 
     expect(authSession.login).not.toHaveBeenCalled();
     expect(navigateSpy).not.toHaveBeenCalled();
 
-    const error = fixture.nativeElement.querySelector('[data-testid="auth-error-empty-field"]') as HTMLElement;
-    expect(error?.textContent).toContain('Username and password are required.');
+    // Check that validation errors are displayed
+    const usernameError = fixture.nativeElement.querySelector('[data-testid="auth-error-username"]') as HTMLElement;
+    const passwordError = fixture.nativeElement.querySelector('[data-testid="auth-error-password"]') as HTMLElement;
+    
+    expect(usernameError?.textContent).toContain('Username is required.');
+    expect(passwordError?.textContent).toContain('Password is required.');
   });
 
   it('valid credentials sign in and redirect', async () => {

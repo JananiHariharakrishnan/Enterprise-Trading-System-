@@ -32,6 +32,10 @@ class TradeApiClientServiceStub {
       status: 'PLACED'
     })
   };
+
+  marketData = {
+    getAllMarketData: vi.fn().mockResolvedValue({})
+  };
 }
 
 describe('OrdersComponent', () => {
@@ -193,7 +197,7 @@ describe('OrdersComponent', () => {
 
     expect(component.form.valid).toBe(true);
     expect(submitButton.disabled).toBe(false);
-    expect(submitButton.textContent).toContain('Buy 2 AAPL');
+    expect(submitButton.textContent).toContain('Buy 1 AAPL @ $100.50');
   });
 
   it('submits through DOM and renders success status', async () => {

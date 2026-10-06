@@ -168,6 +168,7 @@
           <th class="num">Price (USD)</th>
           <th class="num">Executed Price</th>
           <th>Created</th>
+          <th>Actions</th>
         </tr>
         </thead>
         <tbody>
@@ -199,6 +200,19 @@
             <span *ngIf="o.status !== 'FILLED'">—</span>
           </td>
           <td class="created">{{ o.createdOn | date:'short' }}</td>
+          <td class="actions">
+            <button
+              *ngIf="o.status === 'NEW'"
+              class="btn-cancel"
+              (click)="cancelOrder(o.orderId)"
+              [disabled]="isCancelling(o.orderId)"
+              data-testid="cancel-order-button"
+              title="Cancel this order"
+            >
+              {{ isCancelling(o.orderId) ? 'Cancelling...' : 'Cancel' }}
+            </button>
+            <span *ngIf="o.status !== 'NEW'" class="action-placeholder">—</span>
+          </td>
         </tr>
         </tbody>
       </table>

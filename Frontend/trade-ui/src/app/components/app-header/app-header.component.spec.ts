@@ -13,6 +13,9 @@ import { AppHeaderComponent } from './app-header.component';
 class AuthSessionServiceStub {
   isAuthenticated = vi.fn(() => true);
   currentUser = signal({ username: 'testuser' } as any);
+  sessionRemainingSeconds = signal(900);
+  sessionExpiresIn = signal('15:00');
+  isSessionExpiringSoon = signal(false);
   logout = vi.fn().mockResolvedValue(undefined);
 }
 
@@ -252,5 +255,13 @@ describe('AppHeaderComponent', () => {
   it('returns uppercase initial for instrument symbols', () => {
     expect(fixture.componentInstance.getInstrumentInitial('msft')).toBe('M');
     expect(fixture.componentInstance.getInstrumentInitial('')).toBe('?');
+  });
+
+  it('renders session expires countdown in the header', () => {
+    fixture.detectChanges();
+    const timerEl = fixture.nativeElement.querySelector('[data-testid="session-timer"]');
+    expect(timerEl).toBeTruthy();
+    expect(timerEl.textContent).toContain('Session expires in:');
+    expect(timerEl.textContent).toContain('15:00');
   });
 });

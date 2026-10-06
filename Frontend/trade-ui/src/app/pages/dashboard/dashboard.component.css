@@ -54,8 +54,16 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- Account cards: five in one line ---------- */
-.kpis { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 12px; }
-
+.kpis {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.1fr)   /* Account number */
+    minmax(0, 1.7fr)   /* Account holder */
+    minmax(0, 1.2fr)   /* Account balance */
+    minmax(0, 1.2fr)   /* Buying power */
+    minmax(0, 0.9fr);  /* Status */
+  gap: 12px;
+}
 .kpi {
   display: grid;
   gap: 12px;
@@ -73,9 +81,17 @@
   background: var(--d-brand-soft); color: var(--d-brand);
 }
 .kpi-icon.warn { background: var(--d-warn-soft); color: var(--d-warn); }
-.kpi-label { font-size: 12px; color: var(--d-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi-label { font-size: 12px; line-height: 1.25; color: var(--d-muted); }
 .kpi-value { font-size: 18px; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.kpi-value.num { font-variant-numeric: tabular-nums; }
+/* Name may wrap to two lines instead of being cut off */
+.kpi-value.name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
 
 .acct-status {
   display: inline-flex; align-items: center; gap: 8px; width: fit-content;
