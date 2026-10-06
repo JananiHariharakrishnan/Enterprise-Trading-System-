@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { AuthSessionService } from '../../services/auth-session.service';
+import { CustomerPreferencesService, type BaseCurrency, type CustomerPreferences } from '../../services/customer-preferences.service';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
 import type { PlaceOrderRequest, OrderHistoryEntry, AccountResponse, OrderResponse } from '../../generated/trade';
 import { InstrumentSearchComponent, type InstrumentListItem } from '../../components/instrument-search/instrument-search.component';
@@ -19,6 +20,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   private fb = inject(FormBuilder);
   private auth = inject(AuthSessionService);
   private api = inject(TradeApiClientService);
+  private preferencesApi = inject(CustomerPreferencesService, { optional: true });
   private route = inject(ActivatedRoute);
 
   @ViewChild(InstrumentSearchComponent) instrumentSearchComponent?: InstrumentSearchComponent;
@@ -31,6 +33,8 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   readonly errorMessage = signal<string | null>(null);
   readonly lastOrderResponse = signal<OrderResponse | null>(null);
   readonly selectedInstrument = signal<InstrumentListItem | null>(null);
+  readonly skipOrderConfirmation = signal(false);
+  readonly baseCurrency = signal<BaseCurrency>('USD');
   
   private currentIdempotencyKey: string | null = null;
 
@@ -91,6 +95,8 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     return `${verb} ${Number(this.form.value.quantity)} ${instrument.symbol}`;
   });
 
+  readonly currencySymbol = computed(() => (this.baseCurrency() === 'INR' ? '₹' : '$'));
+
   /** Exchange rate actually applied, derived from the response instead of being hard-coded. */
   readonly conversionRate = computed<number | null>(() => {
     const order = this.lastOrderResponse();
@@ -110,6 +116,8 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     // load account info for read-only display
     const user = await this.auth.loadCurrentUser();
     if (user) {
+      await this.loadAndApplyPreferences(user.accountId);
+
       try {
         const acct = await this.api.accounts.getAccount({ id: user.accountId });
         this.account.set(acct);
@@ -201,6 +209,23 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     }
 
     // Prevent duplicate submissions by generating idempotency key only once
+    if (!this.skipOrderConfirmation()) {
+      const confirmationMessage = this.buildConfirmationMessage();
+      let isConfirmed = true;
+      try {
+        isConfirmed = typeof window !== 'undefined' && typeof window.confirm === 'function'
+          ? window.confirm(confirmationMessage)
+          : true;
+      } catch {
+        isConfirmed = true;
+      }
+
+      if (!isConfirmed) {
+        return;
+      }
+    }
+
+    // Prevent duplicate submissions by generating idempotency key only once
     if (!this.currentIdempotencyKey) {
       this.currentIdempotencyKey = crypto.randomUUID();
     }
@@ -211,14 +236,15 @@ export class OrdersComponent implements OnInit, AfterViewInit {
       if (!user) throw new Error('Not authenticated');
 
       const selectedOrderType = this.form.value.orderType as 'MARKET' | 'LIMIT';
+      const normalizedOrderType: 'MARKET' | 'LIMIT' = selectedOrderType === 'LIMIT' ? 'LIMIT' : 'MARKET';
       const payload: PlaceOrderRequest = {
         accountId: user.accountId,
         symbol: this.form.value.symbol ?? '',
         side: this.form.value.side as 'BUY' | 'SELL',
         quantity: Number(this.form.value.quantity),
-        orderType: selectedOrderType,
+        orderType: normalizedOrderType,
         // For MARKET orders, price is null. For LIMIT orders, price is required.
-        price: selectedOrderType === 'MARKET' ? null : Number(this.form.value.price),
+        price: normalizedOrderType === 'MARKET' ? null : Number(this.form.value.price),
         // Use cached idempotency key to prevent duplicates on retry
         idempotencyKey: this.currentIdempotencyKey,
       } as PlaceOrderRequest;
@@ -260,5 +286,47 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  private async loadAndApplyPreferences(accountId: number): Promise<void> {
+    if (!this.preferencesApi) {
+      return;
+    }
+
+    try {
+      const preferences = await this.preferencesApi.getPreferences(accountId)
+        ?? this.preferencesApi.defaultPreferences(accountId);
+      this.applyPreferences(preferences);
+    } catch {
+      // Preference application is best effort and should not block order placement.
+    }
+  }
+
+  private applyPreferences(preferences: CustomerPreferences): void {
+    this.skipOrderConfirmation.set(Boolean(preferences.trading.skipOrderConfirmation));
+    this.baseCurrency.set(preferences.display.baseCurrency);
+
+    const preferredOrderType = preferences.trading.defaultOrderType === 'LIMIT' ? 'LIMIT' : 'MARKET';
+    const preferredQuantity = Number(preferences.trading.defaultTradeQuantity);
+
+    this.form.patchValue({
+      orderType: preferredOrderType,
+      quantity: Number.isFinite(preferredQuantity) && preferredQuantity > 0 ? Math.floor(preferredQuantity) : 1,
+    });
+  }
+
+  private buildConfirmationMessage(): string {
+    const instrument = this.selectedInstrument();
+    const symbol = instrument?.symbol ?? String(this.form.value.symbol ?? '').toUpperCase();
+    const side = this.form.value.side ?? 'BUY';
+    const quantity = Number(this.form.value.quantity);
+    const type = this.form.value.orderType === 'LIMIT' ? 'LIMIT' : 'MARKET';
+
+    if (type === 'LIMIT') {
+      const price = Number(this.form.value.price);
+      return `Confirm ${side} ${quantity} ${symbol} at ${this.currencySymbol()}${price.toFixed(2)} (${type})?`;
+    }
+
+    return `Confirm ${side} ${quantity} ${symbol} at market price?`;
   }
 }

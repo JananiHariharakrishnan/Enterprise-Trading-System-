@@ -136,7 +136,7 @@
          <div class="field" *ngIf="orderType() === 'LIMIT'">
            <label class="field-label" for="price-input">Price per share</label>
            <div class="input-wrap" [class.invalid]="priceError()">
-             <span class="prefix" aria-hidden="true">$</span>
+             <span class="prefix" aria-hidden="true">{{ currencySymbol() }}</span>
              <input
                id="price-input"
                class="input"
@@ -148,7 +148,7 @@
                formControlName="price"
                data-testid="order-price-input"
              />
-             <span class="suffix" aria-hidden="true">USD</span>
+             <span class="suffix" aria-hidden="true">{{ baseCurrency() }}</span>
            </div>
            <p class="field-error" *ngIf="priceError() as message" role="alert">{{ message }}</p>
          </div>
@@ -158,7 +158,7 @@
           <div class="summary-row">
             <span>{{ orderType() === 'MARKET' ? 'Order type' : 'Estimated total' }}</span>
             <strong class="summary-total">
-              {{ orderType() === 'MARKET' ? 'Market Order' : (estimatedTotal() === null ? '–' : '$' + (estimatedTotal() | number: '1.2-2')) }}
+              {{ orderType() === 'MARKET' ? 'Market Order' : (estimatedTotal() === null ? '–' : currencySymbol() + (estimatedTotal() | number: '1.2-2')) }}
             </strong>
           </div>
           <p class="summary-note">
@@ -186,7 +186,7 @@
             </div>
             <div>
               <dt>Deducted from account</dt>
-              <dd class="strong">${{ lastOrderResponse()?.price | number: '1.2-2' }}</dd>
+              <dd class="strong">{{ currencySymbol() }}{{ lastOrderResponse()?.price | number: '1.2-2' }}</dd>
             </div>
             <div *ngIf="conversionRate() as rate">
               <dt>Exchange rate</dt>

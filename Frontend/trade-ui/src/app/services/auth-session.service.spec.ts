@@ -4,6 +4,7 @@ import { routes } from '../app.routes';
 
 import { AuthApiClientService } from './auth-api-client.service';
 import { AuthSessionService } from './auth-session.service';
+import { ThemeService } from './theme.service';
 import { TokenStorageService } from './token-storage.service';
 import { ResponseError } from '../generated/auth';
 import { authMappingComplete, tradeMappingComplete } from '../errors/error-messages';
@@ -20,6 +21,7 @@ describe('AuthSessionService', () => {
   let service: AuthSessionService;
   let apiStub: AuthApiClientServiceStub;
   let tokenStorage: TokenStorageService;
+  let themeService: ThemeService;
   let router: Router;
 
   const mockUser = {
@@ -59,6 +61,7 @@ describe('AuthSessionService', () => {
     ) as unknown as AuthApiClientServiceStub;
 
     tokenStorage = TestBed.inject(TokenStorageService);
+    themeService = TestBed.inject(ThemeService);
     router = TestBed.inject(Router);
   });
 
@@ -602,6 +605,16 @@ describe('AuthSessionService', () => {
       ).toBe(true);
     });
 
+    it('should apply SYSTEM theme when preferences are unavailable', async () => {
+      apiStub.client.authLoginPost.mockResolvedValue(mockLoginResponse);
+      apiStub.client.authMeGet.mockResolvedValue(mockUser);
+      const themeSpy = vi.spyOn(themeService, 'applyThemePreference');
+
+      await service.login('priya.menon', 'password');
+
+      expect(themeSpy).toHaveBeenCalledWith('SYSTEM');
+    });
+
     it('should keep the session for non-ResponseError failures', async () => {
       apiStub.client.authLoginPost.mockResolvedValue(
         mockLoginResponse
@@ -709,6 +722,7 @@ describe('AuthSessionService', () => {
       const navigateSpy = vi
         .spyOn(router, 'navigate')
         .mockResolvedValue(true);
+      const themeSpy = vi.spyOn(themeService, 'applyThemePreference');
 
       await service.logout();
 
@@ -731,6 +745,10 @@ describe('AuthSessionService', () => {
       expect(
         navigateSpy
       ).toHaveBeenCalledWith(['/login']);
+
+      expect(
+        themeSpy
+      ).toHaveBeenCalledWith('SYSTEM');
     });
   });
 

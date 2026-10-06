@@ -1,0 +1,386 @@
+openapi: 3.1.0
+
+info:
+  title: Customer Preferences API
+  version: 1.0.0
+  summary: Single source of truth for customer preferences used by UI sign-in flow and notifications.
+  description: |
+    Contract for the Customer Preferences service.
+
+    Scope:
+    - Customer-owned preference record keyed by account identifier.
+    - Customer-facing read/write APIs.
+    - Internal notification resolution API with separate authentication.
+
+    Non-scope:
+    - Kafka publishing or consumption.
+    - Ownership of account master data.
+    - Ownership of personal profile data beyond preference-specific routing detail.
+
+    Platform conventions:
+    - Error envelope is always { errorCode, message }.
+    - JWTs are verified by this service.
+    - A customer can only read or write their own account preferences.
+
+servers:
+  - url: http://localhost:3000
+    description: Auth service host in local development
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Customer Preferences
+    description: Customer-facing preference read and update APIs.
+  - name: Notification Resolution
+    description: Internal API for resolving delivery channels per event type.
+
+paths:
+  /auth/accounts/{accountId}/preferences:
+    get:
+      tags: [Customer Preferences]
+      operationId: getCustomerPreferences
+      summary: Read the customer preferences for one account.
+      description: |
+        Reads the preference record for the account.
+
+        Access control rule:
+        - JWT accountId claim must match path accountId.
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+      responses:
+        '200':
+          description: Preference record found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/ForbiddenAccountMismatch'
+        '404':
+          $ref: '#/components/responses/PreferencesNotFound'
+
+    put:
+      tags: [Customer Preferences]
+      operationId: putCustomerPreferences
+      summary: Create or replace the customer preferences for one account.
+      description: |
+        Upserts the full preference record.
+
+        Access control rule:
+        - JWT accountId claim must match path accountId.
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerPreferencesUpsertRequest'
+      responses:
+        '200':
+          description: Preference record persisted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/ForbiddenAccountMismatch'
+        '422':
+          $ref: '#/components/responses/InvalidInput'
+
+  /auth/internal/accounts/{accountId}/notifications/resolve:
+    get:
+      tags: [Notification Resolution]
+      operationId: resolveNotificationPreferences
+      summary: Resolve channels and contact routing for notification delivery.
+      description: |
+        Internal endpoint used by the Customer Notifications service.
+
+        Security model:
+        - This endpoint does not accept customer bearer tokens.
+        - Caller authenticates with a service credential token.
+
+        Fallback rule when no preference is set:
+        - Return default channels from service policy with source=DEFAULT.
+      security:
+        - serviceBearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountIdPath'
+        - name: eventType
+          in: query
+          required: true
+          description: Notification event category requiring channel resolution.
+          schema:
+            $ref: '#/components/schemas/NotificationEventType'
+      responses:
+        '200':
+          description: Notification routing resolved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResolutionResponse'
+        '401':
+          $ref: '#/components/responses/InternalUnauthorised'
+        '404':
+          $ref: '#/components/responses/AccountNotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Customer JWT containing accountId claim.
+    serviceBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Service-to-service token issued for internal callers.
+
+  parameters:
+    AccountIdPath:
+      name: accountId
+      in: path
+      required: true
+      description: Numeric account key.
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
+  responses:
+    Unauthorised:
+      description: Missing, invalid, or expired customer token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthorised:
+              value:
+                errorCode: AUTH-401
+                message: Unauthorised
+
+    InternalUnauthorised:
+      description: Missing or invalid internal service token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthorised:
+              value:
+                errorCode: AUTH-401
+                message: Unauthorised internal caller
+
+    ForbiddenAccountMismatch:
+      description: Token account does not match path account.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            forbidden:
+              value:
+                errorCode: ACC-403
+                message: Access denied for account
+
+    PreferencesNotFound:
+      description: No preference record exists for this account.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              value:
+                errorCode: PRF-404
+                message: Preferences not found
+
+    InvalidInput:
+      description: Input validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalid:
+              value:
+                errorCode: VAL-422
+                message: Invalid preference payload
+
+    AccountNotFound:
+      description: Account does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            accountMissing:
+              value:
+                errorCode: ACC-404
+                message: Account not found
+
+    ServiceUnavailable:
+      description: Service unavailable or timed out.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unavailable:
+              value:
+                errorCode: SVC-503
+                message: Preferences service unavailable
+
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [errorCode, message]
+      properties:
+        errorCode:
+          type: string
+          enum: [AUTH-401, ACC-403, ACC-404, PRF-404, VAL-422, SVC-503]
+        message:
+          type: string
+
+    CustomerPreferencesUpsertRequest:
+      type: object
+      additionalProperties: false
+      required: [defaultAccountId, trading, notifications, display]
+      properties:
+        defaultAccountId:
+          type: integer
+          format: int64
+          minimum: 1
+        trading:
+          $ref: '#/components/schemas/TradingPreferences'
+        notifications:
+          $ref: '#/components/schemas/NotificationPreferences'
+        display:
+          $ref: '#/components/schemas/DisplayPreferences'
+
+    CustomerPreferences:
+      type: object
+      additionalProperties: false
+      required: [accountId, defaultAccountId, trading, notifications, display, updatedAt]
+      properties:
+        accountId:
+          type: integer
+          format: int64
+          minimum: 1
+        defaultAccountId:
+          type: integer
+          format: int64
+          minimum: 1
+        trading:
+          $ref: '#/components/schemas/TradingPreferences'
+        notifications:
+          $ref: '#/components/schemas/NotificationPreferences'
+        display:
+          $ref: '#/components/schemas/DisplayPreferences'
+        updatedAt:
+          type: string
+          format: date-time
+
+    TradingPreferences:
+      type: object
+      additionalProperties: false
+      required: [defaultOrderType, skipOrderConfirmation, defaultTradeQuantity]
+      properties:
+        defaultOrderType:
+          $ref: '#/components/schemas/OrderType'
+        skipOrderConfirmation:
+          type: boolean
+        defaultTradeQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 1000000
+
+    NotificationPreferences:
+      type: object
+      additionalProperties: false
+      required: [tradeFills, priceAlerts]
+      properties:
+        tradeFills:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/NotificationChannel'
+        priceAlerts:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/NotificationChannel'
+
+    DisplayPreferences:
+      type: object
+      additionalProperties: false
+      required: [theme, baseCurrency]
+      properties:
+        theme:
+          $ref: '#/components/schemas/Theme'
+        baseCurrency:
+          $ref: '#/components/schemas/BaseCurrency'
+
+    NotificationResolutionResponse:
+      type: object
+      additionalProperties: false
+      required: [accountId, eventType, channels, source]
+      properties:
+        accountId:
+          type: integer
+          format: int64
+          minimum: 1
+        eventType:
+          $ref: '#/components/schemas/NotificationEventType'
+        channels:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/NotificationChannel'
+        # Optional routing targets can be opaque references or encrypted values.
+        # Avoid copying account or profile master data here.
+        channelTargets:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map keyed by channel name to opaque routing target.
+          example:
+            EMAIL: contact-ref:9f159a58
+            SMS: contact-ref:e4d8cc2c
+        source:
+          type: string
+          enum: [PREFERENCE, DEFAULT]
+
+    OrderType:
+      type: string
+      enum: [MARKET, LIMIT, STOP]
+
+    NotificationChannel:
+      type: string
+      enum: [PUSH, IN_APP, EMAIL, SMS]
+
+    Theme:
+      type: string
+      enum: [LIGHT, DARK, SYSTEM]
+
+    BaseCurrency:
+      type: string
+      enum: [USD, INR]
+
+    NotificationEventType:
+      type: string
+      enum: [TRADE_FILLS, PRICE_ALERTS]

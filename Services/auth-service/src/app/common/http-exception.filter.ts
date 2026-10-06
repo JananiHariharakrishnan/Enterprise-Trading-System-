@@ -156,6 +156,20 @@ export class PlatformExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
+      const raw = exception.getResponse();
+
+      if (
+        raw &&
+        typeof raw === 'object' &&
+        'errorCode' in raw &&
+        'message' in raw &&
+        typeof (raw as any).errorCode === 'string' &&
+        typeof (raw as any).message === 'string'
+      ) {
+        response.status(status).json(raw);
+        return;
+      }
+
       response.status(status).json(envelope(status, exception));
       return;
     }

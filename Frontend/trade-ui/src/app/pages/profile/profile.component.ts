@@ -5,6 +5,8 @@ import { Router } from '@angular/router';
 import { UserResponse } from '../../generated/auth';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { AuthApiClientService } from '../../services/auth-api-client.service';
+import { CustomerPreferencesService, type BaseCurrency, type NotificationChannel, type OrderType, type ThemeChoice } from '../../services/customer-preferences.service';
+import { ThemeService } from '../../services/theme.service';
 
 interface CountryCode {
   code: string;
@@ -21,14 +23,23 @@ interface CountryCode {
 export class ProfileComponent implements OnInit {
   readonly authSession = inject(AuthSessionService);
   private readonly authApi = inject(AuthApiClientService);
+  private readonly preferencesApi = inject(CustomerPreferencesService, { optional: true });
+  private readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
   private readonly formBuilder = inject(FormBuilder);
 
   readonly isLoading = signal(true);
   readonly isSaving = signal(false);
+  readonly isSavingPreferences = signal(false);
   readonly successMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly currentUser = signal<UserResponse | null>(null);
+  readonly isLoadingPreferences = signal(false);
+
+  readonly orderTypes: OrderType[] = ['MARKET', 'LIMIT', 'STOP'];
+  readonly notificationChannels: NotificationChannel[] = ['PUSH', 'IN_APP', 'EMAIL', 'SMS'];
+  readonly themeChoices: ThemeChoice[] = ['LIGHT', 'DARK', 'SYSTEM'];
+  readonly baseCurrencies: BaseCurrency[] = ['USD', 'INR'];
 
   readonly countryCodes: CountryCode[] = [
     { code: '+1', country: 'United States' },
@@ -48,7 +59,15 @@ export class ProfileComponent implements OnInit {
       email: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
       countryCode: ['+1'],
       phoneNo: ['', [Validators.minLength(10), Validators.maxLength(10), Validators.pattern(this.phonePattern)]],
-      accountId: [{ value: '', disabled: true }, Validators.required]
+      accountId: [{ value: '', disabled: true }, Validators.required],
+      defaultAccountId: [1, [Validators.required, Validators.min(1)]],
+      defaultOrderType: ['MARKET', Validators.required],
+      skipOrderConfirmation: [false],
+      defaultTradeQuantity: [1, [Validators.required, Validators.min(1)]],
+      tradeFills: [['IN_APP'], Validators.required],
+      priceAlerts: [['IN_APP'], Validators.required],
+      theme: ['SYSTEM', Validators.required],
+      baseCurrency: ['USD', Validators.required]
     });
   }
 
@@ -92,6 +111,8 @@ export class ProfileComponent implements OnInit {
         phoneNo,
         accountId: user.accountId
       });
+
+      await this.loadPreferences(user.accountId);
     } catch {
       // Error loading profile - display user-friendly message without interrupting component lifecycle
       this.errorMessage.set('Failed to load profile information.');
@@ -125,6 +146,11 @@ export class ProfileComponent implements OnInit {
         }
       });
 
+      if (this.preferencesApi) {
+        await this.preferencesApi.upsertPreferences(Number(formValue.accountId), this.toPreferencesPayload(formValue));
+        this.themeService.applyThemePreference(formValue.theme as ThemeChoice);
+      }
+
       this.successMessage.set('Profile updated successfully!');
       // Clear auth cache and reload profile to reflect changes from database
       this.authSession.clearCurrentUserCache();
@@ -139,5 +165,112 @@ export class ProfileComponent implements OnInit {
 
   goBack(): void {
     void this.router.navigate(['/dashboard']);
+  }
+
+  async onSavePreferences(): Promise<void> {
+    if (!this.preferencesApi) {
+      this.errorMessage.set('Preferences service is unavailable.');
+      return;
+    }
+
+    const accountId = Number(this.profileForm.getRawValue().accountId);
+    if (!Number.isFinite(accountId) || accountId < 1) {
+      this.errorMessage.set('Unable to determine account for preferences.');
+      return;
+    }
+
+    this.isSavingPreferences.set(true);
+    this.successMessage.set(null);
+    this.errorMessage.set(null);
+
+    try {
+      const formValue = this.profileForm.getRawValue();
+      await this.preferencesApi.upsertPreferences(accountId, this.toPreferencesPayload(formValue));
+      this.themeService.applyThemePreference(formValue.theme as ThemeChoice);
+      this.successMessage.set('Preferences saved successfully!');
+    } catch {
+      this.errorMessage.set('Failed to save preferences. Please try again.');
+    } finally {
+      this.isSavingPreferences.set(false);
+    }
+  }
+
+  private async loadPreferences(accountId: number): Promise<void> {
+    if (!this.preferencesApi) {
+      return;
+    }
+
+    this.isLoadingPreferences.set(true);
+    try {
+      const preferences = await this.preferencesApi.getPreferences(accountId)
+        ?? this.preferencesApi.defaultPreferences(accountId);
+
+      this.profileForm.patchValue({
+        defaultAccountId: preferences.defaultAccountId,
+        defaultOrderType: preferences.trading.defaultOrderType,
+        skipOrderConfirmation: preferences.trading.skipOrderConfirmation,
+        defaultTradeQuantity: preferences.trading.defaultTradeQuantity,
+        tradeFills: this.normalizeChannels(preferences.notifications.tradeFills),
+        priceAlerts: this.normalizeChannels(preferences.notifications.priceAlerts),
+        theme: preferences.display.theme,
+        baseCurrency: preferences.display.baseCurrency,
+      });
+
+      this.themeService.applyThemePreference(preferences.display.theme);
+    } catch {
+      // Preferences are optional during load; fallback values remain in the form.
+    } finally {
+      this.isLoadingPreferences.set(false);
+    }
+  }
+
+  private normalizeChannels(value: unknown): NotificationChannel[] {
+    const allowed = new Set<NotificationChannel>(['PUSH', 'IN_APP', 'EMAIL', 'SMS']);
+    const source = Array.isArray(value)
+      ? value
+      : typeof value === 'string'
+        ? value.split(/[\s,;|]+/)
+        : [];
+
+    const channels = source
+      .map((item) => String(item).trim().toUpperCase())
+      .map((item) => (item === 'INAPP' ? 'IN_APP' : item))
+      .filter((item): item is NotificationChannel => allowed.has(item as NotificationChannel));
+
+    return channels.length > 0 ? [...new Set(channels)] : ['IN_APP'];
+  }
+
+  private toPreferencesPayload(formValue: any): {
+    defaultAccountId: number;
+    trading: {
+      defaultOrderType: OrderType;
+      skipOrderConfirmation: boolean;
+      defaultTradeQuantity: number;
+    };
+    notifications: {
+      tradeFills: NotificationChannel[];
+      priceAlerts: NotificationChannel[];
+    };
+    display: {
+      theme: ThemeChoice;
+      baseCurrency: BaseCurrency;
+    };
+  } {
+    return {
+      defaultAccountId: Number(formValue.defaultAccountId),
+      trading: {
+        defaultOrderType: formValue.defaultOrderType,
+        skipOrderConfirmation: Boolean(formValue.skipOrderConfirmation),
+        defaultTradeQuantity: Number(formValue.defaultTradeQuantity),
+      },
+      notifications: {
+        tradeFills: this.normalizeChannels(formValue.tradeFills),
+        priceAlerts: this.normalizeChannels(formValue.priceAlerts),
+      },
+      display: {
+        theme: formValue.theme,
+        baseCurrency: formValue.baseCurrency,
+      },
+    };
   }
 }

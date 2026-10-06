@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { LoginRequest, ResponseError, UserResponse } from '../generated/auth';
 import { mapErrorCodeToMessage } from '../errors/error-messages';
 import { AuthApiClientService } from './auth-api-client.service';
+import { CustomerPreferencesService } from './customer-preferences.service';
+import { ThemePreference, ThemeService } from './theme.service';
 import { TokenStorageService } from './token-storage.service';
 
 @Injectable({
@@ -10,6 +12,8 @@ import { TokenStorageService } from './token-storage.service';
 })
 export class AuthSessionService {
   private readonly authApi = inject(AuthApiClientService);
+  private readonly preferencesApi = inject(CustomerPreferencesService, { optional: true });
+  private readonly themeService = inject(ThemeService);
   private readonly tokenStorage = inject(TokenStorageService);
   private readonly router = inject(Router);
 
@@ -24,6 +28,8 @@ export class AuthSessionService {
     const payload: LoginRequest = { username, password };
 
     try {
+      // Clear any in-memory user state before switching sessions.
+      this.currentUserSignal.set(null);
       const response = await this.authApi.client.authLoginPost({ loginRequest: payload });
       this.tokenStorage.setTokens(response.accessToken, response.refreshToken);
       this.isAuthenticatedSignal.set(true);
@@ -66,6 +72,29 @@ export class AuthSessionService {
     this.loadCurrentUserPromise = (async () => {
       try {
         const user = await this.authApi.client.authMeGet();
+        let themePreference: ThemePreference = 'SYSTEM';
+
+        // Apply the persisted default account when available so the session
+        // opens on the account selected in customer preferences.
+        if (this.preferencesApi) {
+          try {
+            const preferences = await this.preferencesApi.getPreferences(user.accountId);
+            if (preferences?.defaultAccountId && Number.isFinite(preferences.defaultAccountId)) {
+              user.accountId = Number(preferences.defaultAccountId);
+            }
+
+            if (preferences?.display?.theme) {
+              themePreference = preferences.display.theme;
+            }
+          } catch {
+            // Best effort: auth should still succeed if preferences are unavailable.
+          }
+        }
+
+        // Always apply a theme preference for the active user. If preferences
+        // are missing or unavailable, default to SYSTEM to avoid stale carry-over.
+        this.themeService.applyThemePreference(themePreference);
+
         this.currentUserSignal.set(user);
         return user;
       } catch (error) {
@@ -87,6 +116,7 @@ export class AuthSessionService {
     this.tokenStorage.clear();
     this.currentUserSignal.set(null);
     this.isAuthenticatedSignal.set(false);
+    this.themeService.applyThemePreference('SYSTEM');
     await this.router.navigate(['/login']);
   }
 
