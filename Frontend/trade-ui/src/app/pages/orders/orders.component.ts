@@ -90,7 +90,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     this.formValue(); // re-evaluate when the form changes
     if (this.form.invalid) return 'Fix the highlighted fields';
     const verb = this.side() === 'BUY' ? 'Buy' : 'Sell';
-    let label = `${verb} ${Number(this.form.value.quantity)} ${instrument.symbol}`;
+    let label = `${verb} ${Number(1)} ${instrument.symbol}`;
 
     const price = this.orderType() === 'LIMIT' ? Number(this.form.value.price) : this.latestPrice();
     if (price && price > 0) {
