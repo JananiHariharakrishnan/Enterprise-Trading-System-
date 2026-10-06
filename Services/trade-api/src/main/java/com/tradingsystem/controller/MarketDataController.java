@@ -22,8 +22,39 @@ public class MarketDataController {
     }
 
     @GetMapping
-    public ResponseEntity<Map<String, LatestMarketPrice>> getAllMarketData() {
-        return ResponseEntity.ok(marketDataService.getAllCachedPrices());
+    public ResponseEntity<Map<String, com.tradingsystem.dto.response.LatestPriceResponse>> getAllMarketData() {
+        Map<String, LatestMarketPrice> cachedPrices = marketDataService.getAllCachedPrices();
+        Map<String, com.tradingsystem.dto.response.LatestPriceResponse> responseMap = new java.util.HashMap<>();
+
+        for (Map.Entry<String, LatestMarketPrice> entry : cachedPrices.entrySet()) {
+            responseMap.put(entry.getKey(), toLatestPriceResponse(entry.getValue()));
+        }
+
+        return ResponseEntity.ok(responseMap);
+    }
+
+    private com.tradingsystem.dto.response.LatestPriceResponse toLatestPriceResponse(LatestMarketPrice latestMarketPrice) {
+        if (latestMarketPrice == null) {
+            return null;
+        }
+
+        com.tradingsystem.dto.response.LatestPriceResponse response = new com.tradingsystem.dto.response.LatestPriceResponse();
+        response.setPrice(latestMarketPrice.getPrice());
+        response.setCurrency(latestMarketPrice.getCurrency());
+        response.setChange(latestMarketPrice.getChange());
+        response.setChangePercent(latestMarketPrice.getChangePercent());
+        response.setPreviousClose(latestMarketPrice.getPreviousClose());
+        response.setMarketState(latestMarketPrice.getMarketState());
+
+        if (latestMarketPrice.getStale() != null) {
+            response.setStale(latestMarketPrice.getStale());
+        }
+
+        if (latestMarketPrice.getQuoteAsOf() != null) {
+            response.setQuoteAsOf(java.time.OffsetDateTime.parse(latestMarketPrice.getQuoteAsOf()));
+        }
+
+        return response;
     }
 }
 

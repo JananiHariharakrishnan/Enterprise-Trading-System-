@@ -1,4 +1,6 @@
+.openapi-generator-ignore
 apis/AccountsApi.ts
+apis/MarketDataApi.ts
 apis/OrdersApi.ts
 apis/WatchlistsApi.ts
 apis/index.ts
