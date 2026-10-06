@@ -23,7 +23,10 @@ describe('AuthSessionService', () => {
 
   let tokenStorage: {
     getAccessToken: ReturnType<typeof vi.fn>;
+    getRefreshToken?: ReturnType<typeof vi.fn>;
+    getExpiresAt: ReturnType<typeof vi.fn>;
     setTokens: ReturnType<typeof vi.fn>;
+    setExpiresAt: ReturnType<typeof vi.fn>;
     clear: ReturnType<typeof vi.fn>;
   };
 
@@ -48,7 +51,9 @@ describe('AuthSessionService', () => {
 
     tokenStorage = {
       getAccessToken: vi.fn().mockReturnValue(null),
+      getExpiresAt: vi.fn().mockReturnValue(null),
       setTokens: vi.fn(),
+      setExpiresAt: vi.fn(),
       clear: vi.fn()
     };
 
@@ -90,7 +95,9 @@ describe('AuthSessionService', () => {
         getAccessToken: vi.fn().mockReturnValue(
           'existing-token'
         ),
+        getExpiresAt: vi.fn().mockReturnValue(null),
         setTokens: vi.fn(),
+        setExpiresAt: vi.fn(),
         clear: vi.fn()
       };
 
@@ -140,7 +147,7 @@ describe('AuthSessionService', () => {
       ).toHaveBeenCalledWith({
         loginRequest: {
           username: 'testuser',
-          password: 'password'
+          password: 'cGFzc3dvcmQ=' // Base64 encoded 'password'
         }
       });
 
@@ -350,7 +357,7 @@ describe('AuthSessionService', () => {
       ).toHaveBeenCalledWith({
         registerRequest: {
           username: 'testuser',
-          password: 'password'
+          password: 'cGFzc3dvcmQ=' // Base64 encoded 'password'
         }
       });
 

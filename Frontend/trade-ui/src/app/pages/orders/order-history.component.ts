@@ -77,6 +77,9 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
   readonly fromDate = signal<string>('');
   readonly toDate = signal<string>('');
 
+  // Cancel order state
+  readonly cancelling = signal<Set<string>>(new Set());
+
   readonly filterForm = this.fb.nonNullable.group(
     {
       status: ['ALL', Validators.required],
@@ -298,6 +301,51 @@ export class OrderHistoryComponent implements OnInit, OnDestroy {
 
   trackByOrderId(_: number, order: OrderHistoryEntry): string | number {
     return order.orderId;
+  }
+
+  /**
+   * Check if an order is currently being cancelled.
+   */
+  isCancelling(orderId: string): boolean {
+    return this.cancelling().has(orderId);
+  }
+
+  /**
+   * Cancel an order that is still NEW.
+   */
+  async cancelOrder(orderId: string): Promise<void> {
+    // Mark as cancelling
+    const cancelling = this.cancelling();
+    cancelling.add(orderId);
+    this.cancelling.set(new Set(cancelling));
+
+    try {
+      // Call the cancel API
+      const response = await this.api.orders.cancelOrder({ id: orderId });
+
+      if (response) {
+        // Find and update the order in the list
+        const orders = this.orders();
+        const index = orders.findIndex(o => o.orderId === orderId);
+        if (index !== -1) {
+          const updated = [...orders];
+          updated[index] = {
+            ...updated[index],
+            status: 'CANCELLED' as any  // Update status to CANCELLED
+          };
+          this.orders.set(updated);
+        }
+      }
+    } catch (error) {
+      // If cancel fails, show error to user (could add toast notification here)
+      console.error('Failed to cancel order:', error);
+      // Optionally show error message to user
+    } finally {
+      // Remove from cancelling set
+      const cancelling = this.cancelling();
+      cancelling.delete(orderId);
+      this.cancelling.set(new Set(cancelling));
+    }
   }
 
   /**

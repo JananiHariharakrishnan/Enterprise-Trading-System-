@@ -257,7 +257,9 @@ public class OrderServiceImpl implements OrderService {
             throw new OrderNotFoundException("Order not found");
         }
 
-        if (existingOrder.getSide() == com.tradingsystem.enums.OrderSide.BUY) {
+        // Only restore buying power for LIMIT buy orders (MARKET orders never reserved buying power)
+        if (existingOrder.getSide() == com.tradingsystem.enums.OrderSide.BUY &&
+            existingOrder.getOrderType() == com.tradingsystem.enums.OrderType.LIMIT) {
             Account account = getAuthorizedAccount(existingOrder.getAccountId());
             BigDecimal reservedValue = existingOrder.getPrice().multiply(BigDecimal.valueOf(existingOrder.getQuantity()));
             BigDecimal restoredBuyingPower = account.getBuyingPower().add(reservedValue);

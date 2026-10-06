@@ -50,6 +50,23 @@ const REFRESH_TOKEN_BCRYPT_COST = Number(process.env.REFRESH_TOKEN_BCRYPT_COST ?
 const REFRESH_TOKEN_TTL_SECONDS = Number(process.env.REFRESH_TOKEN_TTL_SECONDS ?? 60 * 60 * 24 * 7);
 const DUMMY_ARGON_HASH = '$argon2id$v=19$m=32768,t=3,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
+/**
+ * Decode a Base64-encoded password from the frontend.
+ * The frontend encodes passwords to prevent them from appearing in plaintext in network tabs.
+ */
+function decodePassword(encodedPassword: string): string {
+  try {
+    // Decode Base64 using Node.js Buffer
+    return Buffer.from(encodedPassword, 'base64').toString('utf-8');
+  } catch (error) {
+    logger.warn('failed to decode password', {
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+    // Return the encoded password as-is if decoding fails
+    return encodedPassword;
+  }
+}
+
 // Initialize TradeApiClient for calls to trade-api
 const tradeApiClient = new TradeApiClient();
 
@@ -259,7 +276,9 @@ export async function createUser(username: string, accountId: number, roles: str
 }
 
 export async function createCredential(accountId: number, username: string, plainPassword: string): Promise<CredentialRecord> {
-  const passwordHash = await argon2.hash(plainPassword, PASSWORD_HASH_OPTIONS);
+  // Decode the Base64-encoded password from frontend
+  const decodedPassword = decodePassword(plainPassword);
+  const passwordHash = await argon2.hash(decodedPassword, PASSWORD_HASH_OPTIONS);
   const params = {
     time: PASSWORD_HASH_OPTIONS.timeCost,
     memory_kb: PASSWORD_HASH_OPTIONS.memoryCost,
@@ -351,9 +370,12 @@ export async function findCredentialByUsername(username: string): Promise<Creden
 }
 
 export async function verifyPassword(stored: CredentialRecord | null, suppliedPassword: string): Promise<boolean> {
+  // Decode the Base64-encoded password from frontend
+  const decodedPassword = decodePassword(suppliedPassword);
+
   if (!stored) {
     try {
-      await argon2.verify(DUMMY_ARGON_HASH, suppliedPassword);
+      await argon2.verify(DUMMY_ARGON_HASH, decodedPassword);
     } catch {
       // keep failure timing similar
     }
@@ -361,7 +383,7 @@ export async function verifyPassword(stored: CredentialRecord | null, suppliedPa
   }
 
   try {
-    return await argon2.verify(stored.passwordHash, suppliedPassword);
+    return await argon2.verify(stored.passwordHash, decodedPassword);
   } catch (error) {
     logger.warn('password verification failed', {
       username: stored.username,
