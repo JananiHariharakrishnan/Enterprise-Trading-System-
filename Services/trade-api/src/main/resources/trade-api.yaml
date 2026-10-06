@@ -80,6 +80,25 @@ security:
   - bearerAuth: []
 
 paths:
+  /api/v1/market-data:
+    get:
+      tags: [MarketData]
+      operationId: getAllMarketData
+      summary: Get all market data
+      description: Returns the entire in-memory cache of the latest market prices for all tracked instruments.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A map of symbols to their latest market prices.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/LatestPriceResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
   /api/v1/orders:
     post:
       tags: [Orders]

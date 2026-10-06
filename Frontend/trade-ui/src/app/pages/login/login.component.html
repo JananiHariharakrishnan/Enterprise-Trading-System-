@@ -21,6 +21,14 @@
       data-testid="username-input"
     />
 
+    <p
+      class="validation-error"
+      *ngIf="form.get('username')?.touched && form.get('username')?.invalid"
+      data-testid="auth-error-username"
+    >
+      Username is required.
+    </p>
+
     <label for="password">Password</label>
     <input
       id="password"
@@ -32,10 +40,10 @@
 
     <p
       class="validation-error"
-      *ngIf="form.invalid && form.touched"
-      data-testid="auth-error-empty-field"
+      *ngIf="form.get('password')?.touched && form.get('password')?.invalid"
+      data-testid="auth-error-password"
     >
-      Username and password are required.
+      Password is required.
     </p>
 
     <div

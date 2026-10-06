@@ -32,6 +32,10 @@ class TradeApiClientServiceStub {
       status: 'PLACED'
     })
   };
+
+  marketData = {
+    getAllMarketData: vi.fn().mockResolvedValue({})
+  };
 }
 
 describe('OrdersComponent', () => {
@@ -103,7 +107,7 @@ describe('OrdersComponent', () => {
     component.form.patchValue({
       side: 'BUY',
       quantity: 10,
-      price: 120.5,
+      price: null,
       orderType: 'MARKET'
     });
 
@@ -123,7 +127,7 @@ describe('OrdersComponent', () => {
     component.form.patchValue({
       side: 'BUY',
       quantity: 10,
-      price: 120.5,
+      price: null,
       orderType: 'MARKET'
     });
 
@@ -135,7 +139,7 @@ describe('OrdersComponent', () => {
         symbol: 'AAPL',
         side: 'BUY',
         quantity: 10,
-        price: 120.5,
+        price: null,
         orderType: 'MARKET',
         idempotencyKey: '123e4567-e89b-12d3-a456-426614174000'
       }
@@ -152,7 +156,7 @@ describe('OrdersComponent', () => {
     component.form.patchValue({
       side: 'BUY',
       quantity: 10,
-      price: 120.5,
+      price: null,
       orderType: 'MARKET'
     });
 
@@ -193,7 +197,7 @@ describe('OrdersComponent', () => {
 
     expect(component.form.valid).toBe(true);
     expect(submitButton.disabled).toBe(false);
-    expect(submitButton.textContent).toContain('Buy 2 AAPL');
+    expect(submitButton.textContent).toContain('Buy 1 AAPL @ $100.50');
   });
 
   it('submits through DOM and renders success status', async () => {
@@ -204,7 +208,7 @@ describe('OrdersComponent', () => {
     component.form.patchValue({
       side: 'BUY',
       quantity: 2,
-      price: 300.25,
+      price: null,
       orderType: 'MARKET'
     });
     fixture.detectChanges();
@@ -227,7 +231,7 @@ describe('OrdersComponent', () => {
     component.form.patchValue({
       side: 'BUY',
       quantity: 2,
-      price: 300.25,
+      price: null,
       orderType: 'MARKET'
     });
     fixture.detectChanges();

@@ -84,14 +84,16 @@ test.describe('Order Placement Journey', () => {
     await signInToOrders(page);
 
     // Test 1: With no symbol selected, button should be disabled
+    // Set order type to LIMIT first (price field is conditional on this)
+    const orderTypeSelect = page.locator('[data-testid="order-type-select"]');
+    await orderTypeSelect.selectOption('LIMIT');
+
     await page.fill('[data-testid="order-quantity-input"]', '10');
     await page.fill('[data-testid="order-price-input"]', '1600');
 
-    const sideSelect = page.locator('[data-testid="order-side-select"]');
-    await sideSelect.selectOption('BUY');
-
-    const orderTypeSelect = page.locator('[data-testid="order-type-select"]');
-    await orderTypeSelect.selectOption('LIMIT');
+    // Click BUY radio button
+    const buyRadio = page.locator('[data-testid="order-side-buy"]');
+    await buyRadio.click();
 
     // Button should be disabled without instrument selection
     const submitButton = page.locator('[data-testid="place-order-button"]');
@@ -112,6 +114,10 @@ test.describe('Order Placement Journey', () => {
   test('order form validates quantity', async ({ page }) => {
     // Sign in
     await signInToOrders(page);
+
+    // Set order type to LIMIT first (price field is conditional on this)
+    const orderTypeSelect = page.locator('[data-testid="order-type-select"]');
+    await orderTypeSelect.selectOption('LIMIT');
 
     // Search for and select a symbol
     const symbolInput = page.locator('[data-testid="order-symbol-input"]');
@@ -137,6 +143,10 @@ test.describe('Order Placement Journey', () => {
     // Sign in
     await signInToOrders(page);
 
+    // Select order type (LIMIT/MARKET) first - price field is conditional on this
+    const orderTypeSelect = page.locator('[data-testid="order-type-select"]');
+    await orderTypeSelect.selectOption('LIMIT');
+
     // Search for and select a symbol
     const symbolInput = page.locator('[data-testid="order-symbol-input"]');
     await symbolInput.fill('INFY.NS');
@@ -149,13 +159,9 @@ test.describe('Order Placement Journey', () => {
     await page.fill('[data-testid="order-quantity-input"]', '10');
     await page.fill('[data-testid="order-price-input"]', '1600');
 
-    // Select order side (BUY/SELL)
-    const sideSelect = page.locator('[data-testid="order-side-select"]');
-    await sideSelect.selectOption('BUY');
-
-    // Select order type (LIMIT/MARKET)
-    const orderTypeSelect = page.locator('[data-testid="order-type-select"]');
-    await orderTypeSelect.selectOption('LIMIT');
+    // Click BUY radio button
+    const buyRadio = page.locator('[data-testid="order-side-buy"]');
+    await buyRadio.click();
 
     // Submit the order
     const submitButton = page.locator('[data-testid="place-order-button"]');

@@ -33,6 +33,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   readonly errorMessage = signal<string | null>(null);
   readonly lastOrderResponse = signal<OrderResponse | null>(null);
   readonly selectedInstrument = signal<InstrumentListItem | null>(null);
+  readonly latestPrice = signal<number | null>(null);
   readonly skipOrderConfirmation = signal(false);
   readonly baseCurrency = signal<BaseCurrency>('USD');
   
@@ -42,7 +43,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     symbol: [''], // Not required - validated by selectedInstrument() instead
     side: ['BUY', [Validators.required]],
     quantity: [1, [Validators.required, Validators.min(1), Validators.pattern('^[0-9]+$')]],
-    price: [null, []], // Validation is applied conditionally based on orderType
+    price: [null as number | null, []], // Validation is applied conditionally based on orderType
     orderType: ['MARKET', [Validators.required]],
   });
 
@@ -51,6 +52,9 @@ export class OrdersComponent implements OnInit, AfterViewInit {
 
   readonly side = computed<'BUY' | 'SELL'>(() => (this.formValue().side === 'SELL' ? 'SELL' : 'BUY'));
   readonly orderType = computed(() => (this.formValue().orderType === 'LIMIT' ? 'LIMIT' : 'MARKET'));
+  
+  readonly currencySymbol = computed(() => this.selectedInstrument()?.symbol?.endsWith('.NS') ? '₹' : '$');
+  readonly currencyCode = computed(() => this.selectedInstrument()?.symbol?.endsWith('.NS') ? 'INR' : 'USD');
 
   /**
    * Dynamically update price field validation based on order type.
@@ -74,13 +78,11 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     });
   }
 
-  /** Quantity x price, or null until both are valid numbers. For MARKET orders, always null. */
   readonly estimatedTotal = computed<number | null>(() => {
     const v = this.formValue();
-    if (v.orderType === 'MARKET') return null; // Market orders don't have a known price until execution
     const quantity = Number(v.quantity);
-    const price = Number(v.price);
-    return Number.isFinite(quantity) && Number.isFinite(price) && quantity > 0 && price > 0
+    const price = v.orderType === 'MARKET' ? this.latestPrice() : Number(v.price);
+    return Number.isFinite(quantity) && price !== null && Number.isFinite(price) && quantity > 0 && price > 0
       ? quantity * price
       : null;
   });
@@ -149,7 +151,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
 
   // ---------- Instrument ----------
 
-  onInstrumentSelected(instrument: InstrumentListItem): void {
+  async onInstrumentSelected(instrument: InstrumentListItem): Promise<void> {
     this.selectedInstrument.set(instrument);
     this.form.patchValue({ symbol: instrument.symbol });
     this.errorMessage.set(null);
@@ -157,6 +159,18 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     this.lastOrderResponse.set(null);
     // Clear cached idempotency key so new order gets a fresh key
     this.currentIdempotencyKey = null;
+
+    try {
+      const data = await this.api.marketData.getAllMarketData();
+      if (data && data[instrument.symbol]) {
+        this.latestPrice.set(data[instrument.symbol].price ?? null);
+      } else {
+        this.latestPrice.set(null);
+      }
+    } catch (e) {
+      console.error('Failed to load market data', e);
+      this.latestPrice.set(null);
+    }
   }
 
   clearInstrument(): void {

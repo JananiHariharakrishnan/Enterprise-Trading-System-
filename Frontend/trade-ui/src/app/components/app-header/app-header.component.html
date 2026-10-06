@@ -52,6 +52,17 @@
       </button>
     </div>
     <div class="top-actions">
+      <div
+        class="session-timer-badge"
+        [class.expiring]="authSession.isSessionExpiringSoon()"
+        data-testid="session-timer"
+        title="Session expires in"
+      >
+        <span class="timer-icon">⏱</span>
+        <span class="timer-label">Session expires in:</span>
+        <span class="timer-countdown">{{ authSession.sessionExpiresIn() }}</span>
+      </div>
+
       <button
         type="button"
         class="text-btn theme-btn"

@@ -29,5 +29,10 @@ public interface MarketDataService {
      * @return the latest price or null if not cached
      */
     LatestMarketPrice getLatestPrice(String symbol);
+
+    /**
+     * Returns all currently cached quotes.
+     */
+    java.util.Map<String, LatestMarketPrice> getAllCachedPrices();
 }
 
