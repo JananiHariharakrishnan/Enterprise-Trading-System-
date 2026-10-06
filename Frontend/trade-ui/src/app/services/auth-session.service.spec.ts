@@ -5,6 +5,7 @@ import { routes } from '../app.routes';
 import { AuthApiClientService } from './auth-api-client.service';
 import { AuthSessionService } from './auth-session.service';
 import { TokenStorageService } from './token-storage.service';
+import { PasswordHashService } from './password-hash.service';
 import { ResponseError } from '../generated/auth';
 import { authMappingComplete, tradeMappingComplete } from '../errors/error-messages';
 
@@ -89,7 +90,7 @@ describe('AuthSessionService', () => {
       ).toHaveBeenCalledWith({
         loginRequest: {
           username: 'priya.menon',
-          password: 'correct horse battery staple'
+          password: new PasswordHashService().encodePassword('correct horse battery staple')
         }
       });
 
@@ -317,7 +318,7 @@ describe('AuthSessionService', () => {
       ).toHaveBeenCalledWith({
         registerRequest: {
           username: 'priya.menon',
-          password: 'password'
+          password: new PasswordHashService().encodePassword('password')
         }
       });
 
