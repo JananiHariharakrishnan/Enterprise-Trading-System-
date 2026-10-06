@@ -52,9 +52,15 @@ export class OrdersComponent implements OnInit, AfterViewInit {
 
   readonly side = computed<'BUY' | 'SELL'>(() => (this.formValue().side === 'SELL' ? 'SELL' : 'BUY'));
   readonly orderType = computed(() => (this.formValue().orderType === 'LIMIT' ? 'LIMIT' : 'MARKET'));
-  
-  readonly currencySymbol = computed(() => this.selectedInstrument()?.symbol?.endsWith('.NS') ? '₹' : '$');
-  readonly currencyCode = computed(() => this.selectedInstrument()?.symbol?.endsWith('.NS') ? 'INR' : 'USD');
+  readonly currencySymbol = computed(() => {
+    if (this.baseCurrency() === 'INR') return '₹';
+    return this.selectedInstrument()?.symbol?.endsWith('.NS') ? '₹' : '$';
+  });
+
+  readonly currencyCode = computed(() => {
+    if (this.baseCurrency() === 'INR') return 'INR';
+    return this.selectedInstrument()?.symbol?.endsWith('.NS') ? 'INR' : 'USD';
+  });
 
   /**
    * Dynamically update price field validation based on order type.
@@ -97,7 +103,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     return `${verb} ${Number(this.form.value.quantity)} ${instrument.symbol}`;
   });
 
-  readonly currencySymbol = computed(() => (this.baseCurrency() === 'INR' ? '₹' : '$'));
+  
 
   /** Exchange rate actually applied, derived from the response instead of being hard-coded. */
   readonly conversionRate = computed<number | null>(() => {

@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './app/auth/auth.module.js';
-import { PreferencesModule } from './app/preferences/preferences.module.js';
 
 @Module({
   imports: [
@@ -13,7 +12,6 @@ import { PreferencesModule } from './app/preferences/preferences.module.js';
       },
     ]),
     AuthModule,
-    PreferencesModule,
   ],
 })
 export class AppModule {}

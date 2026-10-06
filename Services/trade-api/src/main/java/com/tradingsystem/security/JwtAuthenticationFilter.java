@@ -44,6 +44,19 @@ public class JwtAuthenticationFilter implements Filter {
             return;
         }
 
+        // Allow unauthenticated internal service token calls to internal preference resolution
+        if (requestPath != null && requestPath.startsWith("/api/v1/accounts/") && requestPath.contains("/notifications/resolve")) {
+            String header = httpRequest.getHeader(AUTHORIZATION);
+            String token = extractBearerToken(header);
+            String internal = System.getenv().getOrDefault("INTERNAL_SERVICE_TOKEN", "dev-internal-token");
+            if (token != null && token.equals(internal)) {
+                // treat as internal call: do not set AuthContextHolder accountId; let controller validate token separately
+                chain.doFilter(request, response);
+                return;
+            }
+            // fallthrough to normal JWT validation (reject if token not a JWT)
+        }
+
         String header = httpRequest.getHeader(AUTHORIZATION);
         String token = extractBearerToken(header);
 
