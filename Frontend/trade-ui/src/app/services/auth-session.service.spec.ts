@@ -783,4 +783,102 @@ describe('AuthSessionService', () => {
       ).toBeNull();
     });
   });
+
+  describe('session countdown timer', () => {
+    afterEach(() => {
+      service.stopSessionTimer();
+      vi.useRealTimers();
+    });
+
+    it('should start countdown on successful login with default duration (15 min)', async () => {
+      apiStub.client.authLoginPost.mockResolvedValue(mockLoginResponse);
+      apiStub.client.authMeGet.mockResolvedValue(mockUser);
+
+      await service.login('priya.menon', 'password');
+
+      expect(service.sessionRemainingSeconds()).toBeGreaterThanOrEqual(899);
+      expect(service.sessionRemainingSeconds()).toBeLessThanOrEqual(900);
+      expect(service.sessionExpiresIn()).toBe('15:00');
+      expect(service.isSessionExpiringSoon()).toBe(false);
+    });
+
+    it('should format remaining seconds correctly as MM:SS', () => {
+      service.sessionRemainingSeconds.set(900);
+      expect(service.sessionExpiresIn()).toBe('15:00');
+
+      service.sessionRemainingSeconds.set(65);
+      expect(service.sessionExpiresIn()).toBe('01:05');
+
+      service.sessionRemainingSeconds.set(9);
+      expect(service.sessionExpiresIn()).toBe('00:09');
+
+      service.sessionRemainingSeconds.set(0);
+      expect(service.sessionExpiresIn()).toBe('00:00');
+    });
+
+    it('should flag isSessionExpiringSoon when <= 60 seconds remain', () => {
+      service.sessionRemainingSeconds.set(61);
+      expect(service.isSessionExpiringSoon()).toBe(false);
+
+      service.sessionRemainingSeconds.set(60);
+      expect(service.isSessionExpiringSoon()).toBe(true);
+
+      service.sessionRemainingSeconds.set(10);
+      expect(service.isSessionExpiringSoon()).toBe(true);
+
+      service.sessionRemainingSeconds.set(0);
+      expect(service.isSessionExpiringSoon()).toBe(false);
+    });
+
+    it('should redirect to login with returnUrl and clear session when session expires', async () => {
+      const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+      // Simulate viewing the orders page
+      Object.defineProperty(router, 'url', { value: '/orders', configurable: true });
+
+      tokenStorage.setTokens('token-123', 'refresh-123');
+      expect(service.getAccessToken()).toBe('token-123');
+
+      await service.handleSessionExpiry();
+
+      expect(service.isAuthenticated()).toBe(false);
+      expect(service.currentUser()).toBeNull();
+      expect(tokenStorage.getAccessToken()).toBeNull();
+      expect(service.sessionRemainingSeconds()).toBe(0);
+      expect(navigateSpy).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/orders' } });
+    });
+
+    it('should not pass login or register as returnUrl on expiry', async () => {
+      const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+      Object.defineProperty(router, 'url', { value: '/login', configurable: true });
+
+      tokenStorage.setTokens('token-123', 'refresh-123');
+
+      await service.handleSessionExpiry();
+
+      expect(navigateSpy).toHaveBeenCalledWith(['/login'], undefined);
+    });
+
+    it('should stop timer and reset remaining seconds on logout', async () => {
+      vi.spyOn(router, 'navigate').mockResolvedValue(true);
+      service.sessionRemainingSeconds.set(500);
+
+      await service.logout();
+
+      expect(service.sessionRemainingSeconds()).toBe(0);
+      expect(tokenStorage.getAccessToken()).toBeNull();
+    });
+
+    it('should resume timer from stored expiresAt on refresh', () => {
+      // 5 minutes left (300 seconds)
+      const expiresAt = Date.now() + 300 * 1000;
+      tokenStorage.setTokens('token-123', 'refresh-123');
+      tokenStorage.setExpiresAt(expiresAt);
+
+      service.startSessionTimer();
+
+      expect(service.sessionRemainingSeconds()).toBeGreaterThanOrEqual(299);
+      expect(service.sessionRemainingSeconds()).toBeLessThanOrEqual(300);
+      expect(service.sessionExpiresIn()).toBe('05:00');
+    });
+  });
 });

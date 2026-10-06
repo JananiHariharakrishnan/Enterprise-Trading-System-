@@ -219,4 +219,47 @@
   .asset-detail-grid {
     grid-template-columns: 1fr;
   }
+
+  .session-timer-badge .timer-label {
+    display: none;
+  }
 }
+
+.session-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.session-timer-badge .timer-icon {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.session-timer-badge .timer-label {
+  color: var(--muted);
+}
+
+.session-timer-badge .timer-countdown {
+  font-weight: 700;
+  color: var(--green);
+}
+
+.session-timer-badge.expiring {
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 10%, var(--surface));
+}
+
+.session-timer-badge.expiring .timer-countdown,
+.session-timer-badge.expiring .timer-icon {
+  color: var(--red);
+}
+

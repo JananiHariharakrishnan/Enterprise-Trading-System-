@@ -3,7 +3,8 @@ import { Router } from '@angular/router';
 import { LoginRequest, ResponseError, UserResponse } from '../generated/auth';
 import { mapErrorCodeToMessage } from '../errors/error-messages';
 import { AuthApiClientService } from './auth-api-client.service';
-import { TokenStorageService } from './token-storage.service';
+import { TokenStorageService, SESSION_DURATION_SECONDS } from './token-storage.service';
+import { getSafeReturnUrl } from '../guards/return-url.util';
 import { PasswordHashService } from './password-hash.service';
 
 @Injectable({
@@ -22,6 +23,27 @@ export class AuthSessionService {
   readonly isAuthenticated = this.isAuthenticatedSignal.asReadonly();
   private readonly authHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
 
+  // Session countdown timer state
+  readonly sessionRemainingSeconds = signal<number>(0);
+  readonly sessionExpiresIn = computed(() => {
+    const total = this.sessionRemainingSeconds();
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  });
+  readonly isSessionExpiringSoon = computed(() => {
+    const rem = this.sessionRemainingSeconds();
+    return rem > 0 && rem <= 60;
+  });
+
+  private sessionTimerId: ReturnType<typeof setInterval> | null = null;
+
+  constructor() {
+    if (this.isAuthenticatedSignal()) {
+      this.startSessionTimer();
+    }
+  }
+
   async login(username: string, password: string): Promise<void> {
     try {
       // Encode password on client-side to avoid sending plaintext in network requests
@@ -31,6 +53,7 @@ export class AuthSessionService {
       const response = await this.authApi.client.authLoginPost({ loginRequest: payload });
       this.tokenStorage.setTokens(response.accessToken, response.refreshToken);
       this.isAuthenticatedSignal.set(true);
+      this.startSessionTimer();
       // Best effort profile load; successful token issuance should still allow navigation.
       await this.loadCurrentUser(false);
     } catch (error) {
@@ -75,6 +98,8 @@ export class AuthSessionService {
       } catch (error) {
         this.currentUserSignal.set(null);
         if (clearTokenOnFailure && this.shouldClearSessionOnProfileFailure(error)) {
+          this.stopSessionTimer();
+          this.sessionRemainingSeconds.set(0);
           this.tokenStorage.clear();
           this.isAuthenticatedSignal.set(false);
         }
@@ -88,10 +113,59 @@ export class AuthSessionService {
   }
 
   async logout(): Promise<void> {
+    this.stopSessionTimer();
+    this.sessionRemainingSeconds.set(0);
     this.tokenStorage.clear();
     this.currentUserSignal.set(null);
     this.isAuthenticatedSignal.set(false);
     await this.router.navigate(['/login']);
+  }
+
+  startSessionTimer(): void {
+    this.stopSessionTimer();
+
+    let expiresAt = this.tokenStorage.getExpiresAt();
+    if (!expiresAt) {
+      expiresAt = Date.now() + SESSION_DURATION_SECONDS * 1000;
+      this.tokenStorage.setExpiresAt(expiresAt);
+    }
+
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((expiresAt! - Date.now()) / 1000));
+      this.sessionRemainingSeconds.set(remaining);
+      if (remaining <= 0) {
+        this.stopSessionTimer();
+        void this.handleSessionExpiry();
+      }
+    };
+
+    update();
+    if (this.sessionRemainingSeconds() > 0) {
+      this.sessionTimerId = setInterval(update, 1000);
+    }
+  }
+
+  stopSessionTimer(): void {
+    if (this.sessionTimerId !== null) {
+      clearInterval(this.sessionTimerId);
+      this.sessionTimerId = null;
+    }
+  }
+
+  async handleSessionExpiry(): Promise<void> {
+    this.stopSessionTimer();
+    this.sessionRemainingSeconds.set(0);
+    this.tokenStorage.clear();
+    this.currentUserSignal.set(null);
+    this.isAuthenticatedSignal.set(false);
+
+    const currentUrl = this.router.url;
+    const safeReturn = getSafeReturnUrl(currentUrl);
+    const returnUrl = safeReturn && safeReturn !== '/login' && safeReturn !== '/register'
+      ? safeReturn
+      : undefined;
+
+    await this.router.navigate(['/login'], returnUrl ? { queryParams: { returnUrl } } : undefined);
   }
 
   clearCurrentUserCache(): void {
