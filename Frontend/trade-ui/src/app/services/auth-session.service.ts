@@ -4,6 +4,7 @@ import { LoginRequest, ResponseError, UserResponse } from '../generated/auth';
 import { mapErrorCodeToMessage } from '../errors/error-messages';
 import { AuthApiClientService } from './auth-api-client.service';
 import { TokenStorageService } from './token-storage.service';
+import { PasswordHashService } from './password-hash.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,6 +13,7 @@ export class AuthSessionService {
   private readonly authApi = inject(AuthApiClientService);
   private readonly tokenStorage = inject(TokenStorageService);
   private readonly router = inject(Router);
+  private readonly passwordHashService = inject(PasswordHashService);
 
   private readonly currentUserSignal = signal<UserResponse | null>(null);
   private readonly isAuthenticatedSignal = signal(this.tokenStorage.getAccessToken() !== null);
@@ -21,9 +23,11 @@ export class AuthSessionService {
   private readonly authHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
 
   async login(username: string, password: string): Promise<void> {
-    const payload: LoginRequest = { username, password };
-
     try {
+      // Encode password on client-side to avoid sending plaintext in network requests
+      const encodedPassword = this.passwordHashService.encodePassword(password);
+      const payload: LoginRequest = { username, password: encodedPassword };
+
       const response = await this.authApi.client.authLoginPost({ loginRequest: payload });
       this.tokenStorage.setTokens(response.accessToken, response.refreshToken);
       this.isAuthenticatedSignal.set(true);
@@ -35,14 +39,14 @@ export class AuthSessionService {
   }
 
   async register(username: string, password: string): Promise<UserResponse> {
-    const payload = { username, password };
-
     try {
+      // Encode password on client-side to avoid sending plaintext in network requests
+      const encodedPassword = this.passwordHashService.encodePassword(password);
       // The generated `RegisterRequest` model currently requires `accountId`,
       // but the Auth service will allocate an account id when omitted. Cast
       // to `any` to match the generated client signature without forcing a
       // synthetic accountId value here.
-      return await this.authApi.client.authRegisterPost({ registerRequest: payload as any });
+      return await this.authApi.client.authRegisterPost({ registerRequest: { username, password: encodedPassword } as any });
     } catch (error) {
       throw new Error(await this.toReadableError(error));
     }

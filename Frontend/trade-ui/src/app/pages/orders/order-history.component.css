@@ -308,6 +308,51 @@
   animation: spin 0.9s linear infinite;
 }
 
+/* Cancel button in order history table */
+.btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: 6px;
+  border: 1.5px solid var(--down);
+  background: transparent;
+  color: var(--down);
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: var(--down-bg);
+  border-color: var(--down);
+}
+
+.btn-cancel:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-cancel:disabled {
+  color: var(--disabled-ink);
+  border-color: var(--disabled-bg);
+  background: var(--disabled-bg);
+  cursor: not-allowed;
+}
+
+.btn-cancel:focus-visible {
+  outline: 3px solid var(--down-ring);
+  outline-offset: 2px;
+}
+
+.action-placeholder {
+  color: var(--ink-faint);
+}
+
 /* ---------- Filter panel ---------- */
 
 .filter-panel {
@@ -621,6 +666,11 @@ tbody tr:hover {
 
 .created {
   color: var(--ink-soft);
+}
+
+.actions {
+  text-align: center;
+  white-space: nowrap;
 }
 
 .symbol-cell {
