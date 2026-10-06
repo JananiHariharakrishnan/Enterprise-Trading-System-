@@ -32,6 +32,10 @@ class TradeApiClientServiceStub {
       status: 'PLACED'
     })
   };
+
+  marketData = {
+    getAllMarketData: vi.fn().mockResolvedValue({})
+  };
 }
 
 describe('OrdersComponent', () => {

@@ -31,6 +31,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   readonly errorMessage = signal<string | null>(null);
   readonly lastOrderResponse = signal<OrderResponse | null>(null);
   readonly selectedInstrument = signal<InstrumentListItem | null>(null);
+  readonly latestPrice = signal<number | null>(null);
   
   private currentIdempotencyKey: string | null = null;
 
@@ -141,7 +142,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
 
   // ---------- Instrument ----------
 
-  onInstrumentSelected(instrument: InstrumentListItem): void {
+  async onInstrumentSelected(instrument: InstrumentListItem): Promise<void> {
     this.selectedInstrument.set(instrument);
     this.form.patchValue({ symbol: instrument.symbol });
     this.errorMessage.set(null);
@@ -149,6 +150,18 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     this.lastOrderResponse.set(null);
     // Clear cached idempotency key so new order gets a fresh key
     this.currentIdempotencyKey = null;
+
+    try {
+      const data = await this.api.marketData.getAllMarketData();
+      if (data && data[instrument.symbol]) {
+        this.latestPrice.set(data[instrument.symbol].price ?? null);
+      } else {
+        this.latestPrice.set(null);
+      }
+    } catch (e) {
+      console.error('Failed to load market data', e);
+      this.latestPrice.set(null);
+    }
   }
 
   clearInstrument(): void {

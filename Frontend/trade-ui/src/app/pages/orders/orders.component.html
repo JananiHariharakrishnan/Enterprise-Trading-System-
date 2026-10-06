@@ -56,8 +56,13 @@
       <form [formGroup]="form" (ngSubmit)="submit()" class="ticket-form" novalidate>
         <div class="ticket-head">
           <h3>Order ticket</h3>
-          <span class="ticket-symbol" *ngIf="selectedInstrument() as instrument">{{ instrument.symbol }}</span>
+          <div style="display: flex; flex-direction: column; align-items: flex-end;">
+            <span class="ticket-symbol" *ngIf="selectedInstrument() as instrument">{{ instrument.symbol }}</span>
+            <span *ngIf="latestPrice() !== null" style="font-size: 0.8125rem; font-weight: 500; margin-top: 4px; color: var(--text-2);">
+              {{ latestPrice() | currency:'USD':'symbol':'1.2-2' }}
+            </span>
           </div>
+        </div>
 
         <!-- Side: sliding Buy / Sell toggle -->
         <div class="field">
