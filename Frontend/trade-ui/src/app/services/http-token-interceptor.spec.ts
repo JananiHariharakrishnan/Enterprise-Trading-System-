@@ -4,9 +4,12 @@ import { TokenStorageService } from './token-storage.service';
 
 class MockTokenStorage implements TokenStorageService {
   private token: string | null = null;
+  private expiresAt: number | null = null;
   setTokens(): void {}
   getAccessToken(): string | null { return this.token; }
   getRefreshToken(): string | null { return null; }
+  getExpiresAt(): number | null { return this.expiresAt; }
+  setExpiresAt(): void {}
   clear(): void {}
   // test helper
   setToken(token: string | null) { this.token = token; }

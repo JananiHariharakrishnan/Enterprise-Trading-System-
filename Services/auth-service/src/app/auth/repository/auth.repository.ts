@@ -56,8 +56,8 @@ const DUMMY_ARGON_HASH = '$argon2id$v=19$m=32768,t=3,p=1$AAAAAAAAAAAAAAAAAAAAAA$
  */
 function decodePassword(encodedPassword: string): string {
   try {
-    // Decode from Base64 and handle UTF-8
-    return decodeURIComponent(escape(atob(encodedPassword)));
+    // Decode Base64 using Node.js Buffer
+    return Buffer.from(encodedPassword, 'base64').toString('utf-8');
   } catch (error) {
     logger.warn('failed to decode password', {
       error: error instanceof Error ? error.message : 'unknown',

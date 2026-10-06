@@ -6,6 +6,8 @@ class MockTokenStorage implements TokenStorageService {
   setTokens(): void {}
   getAccessToken(): string | null { return 'token-xyz'; }
   getRefreshToken(): string | null { return null; }
+  getExpiresAt(): number | null { return null; }
+  setExpiresAt(): void {}
   clear(): void {}
 }
 
