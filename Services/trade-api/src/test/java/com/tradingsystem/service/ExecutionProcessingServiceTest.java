@@ -11,6 +11,7 @@ import com.tradingsystem.model.Order;
 import com.tradingsystem.model.Position;
 import com.tradingsystem.enums.OrderSide;
 import com.tradingsystem.enums.OrderStatus;
+import com.tradingsystem.enums.OrderType;
 import com.tradingsystem.messaging.TradeEventPayload;
 import com.tradingsystem.service.Impl.ExecutionProcessingService;
 import org.junit.jupiter.api.AfterEach;
@@ -71,6 +72,7 @@ class ExecutionProcessingServiceTest {
         order.setAccountId(1001L);
         order.setSymbol("AAPL");
         order.setSide(OrderSide.BUY);
+        order.setOrderType(OrderType.LIMIT);
         order.setQuantity(100);
         order.setPrice(new BigDecimal("230.00"));
         order.setStatus(OrderStatus.NEW);
@@ -126,7 +128,7 @@ class ExecutionProcessingServiceTest {
         when(orderDataMapper.updateAccountBalancesWithVersion(
             1001L,
             new BigDecimal("26850.00"), // 50000 - (231.50 * 100)
-            new BigDecimal("50000.00").add(new BigDecimal("23000.00")).subtract(new BigDecimal("23150.00")),
+            new BigDecimal("49850.00"),  // 50000 + 23000 - 23150
             5
         )).thenReturn(1);
         when(orderDataMapper.findPosition(1001L, "AAPL")).thenReturn(position);

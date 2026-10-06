@@ -103,7 +103,7 @@ describe('OrdersComponent', () => {
     component.form.patchValue({
       side: 'BUY',
       quantity: 10,
-      price: 120.5,
+      price: null,
       orderType: 'MARKET'
     });
 
@@ -123,7 +123,7 @@ describe('OrdersComponent', () => {
     component.form.patchValue({
       side: 'BUY',
       quantity: 10,
-      price: 120.5,
+      price: null,
       orderType: 'MARKET'
     });
 
@@ -135,7 +135,7 @@ describe('OrdersComponent', () => {
         symbol: 'AAPL',
         side: 'BUY',
         quantity: 10,
-        price: 120.5,
+        price: null,
         orderType: 'MARKET',
         idempotencyKey: '123e4567-e89b-12d3-a456-426614174000'
       }
@@ -152,7 +152,7 @@ describe('OrdersComponent', () => {
     component.form.patchValue({
       side: 'BUY',
       quantity: 10,
-      price: 120.5,
+      price: null,
       orderType: 'MARKET'
     });
 
@@ -204,7 +204,7 @@ describe('OrdersComponent', () => {
     component.form.patchValue({
       side: 'BUY',
       quantity: 2,
-      price: 300.25,
+      price: null,
       orderType: 'MARKET'
     });
     fixture.detectChanges();
@@ -227,7 +227,7 @@ describe('OrdersComponent', () => {
     component.form.patchValue({
       side: 'BUY',
       quantity: 2,
-      price: 300.25,
+      price: null,
       orderType: 'MARKET'
     });
     fixture.detectChanges();

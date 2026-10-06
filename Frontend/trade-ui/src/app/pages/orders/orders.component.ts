@@ -38,7 +38,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     symbol: [''], // Not required - validated by selectedInstrument() instead
     side: ['BUY', [Validators.required]],
     quantity: [1, [Validators.required, Validators.min(1), Validators.pattern('^[0-9]+$')]],
-    price: [null, []], // Validation is applied conditionally based on orderType
+    price: [null as number | null, []], // Validation is applied conditionally based on orderType
     orderType: ['MARKET', [Validators.required]],
   });
 

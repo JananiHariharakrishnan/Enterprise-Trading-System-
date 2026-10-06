@@ -59,7 +59,7 @@ class OrderServiceImplPlaceOrderTest {
         cmd.setAccountId(1001L);
         cmd.setSymbol("AAPL");
         cmd.setSide(OrderSide.BUY);
-        cmd.setOrderType(com.tradingsystem.enums.OrderType.MARKET);
+        cmd.setOrderType(com.tradingsystem.enums.OrderType.LIMIT);
         cmd.setQuantity(10);
         cmd.setPrice(new BigDecimal("100.00"));
         cmd.setIdempotencyKey("key-1");

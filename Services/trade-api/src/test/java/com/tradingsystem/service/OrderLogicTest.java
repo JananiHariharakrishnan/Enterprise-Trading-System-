@@ -2,6 +2,7 @@ package com.tradingsystem.service;
 
 import com.tradingsystem.enums.AccountStatus;
 import com.tradingsystem.enums.OrderSide;
+import com.tradingsystem.enums.OrderType;
 import com.tradingsystem.exception.*;
 import com.tradingsystem.model.Account;
 import com.tradingsystem.model.Instrument;
@@ -79,6 +80,7 @@ class OrderLogicTest {
         Order o = new Order();
         o.setQuantity(10);
         o.setPrice(new BigDecimal("1.00"));
+        o.setOrderType(OrderType.LIMIT);
         o.setSide(OrderSide.BUY);
         assertThrows(InsufficientFundsException.class, () ->
                 logic.placeOrder(a, inst, o)
