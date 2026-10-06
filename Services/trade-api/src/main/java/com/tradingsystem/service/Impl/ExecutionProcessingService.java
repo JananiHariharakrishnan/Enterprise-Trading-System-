@@ -87,7 +87,8 @@ public class ExecutionProcessingService {
 
         // For REJECTED: we will publish a REJECTED event after commit and return
         if ("REJECTED".equalsIgnoreCase(targetStatus)) {
-            if ("BUY".equalsIgnoreCase(order.getSide().name())) {
+            // Only restore buying power for LIMIT orders that reserved it (MARKET orders don't reserve)
+            if ("BUY".equalsIgnoreCase(order.getSide().name()) && order.getOrderType() != null && order.getOrderType().name().equals("LIMIT")) {
                 Account account = orderDataMapper.findAccountById(order.getAccountId());
                 if (account == null) {
                     throw new MalformedExecutionException("Account not found: " + order.getAccountId());
@@ -165,7 +166,11 @@ public class ExecutionProcessingService {
             }
 
             BigDecimal orderValue = executedPriceInAccountCurrency.multiply(BigDecimal.valueOf(order.getQuantity()));
-            BigDecimal reservedValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
+            // For LIMIT orders, buying power was reserved. For MARKET orders, nothing was reserved.
+            BigDecimal reservedValue = BigDecimal.ZERO;
+            if (order.getOrderType() != null && order.getOrderType().name().equals("LIMIT") && order.getPrice() != null) {
+                reservedValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
+            }
 
             BigDecimal newCashBalance = account.getCashBalance();
             BigDecimal newBuyingPower = account.getBuyingPower();

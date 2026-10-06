@@ -1,7 +1,7 @@
 <section class="orders-page">
   <header class="page-head">
     <h2>Place order</h2>
-    <p>Choose an instrument, set the size and price, then confirm.</p>
+    <p>Choose an instrument, select order type (Market or Limit), set the quantity, then confirm. For limit orders, specify your price.</p>
   </header>
 
   <div class="order-layout">
@@ -57,23 +57,44 @@
         <div class="ticket-head">
           <h3>Order ticket</h3>
           <span class="ticket-symbol" *ngIf="selectedInstrument() as instrument">{{ instrument.symbol }}</span>
-         </div>
+          </div>
 
-         <!-- Side -->
-         <div class="field">
-           <label class="field-label" for="side-select">Order side</label>
-           <select
-             id="side-select"
-             class="select"
-             formControlName="side"
-             data-testid="order-side-select"
-           >
-             <option value="BUY">Buy</option>
-             <option value="SELL">Sell</option>
-           </select>
-         </div>
+        <!-- Side: sliding Buy / Sell toggle -->
+        <div class="field">
+          <span class="field-label" id="side-label">Order side</span>
+          <div
+            class="seg seg-side"
+            [class.is-sell]="side() === 'SELL'"
+            role="radiogroup"
+            aria-labelledby="side-label"
+          >
+            <span class="seg-thumb" aria-hidden="true"></span>
 
-         <!-- Quantity -->
+            <label class="seg-option buy">
+              <input
+                type="radio"
+                name="side"
+                value="BUY"
+                formControlName="side"
+                data-testid="order-side-buy"
+              />
+              <span>Buy</span>
+            </label>
+
+            <label class="seg-option sell">
+              <input
+                type="radio"
+                name="side"
+                value="SELL"
+                formControlName="side"
+                data-testid="order-side-sell"
+              />
+              <span>Sell</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Quantity -->
         <div class="field">
           <label class="field-label" for="quantity-input">Quantity</label>
           <div class="input-wrap" [class.invalid]="quantityError()">
@@ -107,38 +128,42 @@
              <option value="LIMIT">Limit</option>
            </select>
            <p class="field-hint">
-             {{ orderType() === 'LIMIT' ? 'Fills only at your price or better.' : 'Executes immediately.' }}
+             {{ orderType() === 'LIMIT' ? 'Fills only at your price or better.' : 'Executes immediately at current market price.' }}
            </p>
          </div>
 
-          <!-- Price -->
-        <div class="field">
-          <label class="field-label" for="price-input">Price per share</label>
-          <div class="input-wrap" [class.invalid]="priceError()">
-            <span class="prefix" aria-hidden="true">$</span>
-            <input
-              id="price-input"
-              class="input"
-              type="number"
-              inputmode="decimal"
-              step="0.01"
-              min="0.01"
-              placeholder="0.00"
-              formControlName="price"
-              data-testid="order-price-input"
-            />
-            <span class="suffix" aria-hidden="true">USD</span>
-          </div>
-          <p class="field-error" *ngIf="priceError() as message" role="alert">{{ message }}</p>
-        </div>
+         <!-- Price (only for LIMIT orders) -->
+         <div class="field" *ngIf="orderType() === 'LIMIT'">
+           <label class="field-label" for="price-input">Price per share</label>
+           <div class="input-wrap" [class.invalid]="priceError()">
+             <span class="prefix" aria-hidden="true">$</span>
+             <input
+               id="price-input"
+               class="input"
+               type="number"
+               inputmode="decimal"
+               step="0.01"
+               min="0.01"
+               placeholder="0.00"
+               formControlName="price"
+               data-testid="order-price-input"
+             />
+             <span class="suffix" aria-hidden="true">USD</span>
+           </div>
+           <p class="field-error" *ngIf="priceError() as message" role="alert">{{ message }}</p>
+         </div>
 
         <!-- Summary -->
         <div class="summary">
           <div class="summary-row">
-            <span>Estimated total</span>
-            <strong class="summary-total">{{ estimatedTotal() === null ? '–' : '$' + (estimatedTotal() | number: '1.2-2') }}</strong>
+            <span>{{ orderType() === 'MARKET' ? 'Order type' : 'Estimated total' }}</span>
+            <strong class="summary-total">
+              {{ orderType() === 'MARKET' ? 'Market Order' : (estimatedTotal() === null ? '–' : '$' + (estimatedTotal() | number: '1.2-2')) }}
+            </strong>
           </div>
-          <p class="summary-note">Quantity &times; price per share</p>
+          <p class="summary-note">
+            {{ orderType() === 'MARKET' ? 'Fills at current market price' : 'Quantity × price per share' }}
+          </p>
         </div>
 
         <!-- Status -->

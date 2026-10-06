@@ -732,6 +732,14 @@ components:
         `FILLED`, `REJECTED` and `CANCELLED` are terminal. There is no partial-fill state, so the
         Trade Executor fills an order in full or rejects it.
 
+    OrderType:
+      type: string
+      enum: [MARKET, LIMIT]
+      description: |
+        The type of the order.
+        `MARKET` orders execute immediately at the current market price.
+        `LIMIT` orders execute only at the specified price or better.
+
     AccountStatus:
       type: string
       enum: [ACTIVE, SUSPENDED, CLOSED]
@@ -745,7 +753,7 @@ components:
     PlaceOrderRequest:
       type: object
       additionalProperties: false
-      required: [accountId, symbol, side, quantity, price, idempotencyKey]
+      required: [accountId, symbol, side, quantity, orderType, idempotencyKey]
       properties:
         accountId:
           type: integer
@@ -770,15 +778,18 @@ components:
           minimum: 1
           description: Whole units. Must be greater than zero, business rule 4.
           example: 100
+        orderType:
+          $ref: '#/components/schemas/OrderType'
+          description: The type of order - MARKET executes at current price, LIMIT executes only at specified price.
         price:
-          type: number
+          type: [number, 'null']
           format: double
           exclusiveMinimum: 0
           multipleOf: 0.01
           description: |
-            Limit price per unit, to two decimal places. Must be greater than zero, business rule 5.
-            Serialise as a JSON number and hold it as `BigDecimal` in Java. Never use `double` for
-            money in the domain.
+            Limit price per unit, to two decimal places. Required for LIMIT orders (must be > 0).
+            Must be null or omitted for MARKET orders. Serialise as a JSON number and hold it as
+            `BigDecimal` in Java. Never use `double` for money in the domain.
           example: 25.50
         idempotencyKey:
           type: string
@@ -792,7 +803,7 @@ components:
     OrderResponse:
       type: object
       additionalProperties: false
-      required: [orderId, status, message, symbol, side, quantity, price]
+      required: [orderId, status, message, symbol, side, quantity, orderType, price]
       properties:
         orderId:
           type: string
@@ -806,6 +817,9 @@ components:
           type: string
           description: Human-readable outcome. For display only. Never branch on this string.
           example: Order accepted
+
+        orderType:
+          $ref: '#/components/schemas/OrderType'
 
         symbol:
           type: string
@@ -840,7 +854,7 @@ components:
     OrderHistoryEntry:
       type: object
       additionalProperties: false
-      required: [orderId, accountId, symbol, side, quantity, price, status, createdOn]
+      required: [orderId, accountId, symbol, side, quantity, orderType, price, status, createdOn]
       properties:
         orderId:
           type: string
@@ -858,10 +872,12 @@ components:
           type: integer
           format: int32
           example: 100
+        orderType:
+          $ref: '#/components/schemas/OrderType'
         price:
-          type: number
+          type: [number, 'null']
           format: double
-          description: The limit price submitted with the order.
+          description: The limit price submitted with the order. Null for MARKET orders.
           example: 25.50
         executedPrice:
           type: [number, 'null']

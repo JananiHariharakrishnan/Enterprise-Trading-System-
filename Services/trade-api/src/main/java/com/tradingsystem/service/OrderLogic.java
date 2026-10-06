@@ -2,6 +2,7 @@ package com.tradingsystem.service;
 
 import com.tradingsystem.enums.AccountStatus;
 import com.tradingsystem.enums.OrderSide;
+import com.tradingsystem.enums.OrderType;
 import com.tradingsystem.exception.AccountNotActiveException;
 import com.tradingsystem.exception.AccountNotFoundException;
 import com.tradingsystem.exception.DuplicateOrderException;
@@ -88,30 +89,38 @@ public class OrderLogic {
             throw new InvalidOrderException();
         }
 
-        // Rule 5: Price must be positive
-        if (order.getPrice() == null || order.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new InvalidOrderException();
+        // Rule 5: Price must be positive for LIMIT orders, but can be null for MARKET orders
+        if (order.getOrderType() == OrderType.LIMIT) {
+            if (order.getPrice() == null || order.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new InvalidOrderException("Price is required and must be positive for LIMIT orders");
+            }
         }
+        // For MARKET orders, price can be null (will be determined by the executor at market price)
     }
 
     private void validateBuyOrder(Account account, Order order) {
         // Rule 6: BUY requires sufficient balance
         if (order.getSide() == OrderSide.BUY) {
-            // EDGE CASE FIX: Validate quantity doesn't cause overflow
-            if (order.getQuantity() > Integer.MAX_VALUE / 1000) {
-                throw new InvalidOrderException();
-            }
+            // For LIMIT orders: validate buying power at order placement time
+            // For MARKET orders: buying power is validated by the executor at execution time
+            if (order.getOrderType() == OrderType.LIMIT && order.getPrice() != null) {
+                // EDGE CASE FIX: Validate quantity doesn't cause overflow
+                if (order.getQuantity() > Integer.MAX_VALUE / 1000) {
+                    throw new InvalidOrderException();
+                }
 
-            BigDecimal orderValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
+                BigDecimal orderValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
 
-            // EDGE CASE FIX: Check price precision
-            if (orderValue.scale() > 10) {
-                throw new InvalidOrderException();
-            }
+                // EDGE CASE FIX: Check price precision
+                if (orderValue.scale() > 10) {
+                    throw new InvalidOrderException();
+                }
 
-            if (account.getBuyingPower().compareTo(orderValue) < 0) {
-                throw new InsufficientFundsException();
+                if (account.getBuyingPower().compareTo(orderValue) < 0) {
+                    throw new InsufficientFundsException();
+                }
             }
+            // For MARKET orders: buying power validation is deferred to executor at execution time
         }
     }
 

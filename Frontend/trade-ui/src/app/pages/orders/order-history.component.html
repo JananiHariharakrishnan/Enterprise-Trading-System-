@@ -188,7 +188,10 @@
             <span class="pill" [ngClass]="'pill-' + statusKey(o.status)">{{ o.status }}</span>
           </td>
           <td class="num">{{ o.quantity }}</td>
-          <td class="num">${{ o.price != null ? (o.price | number:'1.2-2') : '—' }}</td>
+          <td class="num">
+            <span *ngIf="o.price != null">${{ o.price | number:'1.2-2' }}</span>
+            <span *ngIf="o.price == null" class="pill pill-market">MARKET</span>
+          </td>
           <td class="num">
             <span *ngIf="o.status === 'FILLED'">
               {{ getCurrencySymbol(instrumentCurrency(o)) }}{{ o.executedPrice != null ? (o.executedPrice | number:'1.2-2') : '—' }}

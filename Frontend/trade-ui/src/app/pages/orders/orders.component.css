@@ -9,7 +9,61 @@
    ========================================================== */
 
 /* ---------- Tokens: light (default) ---------- */
+/* ---------- Sliding Buy / Sell toggle ---------- */
 
+.seg-side {
+  position: relative;
+}
+
+/* The moving thumb */
+.seg-side .seg-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  z-index: 0;
+  width: calc(50% - 6px);
+  background: var(--up-solid);
+  border-radius: 9px;
+  box-shadow: 0 4px 10px var(--up-ring);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.seg-side.is-sell .seg-thumb {
+  background: var(--down-solid);
+  box-shadow: 0 4px 10px var(--down-ring);
+  transform: translateX(calc(100% + 4px));
+}
+
+/* Options sit above the thumb; the thumb provides the colour now */
+.seg-side .seg-option {
+  z-index: 1;
+  padding: 12px;
+  font-size: 1rem;
+  background: transparent;
+}
+
+.seg-side .seg-option.buy:has(input:checked),
+.seg-side .seg-option.sell:has(input:checked) {
+  background: transparent;
+  box-shadow: none;
+  color: #fff;
+}
+
+/* Unselected side hints at its own colour on hover */
+.seg-side .seg-option.buy:hover:not(:has(input:checked)) {
+  color: var(--up);
+}
+
+.seg-side .seg-option.sell:hover:not(:has(input:checked)) {
+  color: var(--down);
+}
+
+.seg-side .seg-thumb {
+    transition: none;
+  }
+  
 :host {
   display: block;
   min-width: 0;

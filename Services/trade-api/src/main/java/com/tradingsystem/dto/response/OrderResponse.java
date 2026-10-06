@@ -3,6 +3,7 @@ package com.tradingsystem.dto.response;
 
 import com.tradingsystem.enums.OrderSide;
 import com.tradingsystem.enums.OrderStatus;
+import com.tradingsystem.enums.OrderType;
 
 import java.math.BigDecimal;
 
@@ -13,6 +14,7 @@ public class OrderResponse {
     private String message;
     private String symbol;
     private OrderSide side;
+    private OrderType orderType;
     private Integer quantity;
     private BigDecimal price;
 
@@ -62,6 +64,14 @@ public class OrderResponse {
 
     public void setSide(OrderSide side) {
         this.side = side;
+    }
+
+    public OrderType getOrderType() {
+        return orderType;
+    }
+
+    public void setOrderType(OrderType orderType) {
+        this.orderType = orderType;
     }
 
     public Integer getQuantity() {

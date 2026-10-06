@@ -116,9 +116,10 @@ public class OrderServiceImpl implements OrderService {
         // CURRENCY CONVERSION: Handle .NS (INR) stocks
         // Frontend always sends price in USD
         // For .NS stocks: multiply by 96 for executor, keep as USD for account deduction
+        // Note: MARKET orders have null price, so conversion is skipped (executor determines price)
         BigDecimal priceForExecutor = order.getPrice();
         
-        if (command.getSymbol() != null && command.getSymbol().endsWith(".NS")) {
+        if (order.getPrice() != null && command.getSymbol() != null && command.getSymbol().endsWith(".NS")) {
             // Indian stock - multiply price by 96 for executor
             priceForExecutor = order.getPrice().multiply(BigDecimal.valueOf(96));
             
@@ -126,7 +127,7 @@ public class OrderServiceImpl implements OrderService {
             order.setOriginalPrice(priceForExecutor); // Store the INR price for display
             order.setExecutorPrice(priceForExecutor); // Send INR price to executor
         } else {
-            // US stock - no conversion
+            // US stock or MARKET order - no conversion
             order.setExecutorPrice(order.getPrice());
         }
 
@@ -146,7 +147,11 @@ public class OrderServiceImpl implements OrderService {
                 position
         );
 
-        if (order.getSide() == com.tradingsystem.enums.OrderSide.BUY) {
+        // Reserve buying power for LIMIT BUY orders only
+        // MARKET orders: buying power is validated by executor at execution time
+        if (order.getSide() == com.tradingsystem.enums.OrderSide.BUY 
+            && order.getOrderType() == com.tradingsystem.enums.OrderType.LIMIT 
+            && order.getPrice() != null) {
             BigDecimal reservedValue = order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
             BigDecimal reservedBuyingPower = account.getBuyingPower().subtract(reservedValue);
 
@@ -174,7 +179,13 @@ public class OrderServiceImpl implements OrderService {
             }
 
         } catch (DataIntegrityViolationException exception) {
-            throw new DuplicateOrderException();
+            // Check if it's a duplicate idempotency key violation
+            String cause = exception.getCause() != null ? exception.getCause().getMessage() : "";
+            if (cause.toLowerCase().contains("idempotency_key") || cause.toLowerCase().contains("uq_orders")) {
+                throw new DuplicateOrderException();
+            }
+            // Otherwise, re-throw as a more generic error
+            throw new IllegalStateException("Failed to insert order: " + exception.getMessage(), exception);
         }
 
         /*
@@ -189,6 +200,7 @@ public class OrderServiceImpl implements OrderService {
          response.setMessage("Order accepted");
         response.setSymbol(order.getSymbol());
         response.setSide(order.getSide());
+        response.setOrderType(order.getOrderType());
         response.setQuantity(order.getQuantity());
         response.setPrice(order.getPrice());  // USD amount after conversion
         

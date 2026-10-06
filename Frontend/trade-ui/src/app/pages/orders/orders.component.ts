@@ -31,12 +31,14 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   readonly errorMessage = signal<string | null>(null);
   readonly lastOrderResponse = signal<OrderResponse | null>(null);
   readonly selectedInstrument = signal<InstrumentListItem | null>(null);
+  
+  private currentIdempotencyKey: string | null = null;
 
   readonly form = this.fb.group({
     symbol: [''], // Not required - validated by selectedInstrument() instead
     side: ['BUY', [Validators.required]],
     quantity: [1, [Validators.required, Validators.min(1), Validators.pattern('^[0-9]+$')]],
-    price: [0.01, [Validators.required, Validators.min(0.01), Validators.pattern('^\\d+(\\.\\d{1,2})?$')]],
+    price: [null, []], // Validation is applied conditionally based on orderType
     orderType: ['MARKET', [Validators.required]],
   });
 
@@ -46,9 +48,32 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   readonly side = computed<'BUY' | 'SELL'>(() => (this.formValue().side === 'SELL' ? 'SELL' : 'BUY'));
   readonly orderType = computed(() => (this.formValue().orderType === 'LIMIT' ? 'LIMIT' : 'MARKET'));
 
-  /** Quantity x price, or null until both are valid numbers. */
+  /**
+   * Dynamically update price field validation based on order type.
+   * For LIMIT orders, price is required. For MARKET orders, price is optional.
+   */
+  constructor() {
+    // Set up validator changes based on order type
+    this.form.get('orderType')?.valueChanges.subscribe((orderType) => {
+      const priceControl = this.form.get('price');
+      if (!priceControl) return;
+
+      if (orderType === 'LIMIT') {
+        priceControl.setValidators([Validators.required, Validators.min(0.01), Validators.pattern('^\\d+(\\.\\d{1,2})?$')]);
+        priceControl.updateValueAndValidity();
+      } else {
+        // MARKET order - price is not required
+        priceControl.setValidators([]);
+        priceControl.setValue(null);
+        priceControl.updateValueAndValidity();
+      }
+    });
+  }
+
+  /** Quantity x price, or null until both are valid numbers. For MARKET orders, always null. */
   readonly estimatedTotal = computed<number | null>(() => {
     const v = this.formValue();
+    if (v.orderType === 'MARKET') return null; // Market orders don't have a known price until execution
     const quantity = Number(v.quantity);
     const price = Number(v.price);
     return Number.isFinite(quantity) && Number.isFinite(price) && quantity > 0 && price > 0
@@ -122,6 +147,8 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.lastOrderResponse.set(null);
+    // Clear cached idempotency key so new order gets a fresh key
+    this.currentIdempotencyKey = null;
   }
 
   clearInstrument(): void {
@@ -144,6 +171,8 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   }
 
   priceError(): string | null {
+    const orderType = this.form.controls.orderType.value;
+    if (orderType === 'MARKET') return null; // Price not required for market orders
     const control = this.form.controls.price;
     if (control.valid || !(control.touched || control.dirty)) return null;
     return 'Enter a price of $0.01 or more, with up to 2 decimals.';
@@ -171,20 +200,27 @@ export class OrdersComponent implements OnInit, AfterViewInit {
       return;
     }
 
+    // Prevent duplicate submissions by generating idempotency key only once
+    if (!this.currentIdempotencyKey) {
+      this.currentIdempotencyKey = crypto.randomUUID();
+    }
+
     this.submitting.set(true);
     try {
       const user = await this.auth.loadCurrentUser();
       if (!user) throw new Error('Not authenticated');
 
+      const selectedOrderType = this.form.value.orderType as 'MARKET' | 'LIMIT';
       const payload: PlaceOrderRequest = {
         accountId: user.accountId,
-        symbol: this.form.value.symbol,
-        side: this.form.value.side,
+        symbol: this.form.value.symbol ?? '',
+        side: this.form.value.side as 'BUY' | 'SELL',
         quantity: Number(this.form.value.quantity),
-        price: Number(this.form.value.price),
-        orderType: this.form.value.orderType,
-        // generate idempotency key in background (do not expose in UI)
-        idempotencyKey: crypto.randomUUID(),
+        orderType: selectedOrderType,
+        // For MARKET orders, price is null. For LIMIT orders, price is required.
+        price: selectedOrderType === 'MARKET' ? null : Number(this.form.value.price),
+        // Use cached idempotency key to prevent duplicates on retry
+        idempotencyKey: this.currentIdempotencyKey,
       } as PlaceOrderRequest;
 
       const result: OrderResponse = await this.api.orders.placeOrder({ placeOrderRequest: payload });
@@ -195,16 +231,32 @@ export class OrdersComponent implements OnInit, AfterViewInit {
       this.errorMessage.set(null);
 
       // reset form (keep side and order type so repeat orders are quick)
-      const { side, orderType } = this.form.value;
-      this.form.reset({ symbol: '', side: side ?? 'BUY', quantity: 1, price: 0.01, orderType: orderType ?? 'MARKET' });
+      const { side, orderType: prevOrderType } = this.form.value;
+      this.form.reset({ 
+        symbol: '', 
+        side: side ?? 'BUY', 
+        quantity: 1, 
+        price: null,
+        orderType: prevOrderType ?? 'MARKET' 
+      });
       this.selectedInstrument.set(null);
       this.instrumentSearchComponent?.resetSearch();
+      
+      // Clear idempotency key for next order
+      this.currentIdempotencyKey = null;
     } catch (err: unknown) {
       console.error('Place order failed', err);
       // Map business-rule rejection if present
       const mapped = err && typeof err === 'object' && 'message' in (err as any) ? (err as any).message : 'Failed to place order';
       this.errorMessage.set(String(mapped));
       this.successMessage.set(null);
+      
+      // Keep idempotency key on error - user can retry and backend will deduplicate
+      // Only clear if it's a duplicate key error (which means order was already placed)
+      const errorMessage = String(mapped).toLowerCase();
+      if (errorMessage.includes('duplicate') || errorMessage.includes('409')) {
+        this.currentIdempotencyKey = null;
+      }
     } finally {
       this.submitting.set(false);
     }

@@ -208,7 +208,7 @@ CREATE TABLE IF NOT EXISTS tradingsystem.orders(
     side             VARCHAR(4)    NOT NULL,
     order_type       VARCHAR(10)   NOT NULL,
     qty              INT           NOT NULL,
-    price            NUMERIC(18,2) NOT NULL,
+    price            NUMERIC(18,2),
     status           VARCHAR(20)   NOT NULL,
     idempotency_key  VARCHAR(100)  NOT NULL,
     created_on       TIMESTAMP     NOT NULL DEFAULT NOW(),
@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS tradingsystem.orders(
         CHECK (qty > 0),
 
     CONSTRAINT ck_orders_price_positive
-        CHECK (price > 0)
+        CHECK (price IS NULL OR price > 0)
 );
 
 -- -----------------------------------------------------------------------------

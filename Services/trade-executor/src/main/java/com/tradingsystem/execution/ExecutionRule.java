@@ -11,12 +11,18 @@ public class ExecutionRule {
             BigDecimal orderPrice,
             BigDecimal quotePrice) {
 
-        if (side == null || orderPrice == null || quotePrice == null) {
+        if (side == null || quotePrice == null) {
             return ExecutionDecision.rejected(
                     "Missing execution price information"
             );
         }
 
+        // MARKET order: orderPrice is NULL, execute immediately at quote price
+        if (orderPrice == null) {
+            return ExecutionDecision.filled(quotePrice);
+        }
+
+        // LIMIT order: orderPrice is provided, check if quote is favorable
         if ("BUY".equalsIgnoreCase(side)) {
 
             if (orderPrice.compareTo(quotePrice) >= 0) {
