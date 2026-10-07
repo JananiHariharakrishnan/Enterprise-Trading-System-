@@ -263,3 +263,39 @@
   color: var(--red);
 }
 
+/* ---------- Admin: topbar layout ----------
+   Title on the left, actions pushed to the right edge. */
+.topbar.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.topbar.admin-topbar .top-actions {
+  margin-left: auto;
+}
+
+.admin-topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.admin-shield {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+/* ---------- Admin: sidebar icons ----------
+   Admin items now use the standard .nav-item look (no gold override). */
+.nav-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}

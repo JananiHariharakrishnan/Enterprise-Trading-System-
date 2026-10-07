@@ -1,0 +1,190 @@
+<div class="wallet-page page">
+  <!-- Header -->
+  <header class="wallet-header">
+    <div class="header-left">
+      <h1>Wallet</h1>
+      <p class="subtitle">Add funds to your trading account.</p>
+    </div>
+    <button class="btn-refresh" (click)="loadWallet()" [disabled]="isLoading()" title="Refresh balance">
+      <span class="refresh-icon" [class.spinning]="isLoading()" aria-hidden="true">↻</span>
+      Refresh
+    </button>
+  </header>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage()" class="alert-banner success" data-testid="wallet-success" role="status">
+    <span class="alert-icon" aria-hidden="true">✓</span>
+    <div class="alert-content">
+      <strong>Deposit completed.</strong> {{ successMessage() }}
+    </div>
+    <button class="alert-close" (click)="successMessage.set(null)" aria-label="Dismiss">×</button>
+  </div>
+
+  <div *ngIf="errorMessage()" class="alert-banner error" data-testid="wallet-error" role="alert">
+    <span class="alert-icon" aria-hidden="true">⚠</span>
+    <div class="alert-content">{{ errorMessage() }}</div>
+    <button class="alert-close" (click)="errorMessage.set(null)" aria-label="Dismiss">×</button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading()" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading your balance…</p>
+  </div>
+
+  <ng-container *ngIf="!isLoading() && account() as acc">
+    <!-- Balance overview -->
+    <section class="panel overview">
+      <div class="overview-main">
+        <span class="overview-label">Cash balance</span>
+        <div class="balance-value">{{ acc.cashBalance | currency:'USD':'symbol':'1.2-2' }}</div>
+        <p class="card-sub">Settled funds, ready to withdraw or invest.</p>
+      </div>
+
+      <dl class="overview-details">
+        <div class="detail-row">
+          <dt>Account</dt>
+          <dd class="mono">{{ acc.accountReference }}</dd>
+        </div>
+        <div class="detail-row">
+          <dt>Account ID</dt>
+          <dd class="mono">#{{ acc.accountId }}</dd>
+        </div>
+        <div class="detail-row">
+          <dt>Status</dt>
+          <dd><span class="status-pill" [ngClass]="'status-' + acc.status.toLowerCase()">{{ acc.status }}</span></dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- Deposit -->
+    <section class="panel deposit">
+      <div class="deposit-header">
+        <h2>Add money</h2>
+        <p class="section-desc">Choose an amount to deposit into <strong>{{ acc.accountReference }}</strong>.</p>
+      </div>
+
+      <div class="deposit-layout">
+        <!-- Left: amount -->
+        <div class="deposit-form">
+          <label for="depositAmountInput" class="input-label">Amount (USD)</label>
+          <div class="amount-field">
+            <span class="currency-prefix" aria-hidden="true">$</span>
+            <input
+              id="depositAmountInput"
+              type="number"
+              [(ngModel)]="depositAmount"
+              min="1"
+              step="50"
+              placeholder="0.00"
+              class="amount-input"
+            />
+          </div>
+
+          <div class="chips-row" role="group" aria-label="Quick amounts">
+            <button
+              *ngFor="let amt of quickAmounts"
+              type="button"
+              class="chip-btn"
+              [class.active]="depositAmount === amt"
+              (click)="setQuickAmount(amt)"
+            >
+              ${{ amt | number }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: live summary -->
+        <aside class="deposit-summary">
+          <h3>Summary</h3>
+          <div class="summary-line">
+            <span class="summary-label">Current balance</span>
+            <span class="summary-val">{{ acc.cashBalance | currency:'USD':'symbol':'1.2-2' }}</span>
+          </div>
+          <div class="summary-line">
+            <span class="summary-label">Deposit</span>
+            <span class="summary-val">+ {{ (depositAmount || 0) | currency:'USD':'symbol':'1.2-2' }}</span>
+          </div>
+          <div class="summary-line total">
+            <span class="summary-label">New balance</span>
+            <span class="summary-val">{{ (acc.cashBalance + (depositAmount || 0)) | currency:'USD':'symbol':'1.2-2' }}</span>
+          </div>
+
+          <button
+            type="button"
+            class="btn-primary btn-deposit-cta"
+            (click)="openConfirmation()"
+            [disabled]="!depositAmount || depositAmount <= 0"
+          >
+            Review deposit
+          </button>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Confirmation modal -->
+    <div class="modal-backdrop" *ngIf="isPasswordModalOpen()" (click)="!isSubmitting() && closeModal()">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon-badge" aria-hidden="true">🔒</div>
+          <div class="modal-title-wrap">
+            <h3 id="confirmTitle">Confirm deposit</h3>
+            <p class="modal-subtitle">Enter your password to approve this transfer.</p>
+          </div>
+          <button class="modal-close-btn" (click)="closeModal()" [disabled]="isSubmitting()" aria-label="Close">×</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="transfer-summary-box">
+            <div class="summary-line">
+              <span class="summary-label">Deposit</span>
+              <strong class="summary-val highlight">{{ depositAmount | currency:'USD':'symbol':'1.2-2' }}</strong>
+            </div>
+            <div class="summary-line">
+              <span class="summary-label">Account</span>
+              <strong class="summary-val">{{ acc.accountReference }} (ID {{ acc.accountId }})</strong>
+            </div>
+            <div class="summary-line">
+              <span class="summary-label">New balance</span>
+              <strong class="summary-val">{{ (acc.cashBalance + (depositAmount || 0)) | currency:'USD':'symbol':'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <div *ngIf="modalErrorMessage()" class="alert-banner error in-modal" role="alert">
+            <span aria-hidden="true">⚠</span> {{ modalErrorMessage() }}
+          </div>
+
+          <div class="password-group">
+            <label for="walletPasswordConfirm">Password</label>
+            <input
+              id="walletPasswordConfirm"
+              type="password"
+              [(ngModel)]="confirmPassword"
+              placeholder="Enter your login password"
+              class="password-input"
+              [disabled]="isSubmitting()"
+              (keyup.enter)="confirmAndDeposit()"
+              autofocus
+            />
+            <small class="hint-text">Your password is encrypted and verified before funds are credited.</small>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="isSubmitting()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn-primary btn-confirm-submit"
+            (click)="confirmAndDeposit()"
+            [disabled]="!confirmPassword || isSubmitting()"
+          >
+            <span *ngIf="!isSubmitting()">Confirm deposit</span>
+            <span *ngIf="isSubmitting()">Processing…</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

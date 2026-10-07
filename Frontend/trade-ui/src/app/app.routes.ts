@@ -1,3 +1,4 @@
+import { adminGuard } from './guards/admin.guard';
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
 import { loginRedirectGuard } from './guards/login-redirect.guard';
@@ -11,6 +12,7 @@ import { OrderHistoryComponent } from './pages/orders/order-history.component';
 import { WatchlistsComponent } from './pages/watchlists/watchlists.component';
 import { PositionsComponent } from './pages/positions/positions.component';
 import { PnlComponent } from './pages/pnl/pnl.component';
+import { StrategiesComponent } from './pages/strategies/strategies.component';
 
 export const routes: Routes = [
   // '/' now goes straight to sign in (HomeComponent removed)
@@ -75,6 +77,21 @@ export const routes: Routes = [
     path: 'signals',
     loadComponent: () => import('./pages/signals/signals.component').then(m => m.SignalsComponent),
     canActivate: [authGuard]
+  },
+  {
+    path: 'strategies',
+    component: StrategiesComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'wallet',
+    loadComponent: () => import('./pages/wallet/wallet.component').then(m => m.WalletComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'admin',
+    loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent),
+    canActivate: [adminGuard]
   },
   // Analytics removed — no route registered
   {

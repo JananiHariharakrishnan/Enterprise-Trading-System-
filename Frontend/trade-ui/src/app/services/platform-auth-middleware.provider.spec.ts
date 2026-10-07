@@ -39,16 +39,9 @@ describe('platform auth middleware provider', () => {
     const clearSpy = vi.spyOn(mockTokenStorage, 'clear');
     const reloadSpy = vi.fn();
 
-    const middleware = createPlatformAuthMiddleware(mockTokenStorage);
-    const response = new Response('Unauthorized', { status: 401 });
-
-    // Mock setTimeout and window.location.reload
     vi.useFakeTimers();
-    const originalLocation = window.location;
-    Object.defineProperty(window, 'location', {
-      value: { ...originalLocation, reload: reloadSpy },
-      writable: true,
-    });
+    const middleware = createPlatformAuthMiddleware(mockTokenStorage, reloadSpy);
+    const response = new Response('Unauthorized', { status: 401 });
 
     // Test with protected API route (not an unauthenticated path)
     await middleware.post?.({
@@ -61,11 +54,6 @@ describe('platform auth middleware provider', () => {
     vi.runAllTimers();
     expect(reloadSpy).toHaveBeenCalled();
 
-    // Restore
-    Object.defineProperty(window, 'location', {
-      value: originalLocation,
-      writable: true,
-    });
     vi.useRealTimers();
   });
 
@@ -74,16 +62,9 @@ describe('platform auth middleware provider', () => {
     const clearSpy = vi.spyOn(mockTokenStorage, 'clear');
     const reloadSpy = vi.fn();
 
-    const middleware = createPlatformAuthMiddleware(mockTokenStorage);
-    const response = new Response('Forbidden', { status: 403 });
-
-    // Mock setTimeout and window.location.reload
     vi.useFakeTimers();
-    const originalLocation = window.location;
-    Object.defineProperty(window, 'location', {
-      value: { ...originalLocation, reload: reloadSpy },
-      writable: true,
-    });
+    const middleware = createPlatformAuthMiddleware(mockTokenStorage, reloadSpy);
+    const response = new Response('Forbidden', { status: 403 });
 
     // Test with protected API route (not an unauthenticated path)
     await middleware.post?.({
@@ -96,11 +77,6 @@ describe('platform auth middleware provider', () => {
     vi.runAllTimers();
     expect(reloadSpy).toHaveBeenCalled();
 
-    // Restore
-    Object.defineProperty(window, 'location', {
-      value: originalLocation,
-      writable: true,
-    });
     vi.useRealTimers();
   });
 
@@ -109,16 +85,9 @@ describe('platform auth middleware provider', () => {
     const clearSpy = vi.spyOn(mockTokenStorage, 'clear');
     const reloadSpy = vi.fn();
 
-    const middleware = createPlatformAuthMiddleware(mockTokenStorage);
-    const response = new Response('Unauthorized', { status: 401 });
-
-    // Mock setTimeout and window.location.reload
     vi.useFakeTimers();
-    const originalLocation = window.location;
-    Object.defineProperty(window, 'location', {
-      value: { ...originalLocation, reload: reloadSpy },
-      writable: true,
-    });
+    const middleware = createPlatformAuthMiddleware(mockTokenStorage, reloadSpy);
+    const response = new Response('Unauthorized', { status: 401 });
 
     // Test with unauthenticated path (should not clear or reload)
     await middleware.post?.({
@@ -131,11 +100,6 @@ describe('platform auth middleware provider', () => {
     vi.runAllTimers();
     expect(reloadSpy).not.toHaveBeenCalled();
 
-    // Restore
-    Object.defineProperty(window, 'location', {
-      value: originalLocation,
-      writable: true,
-    });
     vi.useRealTimers();
   });
 });

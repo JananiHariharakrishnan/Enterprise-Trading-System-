@@ -3,10 +3,12 @@ package com.tradingsystem.messaging;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tradingsystem.automation.service.StrategyAutomationService;
 import com.tradingsystem.service.MarketDataService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
@@ -22,13 +24,24 @@ public class MarketDataListener {
 
     private final ObjectMapper objectMapper;
     private final MarketDataService marketDataService;
+    private final StrategyAutomationService strategyAutomationService;
 
     public MarketDataListener(
             ObjectMapper objectMapper,
             MarketDataService marketDataService
     ) {
+        this(objectMapper, marketDataService, null);
+    }
+
+    @Autowired
+    public MarketDataListener(
+            ObjectMapper objectMapper,
+            MarketDataService marketDataService,
+            @Autowired(required = false) StrategyAutomationService strategyAutomationService
+    ) {
         this.objectMapper = objectMapper;
         this.marketDataService = marketDataService;
+        this.strategyAutomationService = strategyAutomationService;
     }
 
     @KafkaListener(
@@ -153,6 +166,14 @@ public class MarketDataListener {
                 eventType,
                 payload
         );
+
+        if (strategyAutomationService != null) {
+            try {
+                strategyAutomationService.onQuote(payload);
+            } catch (Exception ex) {
+                logger.error("Error evaluating automated strategy for quote: {}", ex.getMessage(), ex);
+            }
+        }
 
         logger.debug(
                 "Processed market-data event: symbol={}, eventId={}",

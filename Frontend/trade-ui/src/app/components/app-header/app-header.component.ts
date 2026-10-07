@@ -54,6 +54,17 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
     await this.authSession.logout();
   }
 
+  isAdminTabActive(tab: string): boolean {
+    const url = this.router?.url || '';
+    if (!url.startsWith('/admin')) {
+      return false;
+    }
+    if (tab === 'dashboard') {
+      return url === '/admin' || url.includes('tab=dashboard');
+    }
+    return url.includes(`tab=${tab}`);
+  }
+
   toggleTheme(): void {
     this.themeService.toggleTheme();
   }

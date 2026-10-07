@@ -108,6 +108,8 @@ export class LoginComponent {
 
       if (safeReturn) {
         await this.router.navigateByUrl(safeReturn);
+      } else if (this.authSession.isAdmin?.()) {
+        await this.router.navigate(['/admin']);
       } else {
         await this.router.navigate(['/dashboard']);
       }
