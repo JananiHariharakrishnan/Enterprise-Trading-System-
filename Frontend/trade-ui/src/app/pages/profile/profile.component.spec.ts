@@ -355,4 +355,78 @@ describe('ProfileComponent', () => {
 
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/dashboard']);
   });
+
+  it('should initialize notificationsAndAlerts as YES by default and update channels', () => {
+    expect(component.profileForm.get('notificationsAndAlerts')?.value).toBe('YES');
+
+    component.profileForm.patchValue({ notificationsAndAlerts: 'NO' });
+    expect(component.profileForm.get('tradeFills')?.value).toEqual(['NO NOTIFICATION']);
+    expect(component.profileForm.get('priceAlerts')?.value).toEqual(['NO NOTIFICATION']);
+
+    component.profileForm.patchValue({ notificationsAndAlerts: 'YES' });
+    expect(component.profileForm.get('tradeFills')?.value).toEqual(['IN_APP', 'EMAIL']);
+    expect(component.profileForm.get('priceAlerts')?.value).toEqual(['IN_APP', 'EMAIL']);
+  });
+
+  it('should render Notifications and Alerts select with only Yes and No options', () => {
+    renderWithoutInit();
+    component.isLoading.set(false);
+    component.currentUser.set({
+      id: '1',
+      username: 'testuser',
+      accountId: 8,
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      phoneNo: '+1234567890'
+    } as any);
+    fixture.detectChanges();
+
+    const select = fixture.nativeElement.querySelector('[data-testid="profile-notificationsAndAlerts-select"]') as HTMLSelectElement;
+    expect(select).toBeTruthy();
+    expect(select.options.length).toBe(2);
+    expect(select.options[0].value).toBe('YES');
+    expect(select.options[0].text.trim()).toBe('Yes');
+    expect(select.options[1].value).toBe('NO');
+    expect(select.options[1].text.trim()).toBe('No');
+  });
+
+  it('should correctly save preferences with notificationsAndAlerts NO and YES', async () => {
+    renderWithoutInit();
+    component.currentUser.set({
+      id: '1',
+      username: 'testuser',
+      accountId: 8,
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      phoneNo: '+1234567890'
+    } as any);
+    component.profileForm.patchValue({
+      accountId: 8,
+      notificationsAndAlerts: 'NO'
+    });
+
+    await component.onSavePreferences();
+
+    expect(mockPreferencesApi.upsertPreferences).toHaveBeenCalledWith(8, expect.objectContaining({
+      notifications: {
+        tradeFills: ['NO NOTIFICATION'],
+        priceAlerts: ['NO NOTIFICATION']
+      }
+    }));
+
+    component.profileForm.patchValue({
+      notificationsAndAlerts: 'YES'
+    });
+
+    await component.onSavePreferences();
+
+    expect(mockPreferencesApi.upsertPreferences).toHaveBeenCalledWith(8, expect.objectContaining({
+      notifications: {
+        tradeFills: ['IN_APP', 'EMAIL'],
+        priceAlerts: ['IN_APP', 'EMAIL']
+      }
+    }));
+  });
 });

@@ -68,10 +68,19 @@ export class ProfileComponent implements OnInit {
       defaultOrderType: ['MARKET', Validators.required],
       skipOrderConfirmation: [false],
       defaultTradeQuantity: [1, [Validators.required, Validators.min(1)]],
-      tradeFills: [['IN_APP'], Validators.required],
-      priceAlerts: [['IN_APP'], Validators.required],
+      notificationsAndAlerts: ['YES', Validators.required],
+      tradeFills: [['IN_APP', 'EMAIL'], Validators.required],
+      priceAlerts: [['IN_APP', 'EMAIL'], Validators.required],
       theme: ['SYSTEM', Validators.required],
       baseCurrency: ['USD', Validators.required]
+    });
+
+    this.profileForm.get('notificationsAndAlerts')?.valueChanges.subscribe((val) => {
+      const isYes = val === 'YES';
+      this.profileForm.patchValue({
+        tradeFills: isYes ? ['IN_APP', 'EMAIL'] : ['NO NOTIFICATION'],
+        priceAlerts: isYes ? ['IN_APP', 'EMAIL'] : ['NO NOTIFICATION'],
+      }, { emitEvent: false });
     });
   }
 
@@ -237,13 +246,17 @@ async onSubmit(): Promise<void> {
       const preferences = await this.preferencesApi.getPreferences(accountId)
         ?? this.preferencesApi.defaultPreferences(accountId);
 
+      const isTurnedOff = this.isNotificationsTurnedOff(preferences.notifications);
+      const notificationsAndAlertsValue = isTurnedOff ? 'NO' : 'YES';
+
       this.profileForm.patchValue({
         defaultAccountId: preferences.defaultAccountId,
         defaultOrderType: preferences.trading.defaultOrderType,
         skipOrderConfirmation: preferences.trading.skipOrderConfirmation,
         defaultTradeQuantity: preferences.trading.defaultTradeQuantity,
-        tradeFills: this.normalizeChannels(preferences.notifications.tradeFills),
-        priceAlerts: this.normalizeChannels(preferences.notifications.priceAlerts),
+        notificationsAndAlerts: notificationsAndAlertsValue,
+        tradeFills: isTurnedOff ? ['NO NOTIFICATION'] : ['IN_APP', 'EMAIL'],
+        priceAlerts: isTurnedOff ? ['NO NOTIFICATION'] : ['IN_APP', 'EMAIL'],
         theme: preferences.display.theme,
         baseCurrency: preferences.display.baseCurrency,
       });
@@ -254,6 +267,22 @@ async onSubmit(): Promise<void> {
     } finally {
       this.isLoadingPreferences.set(false);
     }
+  }
+
+  private isNotificationsTurnedOff(notifications?: { tradeFills?: unknown; priceAlerts?: unknown }): boolean {
+    if (!notifications) {
+      return false;
+    }
+    const hasNoNotification = (channels: unknown): boolean => {
+      if (!channels) return false;
+      const list = Array.isArray(channels) ? channels : [channels];
+      return list.some((item) => {
+        const str = String(item).trim().toUpperCase();
+        return str === 'NO NOTIFICATION' || str === 'NO_NOTIFICATION';
+      });
+    };
+
+    return hasNoNotification(notifications.tradeFills) || hasNoNotification(notifications.priceAlerts);
   }
 
   private normalizeChannels(value: unknown): NotificationChannel[] {
@@ -270,10 +299,10 @@ async onSubmit(): Promise<void> {
 
     const channels = source
       .map((item) => String(item).trim().toUpperCase())
-      .map((item) => (item === 'INAPP' ? 'IN_APP' : item))
+      .map((item) => (item === 'INAPP' ? 'IN_APP' : item === 'NO_NOTIFICATION' ? 'NO NOTIFICATION' : item))
       .filter((item): item is NotificationChannel => allowed.has(item as NotificationChannel));
 
-    return channels.length > 0 ? [...new Set(channels)] : ['IN_APP'];
+    return channels.length > 0 ? [...new Set(channels)] : ['IN_APP', 'EMAIL'];
   }
 
   private toPreferencesPayload(formValue: any): {
@@ -292,6 +321,11 @@ async onSubmit(): Promise<void> {
       baseCurrency: BaseCurrency;
     };
   } {
+    const isNotificationsEnabled = formValue.notificationsAndAlerts !== 'NO';
+    const channels: NotificationChannel[] = isNotificationsEnabled
+      ? ['IN_APP', 'EMAIL']
+      : ['NO NOTIFICATION'];
+
     return {
       defaultAccountId: Number(formValue.defaultAccountId),
       trading: {
@@ -300,8 +334,12 @@ async onSubmit(): Promise<void> {
         defaultTradeQuantity: Number(formValue.defaultTradeQuantity),
       },
       notifications: {
-        tradeFills: this.normalizeChannels(formValue.tradeFills),
-        priceAlerts: this.normalizeChannels(formValue.priceAlerts),
+        tradeFills: formValue.notificationsAndAlerts !== undefined
+          ? channels
+          : this.normalizeChannels(formValue.tradeFills),
+        priceAlerts: formValue.notificationsAndAlerts !== undefined
+          ? channels
+          : this.normalizeChannels(formValue.priceAlerts),
       },
       display: {
         theme: formValue.theme,

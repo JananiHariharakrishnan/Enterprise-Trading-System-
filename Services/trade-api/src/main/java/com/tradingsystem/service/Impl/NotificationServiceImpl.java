@@ -1,6 +1,8 @@
 package com.tradingsystem.service.Impl;
 
+import com.tradingsystem.mapper.CustomerPreferencesDataMapper;
 import com.tradingsystem.messaging.TradeEventPayload;
+import com.tradingsystem.model.CustomerPreferences;
 import com.tradingsystem.model.User;
 import com.tradingsystem.service.NotificationService;
 import org.slf4j.Logger;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Service
 public class NotificationServiceImpl implements NotificationService {
@@ -20,6 +23,7 @@ public class NotificationServiceImpl implements NotificationService {
     private static final Logger log = LoggerFactory.getLogger(NotificationServiceImpl.class);
 
     private final JavaMailSender mailSender;
+    private CustomerPreferencesDataMapper customerPreferencesDataMapper;
 
     @Value("${spring.mail.username:}")
     private String mailUsername;
@@ -31,7 +35,41 @@ public class NotificationServiceImpl implements NotificationService {
     private boolean mailEnabled;
 
     public NotificationServiceImpl(@Autowired(required = false) JavaMailSender mailSender) {
+        this(mailSender, null);
+    }
+
+    @Autowired
+    public NotificationServiceImpl(
+            @Autowired(required = false) JavaMailSender mailSender,
+            @Autowired(required = false) CustomerPreferencesDataMapper customerPreferencesDataMapper
+    ) {
         this.mailSender = mailSender;
+        this.customerPreferencesDataMapper = customerPreferencesDataMapper;
+    }
+
+    public void setCustomerPreferencesDataMapper(CustomerPreferencesDataMapper customerPreferencesDataMapper) {
+        this.customerPreferencesDataMapper = customerPreferencesDataMapper;
+    }
+
+    private boolean isEmailEnabled(List<String> channels) {
+        if (channels == null || channels.isEmpty()) {
+            return false;
+        }
+        for (String ch : channels) {
+            if (ch == null) continue;
+            String trimmed = ch.trim().toUpperCase();
+            if ("NO NOTIFICATION".equals(trimmed) || "NO_NOTIFICATION".equals(trimmed)) {
+                return false;
+            }
+        }
+        for (String ch : channels) {
+            if (ch == null) continue;
+            String trimmed = ch.trim().toUpperCase();
+            if ("EMAIL".equals(trimmed)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -45,6 +83,18 @@ public class NotificationServiceImpl implements NotificationService {
             log.warn("Cannot send email: user is null for trade event orderId={}",
                     payload != null ? payload.getOrderId() : "unknown");
             return;
+        }
+
+        Long accountId = user.getAccountId() != null ? user.getAccountId() : (payload != null ? payload.getAccountId() : null);
+        if (customerPreferencesDataMapper != null && accountId != null) {
+            CustomerPreferences prefs = customerPreferencesDataMapper.findByAccountId(accountId);
+            if (prefs != null) {
+                List<String> channels = prefs.getNotificationsTradeFills();
+                if (channels != null && !isEmailEnabled(channels)) {
+                    log.info("Order filled email notification skipped: notifications disabled in preferences for accountId={}", accountId);
+                    return;
+                }
+            }
         }
 
         String recipientEmail = user.getEmail();
@@ -88,6 +138,17 @@ public class NotificationServiceImpl implements NotificationService {
         if (user == null) {
             log.warn("Cannot send email: user is null for price alert on symbol={}", symbol != null ? symbol : "unknown");
             return;
+        }
+
+        if (customerPreferencesDataMapper != null && user.getAccountId() != null) {
+            CustomerPreferences prefs = customerPreferencesDataMapper.findByAccountId(user.getAccountId());
+            if (prefs != null) {
+                List<String> channels = prefs.getNotificationsPriceAlerts();
+                if (channels != null && !isEmailEnabled(channels)) {
+                    log.info("Price alert email notification skipped: alerts disabled in preferences for accountId={}", user.getAccountId());
+                    return;
+                }
+            }
         }
 
         String recipientEmail = user.getEmail();

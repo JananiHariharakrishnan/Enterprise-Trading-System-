@@ -26,13 +26,7 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
   private readonly marketEndpointUrl = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=%5EGSPC,%5EIXIC,%5EDJI,%5EVIX';
   private readonly instrumentLimit = 75;
 
-  readonly marketItems = signal<MarketStripItem[]>([
-    { label: 'S&P 500', value: 6230.42, changePct: 0.34 },
-    { label: 'NASDAQ', value: 20184.11, changePct: 0.58 },
-    { label: 'DOW', value: 42932.18, changePct: 0.21 },
-    { label: 'VIX', value: 14.79, changePct: -1.52 }
-  ]);
-  readonly marketFeedLabel = signal('LOADING LIVE DATA');
+  // Market strip removed: no polling signals
   readonly isAssetSearchOpen = signal(false);
   readonly isLoadingInstruments = signal(false);
   readonly instrumentSearchText = signal('');
@@ -40,25 +34,16 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
   readonly instrumentResults = signal<InstrumentListItem[]>([]);
   readonly selectedInstrument = signal<InstrumentListItem | null>(null);
 
-  private marketPollId: ReturnType<typeof setInterval> | null = null;
   private instrumentSearchDebounceId: ReturnType<typeof setTimeout> | null = null;
   private readonly marketRefreshMs = 15000;
 
   menuOpen = false;
 
   ngOnInit(): void {
-    void this.refreshMarketSnapshot();
-    this.marketPollId = setInterval(() => {
-      void this.refreshMarketSnapshot();
-    }, this.marketRefreshMs);
+    // Market polling disabled
   }
 
   ngOnDestroy(): void {
-    if (this.marketPollId) {
-      clearInterval(this.marketPollId);
-      this.marketPollId = null;
-    }
-
     if (this.instrumentSearchDebounceId) {
       clearTimeout(this.instrumentSearchDebounceId);
       this.instrumentSearchDebounceId = null;
@@ -120,31 +105,7 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
     this.selectedInstrument.set(null);
   }
 
-  private async refreshMarketSnapshot(): Promise<void> {
-    try {
-      const response = await firstValueFrom(this.http.get<YahooQuoteResponse>(this.marketEndpointUrl));
-      const entries = (response.quoteResponse?.result ?? [])
-        .map((entry) => ({
-          label: this.toIndexLabel(entry.symbol),
-          value: entry.regularMarketPrice,
-          changePct: entry.regularMarketChangePercent
-        }))
-        .filter((entry) => {
-          return entry.label.length > 0
-            && Number.isFinite(entry.value)
-            && Number.isFinite(entry.changePct);
-        });
-
-      if (entries.length >= 4) {
-        this.marketItems.set(this.orderIndices(entries));
-        this.marketFeedLabel.set('LIVE YAHOO FINANCE FEED');
-      } else {
-        this.marketFeedLabel.set('FALLBACK SNAPSHOT');
-      }
-    } catch {
-      this.marketFeedLabel.set('FALLBACK SNAPSHOT');
-    }
-  }
+  // Market snapshot polling removed
 
   private async fetchInstrumentResults(query: string): Promise<void> {
     this.isLoadingInstruments.set(true);
@@ -195,27 +156,7 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
     }
   }
 
-  private orderIndices(entries: MarketStripItem[]): MarketStripItem[] {
-    const order = ['S&P 500', 'NASDAQ', 'DOW', 'VIX'];
-    return order
-      .map((label) => entries.find((entry) => entry.label === label))
-      .filter((entry): entry is MarketStripItem => entry !== undefined);
-  }
-
-  private toIndexLabel(symbol: string): string {
-    switch (symbol) {
-      case '^GSPC':
-        return 'S&P 500';
-      case '^IXIC':
-        return 'NASDAQ';
-      case '^DJI':
-        return 'DOW';
-      case '^VIX':
-        return 'VIX';
-      default:
-        return '';
-    }
-  }
+  // Helper methods for market snapshot removed
 }
 
 type MarketStripItem = {

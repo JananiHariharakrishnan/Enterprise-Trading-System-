@@ -244,31 +244,20 @@
     </div>
 
     <div class="form-group">
-      <label for="tradeFills">Trade Fill Notification Channels</label>
+      <label for="notificationsAndAlerts">Notifications and Alerts</label>
       <select
-        id="tradeFills"
-        multiple
-        formControlName="tradeFills"
+        id="notificationsAndAlerts"
+        formControlName="notificationsAndAlerts"
         class="form-input"
-        data-testid="profile-tradeFills-select"
+        data-testid="profile-notificationsAndAlerts-select"
         [attr.disabled]="isSaving() ? true : null"
       >
-        <option *ngFor="let channel of notificationChannels" [value]="channel">{{ channel }}</option>
+        <option value="YES">Yes</option>
+        <option value="NO">No</option>
       </select>
-    </div>
-
-    <div class="form-group">
-      <label for="priceAlerts">Price Alert Notification Channels</label>
-      <select
-        id="priceAlerts"
-        multiple
-        formControlName="priceAlerts"
-        class="form-input"
-        data-testid="profile-priceAlerts-select"
-        [attr.disabled]="isSaving() ? true : null"
-      >
-        <option *ngFor="let channel of notificationChannels" [value]="channel">{{ channel }}</option>
-      </select>
+      <small class="form-note">
+        Select Yes to receive email notifications and alerts, or No to turn off email notifications and alerts.
+      </small>
     </div>
 
     <div class="form-actions">

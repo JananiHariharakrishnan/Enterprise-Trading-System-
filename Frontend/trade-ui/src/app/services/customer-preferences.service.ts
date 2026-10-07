@@ -46,8 +46,8 @@ export class CustomerPreferencesService {
         defaultTradeQuantity: 1,
       },
       notifications: {
-        tradeFills: ['IN_APP'],
-        priceAlerts: ['IN_APP'],
+        tradeFills: ['IN_APP', 'EMAIL'],
+        priceAlerts: ['IN_APP', 'EMAIL'],
       },
       display: {
         theme: 'SYSTEM',
