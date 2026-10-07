@@ -23,7 +23,7 @@ public class MarketContextStore {
 
     private static final Logger log = LoggerFactory.getLogger(MarketContextStore.class);
 
-    private static final int MAX_QUOTES = 100;
+    private static final int MAX_QUOTES = 300;
     private static final int MIN_HISTORY_FOR_INDICATORS = 25;
 
     private final CandleCacheManager candleCacheManager;
