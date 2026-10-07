@@ -1,6 +1,8 @@
 package com.tradingsystem.automation.strategy;
 
 import com.tradingsystem.automation.model.StrategySignal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -10,6 +12,8 @@ import java.util.List;
  */
 @Component
 public class StrategyEvaluator {
+
+    private static final Logger logger = LoggerFactory.getLogger(StrategyEvaluator.class);
 
     /**
      * Evaluates Moving Average Crossover (Fast SMA vs Slow SMA).
@@ -35,6 +39,17 @@ public class StrategyEvaluator {
 
         double currFast = computeSma(prices, fastPeriod);
         double currSlow = computeSma(prices, slowPeriod);
+
+        // Always log computed moving averages at INFO so they're visible in normal runs
+        logger.info("MA_CROSSOVER: historySize={} fastPeriod={} slowPeriod={} prevFast={} prevSlow={} currFast={} currSlow={}",
+            prices != null ? prices.size() : 0,
+            fastPeriod,
+            slowPeriod,
+            String.format("%.2f", prevFast),
+            String.format("%.2f", prevSlow),
+            String.format("%.2f", currFast),
+            String.format("%.2f", currSlow)
+        );
 
         // Golden Cross: Fast MA crosses above Slow MA
         if (prevFast <= prevSlow && currFast > currSlow) {
@@ -69,6 +84,17 @@ public class StrategyEvaluator {
         double upperBand = sma + (numStdDev * stdDev);
         double lowerBand = sma - (numStdDev * stdDev);
         double currentPrice = prices.get(prices.size() - 1);
+
+        // Always log Bollinger Band values at INFO for observability
+        logger.info("BOLLINGER: period={} numStdDev={} sma={} stdDev={} upperBand={} lowerBand={} currentPrice={}",
+            period,
+            numStdDev,
+            String.format("%.2f", sma),
+            String.format("%.2f", stdDev),
+            String.format("%.2f", upperBand),
+            String.format("%.2f", lowerBand),
+            String.format("%.2f", currentPrice)
+        );
 
         if (currentPrice <= lowerBand) {
             return StrategySignal.BUY;
