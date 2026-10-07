@@ -1,7 +1,11 @@
 package com.tradingsystem.service;
 
+import com.tradingsystem.mapper.CustomerPreferencesDataMapper;
+import com.tradingsystem.mapper.UserNotificationDataMapper;
 import com.tradingsystem.messaging.TradeEventPayload;
+import com.tradingsystem.model.CustomerPreferences;
 import com.tradingsystem.model.User;
+import com.tradingsystem.model.UserNotification;
 import com.tradingsystem.service.Impl.NotificationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,14 +32,26 @@ class NotificationServiceImplTest {
     @Mock
     private JavaMailSender mailSender;
 
+    @Mock
+    private UserNotificationDataMapper notificationDataMapper;
+
+    @Mock
+    private CustomerPreferencesDataMapper preferencesDataMapper;
+
     private NotificationServiceImpl notificationService;
 
     @BeforeEach
     void setUp() {
-        notificationService = new NotificationServiceImpl(mailSender);
+        notificationService = new NotificationServiceImpl(mailSender, notificationDataMapper, preferencesDataMapper);
         ReflectionTestUtils.setField(notificationService, "mailUsername", "sender@tradingsystem.com");
         ReflectionTestUtils.setField(notificationService, "fromEmail", "sender@tradingsystem.com");
         ReflectionTestUtils.setField(notificationService, "mailEnabled", true);
+    }
+
+    private void optIn(Long accountId) {
+        CustomerPreferences prefs = new CustomerPreferences();
+        prefs.setEmailNotificationsEnabled(true);
+        when(preferencesDataMapper.findByAccountId(accountId)).thenReturn(prefs);
     }
 
     @Test
@@ -58,6 +74,7 @@ class NotificationServiceImplTest {
         payload.setStatus("FILLED");
         payload.setExecutedOn("2026-10-06T15:00:00Z");
 
+        optIn(1L);
         notificationService.sendOrderFilledNotification(user, payload);
 
         ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
@@ -89,8 +106,10 @@ class NotificationServiceImplTest {
     @Test
     void sendOrderFilledNotification_skippedWhenUserEmailMissing() {
         User user = new User();
+        user.setAccountId(1L);
         user.setEmail(null);
         TradeEventPayload payload = new TradeEventPayload();
+        optIn(1L);
 
         notificationService.sendOrderFilledNotification(user, payload);
 
@@ -102,8 +121,10 @@ class NotificationServiceImplTest {
         ReflectionTestUtils.setField(notificationService, "mailUsername", "");
 
         User user = new User();
+        user.setAccountId(1L);
         user.setEmail("alice@example.com");
         TradeEventPayload payload = new TradeEventPayload();
+        optIn(1L);
 
         notificationService.sendOrderFilledNotification(user, payload);
 
@@ -113,9 +134,11 @@ class NotificationServiceImplTest {
     @Test
     void sendOrderFilledNotification_handlesMailExceptionGracefully() {
         User user = new User();
+        user.setAccountId(1L);
         user.setEmail("alice@example.com");
         TradeEventPayload payload = new TradeEventPayload();
         payload.setOrderId("ord-1");
+        optIn(1L);
 
         doThrow(new MailSendException("SMTP error")).when(mailSender).send(any(SimpleMailMessage.class));
 
@@ -130,6 +153,31 @@ class NotificationServiceImplTest {
 
         assertTrue(sent);
         verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void sendOrderFilledNotification_savesInAppAndSkipsEmailWhenOptInDisabled() {
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setAccountId(1L);
+        user.setEmail("alice@example.com");
+
+        TradeEventPayload payload = new TradeEventPayload();
+        payload.setSymbol("AAPL");
+        payload.setSide("BUY");
+        payload.setQuantity(new BigDecimal("2"));
+        payload.setExecutedPrice(new BigDecimal("10.00"));
+
+        notificationService.sendOrderFilledNotification(user, payload);
+
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+        ArgumentCaptor<UserNotification> saved = ArgumentCaptor.forClass(UserNotification.class);
+        verify(notificationDataMapper, times(1)).insert(saved.capture());
+        assertEquals("ORDER_FILLED", saved.getValue().getCategory());
+        assertEquals("Order filled", saved.getValue().getTitle());
+        assertEquals("AAPL", saved.getValue().getSymbol());
+        assertFalse(saved.getValue().isEmailSent());
+        assertTrue(saved.getValue().getBody().contains("AAPL"));
     }
 
     // =========================================================
@@ -147,6 +195,7 @@ class NotificationServiceImplTest {
 
         OffsetDateTime triggeredOn = OffsetDateTime.now();
 
+        optIn(1001L);
         notificationService.sendPriceAlertTriggeredNotification(
                 user,
                 "AAPL",
@@ -181,6 +230,7 @@ class NotificationServiceImplTest {
 
         OffsetDateTime triggeredOn = OffsetDateTime.now();
 
+        optIn(1001L);
         notificationService.sendPriceAlertTriggeredNotification(
                 user,
                 "MSFT",
@@ -239,7 +289,9 @@ class NotificationServiceImplTest {
     @Test
     void sendPriceAlertTriggeredNotification_skippedWhenUserEmailMissing() {
         User user = new User();
+        user.setAccountId(1001L);
         user.setEmail(null);
+        optIn(1001L);
 
         notificationService.sendPriceAlertTriggeredNotification(
                 user,
@@ -256,9 +308,11 @@ class NotificationServiceImplTest {
     @Test
     void sendPriceAlertTriggeredNotification_usesUsernameWhenFirstNameMissing() {
         User user = new User();
+        user.setAccountId(1001L);
         user.setUsername("trader1");
         user.setFirstName(null);
         user.setEmail("trader@example.com");
+        optIn(1001L);
 
         notificationService.sendPriceAlertTriggeredNotification(
                 user,
@@ -279,7 +333,9 @@ class NotificationServiceImplTest {
     @Test
     void sendPriceAlertTriggeredNotification_handlesMailExceptionGracefully() {
         User user = new User();
+        user.setAccountId(1001L);
         user.setEmail("alice@example.com");
+        optIn(1001L);
 
         doThrow(new MailSendException("SMTP error")).when(mailSender).send(any(SimpleMailMessage.class));
 
@@ -299,8 +355,10 @@ class NotificationServiceImplTest {
     @Test
     void sendPriceAlertTriggeredNotification_handlesMissingSymbol() {
         User user = new User();
+        user.setAccountId(1001L);
         user.setFirstName("Alice");
         user.setEmail("alice@example.com");
+        optIn(1001L);
 
         notificationService.sendPriceAlertTriggeredNotification(
                 user,

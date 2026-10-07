@@ -82,6 +82,16 @@ describe('OrdersComponent', () => {
     expect(component.account()?.accountId).toBe('ACC-101');
   });
 
+  it('refreshes the account balance without placing an order', async () => {
+    await component.ngOnInit();
+    tradeApi.accounts.getAccount.mockClear();
+
+    await component.refresh();
+
+    expect(tradeApi.accounts.getAccount).toHaveBeenCalledWith({ id: 101 });
+    expect(tradeApi.orders.placeOrder).not.toHaveBeenCalled();
+  });
+
   it('does not load account when session is missing', async () => {
     authSession.loadCurrentUser.mockResolvedValueOnce(null);
 

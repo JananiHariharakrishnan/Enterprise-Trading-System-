@@ -226,10 +226,12 @@
 }
 
 .session-timer-badge {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
+  height: 36px;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 0 12px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm, 8px);

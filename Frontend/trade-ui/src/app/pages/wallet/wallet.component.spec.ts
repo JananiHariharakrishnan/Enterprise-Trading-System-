@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WalletComponent } from './wallet.component';
 import { WalletService, WalletAccount, WalletDepositResponse } from '../../services/wallet.service';
 import { PasswordHashService } from '../../services/password-hash.service';
+import { CustomerPreferencesService } from '../../services/customer-preferences.service';
+import { USD_INR_RATE } from '../../utils/currency.util';
 
 describe('WalletComponent', () => {
   let component: WalletComponent;
@@ -45,7 +47,8 @@ describe('WalletComponent', () => {
       imports: [WalletComponent],
       providers: [
         { provide: WalletService, useValue: walletServiceSpy },
-        { provide: PasswordHashService, useValue: passwordHashSpy }
+        { provide: PasswordHashService, useValue: passwordHashSpy },
+        { provide: CustomerPreferencesService, useValue: { getPreferences: vi.fn().mockResolvedValue(null) } }
       ]
     }).compileComponents();
 
@@ -67,17 +70,17 @@ describe('WalletComponent', () => {
   });
 
   it('opens password confirmation modal when amount is valid', () => {
-    component.depositAmount = 750;
+    component.depositAmount = 1000;
     component.openConfirmation();
     expect(component.isPasswordModalOpen()).toBe(true);
     expect(component.confirmPassword).toBe('');
   });
 
-  it('shows error if opening confirmation with zero or negative amount', () => {
+  it('shows error if opening confirmation with an amount outside the presets', () => {
     component.depositAmount = 0;
     component.openConfirmation();
     expect(component.isPasswordModalOpen()).toBe(false);
-    expect(component.errorMessage()).toContain('greater than $0');
+    expect(component.errorMessage()).toContain('Choose 100');
   });
 
   it('submits deposit with encoded password and refreshes balance', async () => {
@@ -88,9 +91,9 @@ describe('WalletComponent', () => {
     await component.confirmAndDeposit();
 
     expect(passwordHashSpy.encodePassword).toHaveBeenCalledWith('mySecurePassword');
-    expect(walletServiceSpy.depositFunds).toHaveBeenCalledWith(500, 'b64_mySecurePassword');
+    expect(walletServiceSpy.depositFunds).toHaveBeenCalledWith(Math.round((500 / USD_INR_RATE) * 100) / 100, 'b64_mySecurePassword');
     expect(component.isPasswordModalOpen()).toBe(false);
-    expect(component.successMessage()).toContain('$500');
+    expect(component.successMessage()).toContain('₹500');
     expect(walletServiceSpy.getWalletDetails).toHaveBeenCalledTimes(2); // init + after deposit
   });
 

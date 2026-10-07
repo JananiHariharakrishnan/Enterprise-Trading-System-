@@ -1,7 +1,19 @@
 <section class="orders-page">
   <header class="page-head">
-    <h2>Place order</h2>
-    <p>Choose an instrument, select order type (Market or Limit), set the quantity, then confirm. For limit orders, specify your price.</p>
+    <div>
+      <h2>Place order</h2>
+      <p>Choose an instrument, select order type (Market or Limit), set the quantity, then confirm. For limit orders, specify your price.</p>
+    </div>
+    <button
+      type="button"
+      class="btn-refresh"
+      (click)="refresh()"
+      [disabled]="isRefreshing() || submitting()"
+      data-testid="refresh-order-button"
+    >
+      <span class="refresh-icon" [class.spinning]="isRefreshing()" aria-hidden="true">↻</span>
+      {{ isRefreshing() ? 'Refreshing' : 'Refresh' }}
+    </button>
   </header>
 
   <!-- Account bar -->

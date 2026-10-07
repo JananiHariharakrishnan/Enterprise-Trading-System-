@@ -19,6 +19,7 @@ export type CustomerPreferences = {
   notifications: {
     tradeFills: NotificationChannel[];
     priceAlerts: NotificationChannel[];
+    emailEnabled?: boolean;
   };
   display: {
     theme: ThemeChoice;
@@ -48,10 +49,11 @@ export class CustomerPreferencesService {
       notifications: {
         tradeFills: ['IN_APP'],
         priceAlerts: ['IN_APP'],
+        emailEnabled: false,
       },
       display: {
         theme: 'SYSTEM',
-        baseCurrency: 'USD',
+        baseCurrency: 'INR',
       },
     };
   }

@@ -44,37 +44,99 @@
       <div class="nav-group" *ngIf="!authSession.isAdmin()">
         <div class="nav-label">WORKSPACE</div>
         <a class="nav-item" routerLink="/dashboard" routerLinkActive="active">
-          <span class="nav-icon">▦</span><span>Overview</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 10.5 12 4l8 6.5"/>
+              <path d="M6 9.8V20h12V9.8"/>
+            </svg>
+          </span><span>Overview</span>
         </a>
         <a class="nav-item" routerLink="/positions" routerLinkActive="active">
-          <span class="nav-icon">▣</span><span>Positions</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3 3 8l9 5 9-5-9-5z"/>
+              <path d="M3 12l9 5 9-5"/>
+              <path d="M3 16l9 5 9-5"/>
+            </svg>
+          </span><span>Positions</span>
         </a>
         <a class="nav-item" routerLink="/pnl" routerLinkActive="active">
-          <span class="nav-icon">≡</span><span>Portfolio &amp; P&amp;L</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 19V5"/>
+              <path d="M4 19h16"/>
+              <path d="M7 14l4-4 3 2 5-6"/>
+            </svg>
+          </span><span>Portfolio &amp; P&amp;L</span>
         </a>
         <a class="nav-item" routerLink="/orders" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-          <span class="nav-icon">☷</span><span>Orders</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 4h8"/>
+              <rect x="5" y="6" width="14" height="14" rx="2"/>
+              <path d="M8 11h8M8 15h5"/>
+            </svg>
+          </span><span>Orders</span>
         </a>
         <a class="nav-item" routerLink="/orders/history" routerLinkActive="active">
-          <span class="nav-icon">◷</span><span>Order history</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="8"/>
+              <path d="M12 8v4l3 2"/>
+            </svg>
+          </span><span>Order history</span>
         </a>
         <a class="nav-item" routerLink="/watchlists" routerLinkActive="active">
-          <span class="nav-icon">☆</span><span>Watchlists</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m12 3.5 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16l-4.8 2.4.9-5.4L4.2 9.2l5.4-.8L12 3.5z"/>
+            </svg>
+          </span><span>Watchlists</span>
         </a>
         <a class="nav-item" routerLink="/alerts" routerLinkActive="active">
-          <span class="nav-icon">⚑</span><span>Alerts</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 9a6 6 0 0 1 12 0c0 6 2 6 2 8H4c0-2 2-2 2-8"/>
+              <path d="M10 19a2 2 0 0 0 4 0"/>
+            </svg>
+          </span><span>Alerts</span>
         </a>
         <a class="nav-item" routerLink="/signals" routerLinkActive="active">
-          <span class="nav-icon">⚡</span><span>AI Signals</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4.5 12a7.5 7.5 0 0 1 15 0"/>
+              <path d="M7.5 12a4.5 4.5 0 0 1 9 0"/>
+              <circle cx="12" cy="12.5" r="1.2" fill="currentColor" stroke="none"/>
+              <path d="M12 14v6"/>
+            </svg>
+          </span><span>AI Signals</span>
         </a>
         <a class="nav-item" routerLink="/wallet" routerLinkActive="active">
-          <span class="nav-icon">⛁</span><span>Wallet</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="6" width="18" height="13" rx="2"/>
+              <path d="M3 10h18"/>
+              <circle cx="16.5" cy="14.5" r="1.1" fill="currentColor" stroke="none"/>
+            </svg>
+          </span><span>Wallet</span>
         </a>
         <a class="nav-item" routerLink="/strategies" routerLinkActive="active">
-          <span class="nav-icon">⚡</span><span>Auto Strategies</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="7" height="6" rx="1.5"/>
+              <rect x="14" y="14" width="7" height="6" rx="1.5"/>
+              <path d="M10 7h3.5A2.5 2.5 0 0 1 16 9.5V14"/>
+              <path d="M14 17H10.5A2.5 2.5 0 0 1 8 14.5V10"/>
+            </svg>
+          </span><span>Auto Strategies</span>
         </a>
         <a class="nav-item" routerLink="/profile" routerLinkActive="active">
-          <span class="nav-icon">⚙</span><span>Profile & settings</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="8" r="3.2"/>
+              <path d="M5 20c1.2-3.4 3.7-5 7-5s5.8 1.6 7 5"/>
+            </svg>
+          </span><span>Profile & settings</span>
         </a>
       </div>
     </nav>
@@ -119,6 +181,8 @@
         <span class="timer-countdown">{{ authSession.sessionExpiresIn() }}</span>
       </div>
 
+      <app-notification-panel *ngIf="authSession.isAuthenticated()"></app-notification-panel>
+
       <button
         type="button"
         class="text-btn theme-btn"
@@ -146,12 +210,19 @@
 
   <div class="market-strip" *ngIf="!authSession.isAdmin()">
     <div class="snapshot"><span class="live-dot"></span><div><b>MARKET SNAPSHOT</b><small>{{ marketFeedLabel() }}</small></div></div>
-    <div *ngFor="let item of marketItems()">
-      <small>{{ item.label }}</small>
-      <strong>{{ item.value | number:'1.2-2' }}</strong>
-      <em [class.up]="item.changePct >= 0" [class.down]="item.changePct < 0">
-        {{ item.changePct >= 0 ? '↗' : '↘' }} {{ item.changePct >= 0 ? '+' : '' }}{{ item.changePct | number:'1.2-2' }}%
-      </em>
+    <div class="ticker-viewport">
+      <div class="ticker-track" #tickerTrack *ngIf="marketItems().length > 0">
+        <div class="ticker-set" *ngFor="let copy of tickerCopies" #tickerSet [attr.aria-hidden]="copy === 0 ? null : true">
+          <div class="ticker-item" *ngFor="let item of marketItems()">
+            <small>{{ item.label }}</small>
+            <strong>{{ priceSymbol() }}{{ displayPrice(item) | number:'1.2-2' }}</strong>
+            <em [class.up]="item.changePct >= 0" [class.down]="item.changePct < 0">
+              {{ item.changePct >= 0 ? '↗' : '↘' }} {{ item.changePct >= 0 ? '+' : '' }}{{ item.changePct | number:'1.2-2' }}%
+            </em>
+          </div>
+        </div>
+      </div>
+      <p class="ticker-empty" *ngIf="marketItems().length === 0">Waiting for cached prices from positions and watchlists.</p>
     </div>
   </div>
 

@@ -432,8 +432,17 @@ label {
 
 .trade-shell-ui .nav-icon {
   width: 18px;
-  text-align: center;
-  font-size: 17px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.trade-shell-ui .nav-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
 }
 
 .trade-shell-ui .sidebar-footer {
@@ -587,7 +596,11 @@ label {
 }
 
 .trade-shell-ui .theme-btn {
-  padding: 6px 10px;
+  box-sizing: border-box;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-soft);
@@ -649,12 +662,13 @@ label {
   height: 68px;
   border-bottom: 1px solid var(--line);
   display: grid;
-  grid-template-columns: 1.35fr repeat(4, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   padding: 0 30px;
   gap: 18px;
   background: color-mix(in srgb, var(--surface) 95%, #f2f8f4 5%);
   z-index: 14;
+  overflow: hidden;
 }
 
 .trade-shell-ui .market-strip > div {
@@ -663,7 +677,7 @@ label {
   gap: 9px;
 }
 
-.trade-shell-ui .market-strip > div:not(.snapshot) {
+.trade-shell-ui .market-strip > div:not(.snapshot):not(.ticker-viewport) {
   border: 1px solid color-mix(in srgb, var(--line) 82%, #bdd6c9 18%);
   border-radius: 10px;
   padding: 7px 10px;
@@ -703,6 +717,47 @@ label {
   margin-top: 3px;
 }
 
+.trade-shell-ui .ticker-viewport {
+  overflow: hidden;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.trade-shell-ui .ticker-track {
+  display: flex;
+  flex: 0 0 auto;
+  width: max-content;
+  will-change: transform;
+}
+
+.trade-shell-ui .ticker-set {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  width: max-content;
+  gap: 12px;
+  padding-right: 12px;
+}
+
+.trade-shell-ui .ticker-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, #bdd6c9 18%);
+  border-radius: 10px;
+  padding: 7px 12px;
+  background: color-mix(in srgb, var(--surface) 92%, #f4faf7 8%);
+  white-space: nowrap;
+}
+
+.trade-shell-ui .ticker-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .trade-shell-ui .up {
   color: #438768;
 }
@@ -723,7 +778,7 @@ label {
   }
 
   .trade-shell-ui .market-strip {
-    grid-template-columns: 1fr repeat(4, auto);
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
   .trade-shell-ui .crumbs {

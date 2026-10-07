@@ -19,3 +19,23 @@ export function avgCostInUsd(averageCost: number, symbol: string): number {
 export function quoteCurrency(symbol: string, fallback = 'USD'): string {
   return isIndianSymbol(symbol) ? 'INR' : fallback;
 }
+
+export function currencySymbol(code: string | null | undefined): string {
+  return (code ?? '').toUpperCase() === 'USD' ? '$' : '₹';
+}
+
+/** Convert between the ledger currency (USD) and the user's display currency. */
+export function convertAmount(amount: number, from: string, to: string, rate = USD_INR_RATE): number {
+  const source = (from || 'USD').toUpperCase();
+  const target = (to || 'INR').toUpperCase();
+  if (!Number.isFinite(amount) || source === target) {
+    return amount;
+  }
+  if (source === 'USD' && target === 'INR') {
+    return amount * rate;
+  }
+  if (source === 'INR' && target === 'USD') {
+    return amount / rate;
+  }
+  return amount;
+}

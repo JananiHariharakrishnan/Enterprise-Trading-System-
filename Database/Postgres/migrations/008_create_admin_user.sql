@@ -14,8 +14,8 @@ INSERT INTO tradingsystem.accounts (
     status
 ) VALUES (
     'ETP-ADMIN-01',
-    0.00,
-    0.00,
+    10000.00,
+    10000.00,
     'ACTIVE'
 )
 ON CONFLICT (account_reference) DO NOTHING;

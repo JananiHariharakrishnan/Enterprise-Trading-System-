@@ -26,6 +26,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   @ViewChild(InstrumentSearchComponent) instrumentSearchComponent?: InstrumentSearchComponent;
 
   readonly submitting = signal(false);
+  readonly isRefreshing = signal(false);
   readonly prefilling = signal(false);
   readonly orders = signal<OrderHistoryEntry[]>([]);
   readonly account = signal<AccountResponse | null>(null);
@@ -161,6 +162,26 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     void this.prefillFromUrl();
   }
 
+  async refresh(): Promise<void> {
+    if (this.isRefreshing() || this.submitting()) {
+      return;
+    }
+
+    this.isRefreshing.set(true);
+    try {
+      const user = await this.auth.loadCurrentUser();
+      if (user) {
+        const acct = await this.api.accounts.getAccount({ id: user.accountId });
+        this.account.set(acct);
+      }
+      await this.refreshQuote();
+    } catch (e) {
+      console.error('Failed to refresh order page', e);
+    } finally {
+      this.isRefreshing.set(false);
+    }
+  }
+
   private async prefillFromUrl(): Promise<void> {
     const symbol = this.route.snapshot.queryParamMap.get('symbol')?.trim();
     if (!symbol || !this.instrumentSearchComponent) return;
@@ -188,13 +209,18 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     // Clear cached idempotency key so new order gets a fresh key
     this.currentIdempotencyKey = null;
 
+    await this.refreshQuote();
+  }
+
+  private async refreshQuote(): Promise<void> {
+    const instrument = this.selectedInstrument();
+    if (!instrument) {
+      return;
+    }
+
     try {
       const data = await this.api.marketData.getAllMarketData();
-      if (data && data[instrument.symbol]) {
-        this.latestPrice.set(data[instrument.symbol].price ?? null);
-      } else {
-        this.latestPrice.set(null);
-      }
+      this.latestPrice.set(data?.[instrument.symbol]?.price ?? null);
     } catch (e) {
       console.error('Failed to load market data', e);
       this.latestPrice.set(null);

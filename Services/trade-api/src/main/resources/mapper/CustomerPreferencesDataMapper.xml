@@ -12,6 +12,7 @@
         <result property="tradingDefaultTradeQuantity" column="trading_default_trade_quantity"/>
         <result property="notificationsTradeFills" column="notifications_trade_fills" javaType="java.util.List"/>
         <result property="notificationsPriceAlerts" column="notifications_price_alerts" javaType="java.util.List"/>
+        <result property="emailNotificationsEnabled" column="email_notifications_enabled"/>
         <result property="displayTheme" column="display_theme"/>
         <result property="displayBaseCurrency" column="display_base_currency"/>
         <result property="updatedAt" column="updated_at"/>
@@ -26,6 +27,7 @@
             trading_default_trade_quantity,
             notifications_trade_fills,
             notifications_price_alerts,
+            email_notifications_enabled,
             display_theme,
             display_base_currency,
             updated_at
@@ -43,6 +45,7 @@
             trading_default_trade_quantity,
             notifications_trade_fills,
             notifications_price_alerts,
+            email_notifications_enabled,
             display_theme,
             display_base_currency,
             updated_at
@@ -54,6 +57,7 @@
             #{tradingDefaultTradeQuantity},
             #{notificationsTradeFills, jdbcType=OTHER},
             #{notificationsPriceAlerts, jdbcType=OTHER},
+            #{emailNotificationsEnabled},
             #{displayTheme},
             #{displayBaseCurrency},
             NOW()
@@ -65,6 +69,7 @@
             trading_default_trade_quantity = EXCLUDED.trading_default_trade_quantity,
             notifications_trade_fills = EXCLUDED.notifications_trade_fills,
             notifications_price_alerts = EXCLUDED.notifications_price_alerts,
+            email_notifications_enabled = EXCLUDED.email_notifications_enabled,
             display_theme = EXCLUDED.display_theme,
             display_base_currency = EXCLUDED.display_base_currency,
             updated_at = NOW();

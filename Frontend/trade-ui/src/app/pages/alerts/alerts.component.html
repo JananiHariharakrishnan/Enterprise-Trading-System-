@@ -1,7 +1,19 @@
 <section class="orders-page" style="display: block; padding: 24px; max-width: 1200px; margin: 0 auto;">
-  <header class="page-head" style="margin-bottom: 32px;">
-    <h2>Price Alerts</h2>
-    <p>Set up one-shot alerts and get notified when symbols cross your target prices.</p>
+  <header class="page-head">
+    <div>
+      <h2>Price Alerts</h2>
+      <p>Set up one-shot alerts and get notified when symbols cross your target prices.</p>
+    </div>
+    <button
+      type="button"
+      class="btn-refresh"
+      (click)="refresh()"
+      [disabled]="isLoading() || isRefreshing() || isSaving()"
+      data-testid="refresh-alerts-button"
+    >
+      <span class="refresh-icon" [class.spinning]="isRefreshing()" aria-hidden="true">↻</span>
+      {{ isRefreshing() ? 'Refreshing' : 'Refresh' }}
+    </button>
   </header>
 
   <div class="watchlists-container" style="display: flex; gap: 32px; flex-wrap: wrap;">

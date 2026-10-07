@@ -32,12 +32,12 @@
     <p>Loading your balance…</p>
   </div>
 
-  <ng-container *ngIf="!isLoading() && account() as acc">
+  <div class="wallet-split" *ngIf="!isLoading() && account() as acc">
     <!-- Balance overview -->
     <section class="panel overview">
       <div class="overview-main">
         <span class="overview-label">Cash balance</span>
-        <div class="balance-value">{{ acc.cashBalance | currency:'USD':'symbol':'1.2-2' }}</div>
+        <div class="balance-value">{{ moneySymbol() }}{{ shownBalance(acc.cashBalance) | number:'1.2-2' }}</div>
         <p class="card-sub">Settled funds, ready to withdraw or invest.</p>
       </div>
 
@@ -67,17 +67,16 @@
       <div class="deposit-layout">
         <!-- Left: amount -->
         <div class="deposit-form">
-          <label for="depositAmountInput" class="input-label">Amount (USD)</label>
+          <label for="depositAmountInput" class="input-label">Amount ({{ displayCurrency() }})</label>
           <div class="amount-field">
-            <span class="currency-prefix" aria-hidden="true">$</span>
+            <span class="currency-prefix" aria-hidden="true">{{ moneySymbol() }}</span>
             <input
               id="depositAmountInput"
-              type="number"
-              [(ngModel)]="depositAmount"
-              min="1"
-              step="50"
-              placeholder="0.00"
+              type="text"
               class="amount-input"
+              [value]="depositAmount | number:'1.0-0'"
+              readonly
+              tabindex="-1"
             />
           </div>
 
@@ -89,7 +88,7 @@
               [class.active]="depositAmount === amt"
               (click)="setQuickAmount(amt)"
             >
-              ${{ amt | number }}
+              {{ moneySymbol() }}{{ amt | number }}
             </button>
           </div>
         </div>
@@ -99,15 +98,15 @@
           <h3>Summary</h3>
           <div class="summary-line">
             <span class="summary-label">Current balance</span>
-            <span class="summary-val">{{ acc.cashBalance | currency:'USD':'symbol':'1.2-2' }}</span>
+            <span class="summary-val">{{ moneySymbol() }}{{ shownBalance(acc.cashBalance) | number:'1.2-2' }}</span>
           </div>
           <div class="summary-line">
             <span class="summary-label">Deposit</span>
-            <span class="summary-val">+ {{ (depositAmount || 0) | currency:'USD':'symbol':'1.2-2' }}</span>
+            <span class="summary-val">+ {{ moneySymbol() }}{{ shownDeposit() | number:'1.2-2' }}</span>
           </div>
           <div class="summary-line total">
             <span class="summary-label">New balance</span>
-            <span class="summary-val">{{ (acc.cashBalance + (depositAmount || 0)) | currency:'USD':'symbol':'1.2-2' }}</span>
+            <span class="summary-val">{{ moneySymbol() }}{{ shownNewBalance() | number:'1.2-2' }}</span>
           </div>
 
           <button
@@ -121,7 +120,9 @@
         </aside>
       </div>
     </section>
+  </div>
 
+  <ng-container *ngIf="!isLoading() && account() as acc">
     <!-- Confirmation modal -->
     <div class="modal-backdrop" *ngIf="isPasswordModalOpen()" (click)="!isSubmitting() && closeModal()">
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" (click)="$event.stopPropagation()">
@@ -138,7 +139,7 @@
           <div class="transfer-summary-box">
             <div class="summary-line">
               <span class="summary-label">Deposit</span>
-              <strong class="summary-val highlight">{{ depositAmount | currency:'USD':'symbol':'1.2-2' }}</strong>
+              <strong class="summary-val highlight">{{ moneySymbol() }}{{ shownDeposit() | number:'1.2-2' }}</strong>
             </div>
             <div class="summary-line">
               <span class="summary-label">Account</span>
@@ -146,7 +147,7 @@
             </div>
             <div class="summary-line">
               <span class="summary-label">New balance</span>
-              <strong class="summary-val">{{ (acc.cashBalance + (depositAmount || 0)) | currency:'USD':'symbol':'1.2-2' }}</strong>
+              <strong class="summary-val">{{ moneySymbol() }}{{ shownNewBalance() | number:'1.2-2' }}</strong>
             </div>
           </div>
 
