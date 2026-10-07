@@ -72,5 +72,9 @@ export class StrategyService {
   simulateTick(symbol: string, price: number): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/simulate-tick`, { symbol, price }, { headers: this.getHeaders() });
   }
+
+  deleteStrategy(strategyId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${strategyId}`, { headers: this.getHeaders() });
+  }
 }
 

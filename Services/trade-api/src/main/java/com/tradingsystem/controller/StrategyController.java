@@ -99,6 +99,17 @@ public class StrategyController {
         return ResponseEntity.ok(StrategyResponse.fromInstance(instance));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteStrategy(@PathVariable("id") String id) {
+        StrategyInstance instance = strategyAutomationService.getStrategy(id);
+        if (instance == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        strategyAutomationService.unregisterStrategy(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/simulate-tick")
     public ResponseEntity<Map<String, Object>> simulateTick(@Valid @RequestBody SimulateTickRequest request) {
         QuotePayload quote = new QuotePayload();

@@ -188,6 +188,13 @@
             >
               {{ strat.enabled ? 'Disable' : 'Enable' }}
             </button>
+            <button
+              class="btn btn-sm btn-outline-danger"
+              style="margin-left:8px"
+              (click)="removeStrategy(strat)"
+            >
+              Cancel
+            </button>
           </td>
         </tr>
         </tbody>

@@ -99,6 +99,22 @@ export class StrategiesComponent implements OnInit {
     }
   }
 
+  removeStrategy(strat: StrategyResponse): void {
+    const ok = confirm(`Remove strategy ${strat.strategyId}? This will permanently delete the rule.`);
+    if (!ok) {
+      return;
+    }
+
+    this.strategyService.deleteStrategy(strat.strategyId).subscribe({
+      next: () => {
+        this.actionMessage.set(`Strategy ${strat.strategyId} removed`);
+        this.errorMessage.set(null);
+        this.loadStrategies();
+      },
+      error: (err) => this.errorMessage.set(err?.message || 'Failed to remove strategy')
+    });
+  }
+
   sendSimulatedTick(): void {
     if (!this.simSymbol || this.simPrice <= 0) {
       return;

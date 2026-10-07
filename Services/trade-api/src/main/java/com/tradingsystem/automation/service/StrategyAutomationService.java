@@ -247,5 +247,18 @@ public class StrategyAutomationService {
         priceHistory.clear();
         activeStrategies.clear();
     }
+
+    /**
+     * Unregisters and removes a strategy from the active registry.
+     */
+    public void unregisterStrategy(String strategyId) {
+        StrategyInstance removed = activeStrategies.remove(strategyId);
+        if (removed != null) {
+            logger.info("Unregistered automated strategy: id={}, symbol={}, type={}",
+                    removed.getStrategyId(), removed.getSymbol(), removed.getType());
+        } else {
+            logger.debug("Attempted to unregister non-existent strategy id={}", strategyId);
+        }
+    }
 }
 
