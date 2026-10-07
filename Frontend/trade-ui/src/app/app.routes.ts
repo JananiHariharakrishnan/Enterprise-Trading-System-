@@ -66,6 +66,11 @@ export const routes: Routes = [
     component: WatchlistsComponent,
     canActivate: [authGuard]
   },
+  {
+    path: 'alerts',
+    loadComponent: () => import('./pages/alerts/alerts.component').then(m => m.AlertsComponent),
+    canActivate: [authGuard]
+  },
   // Analytics removed — no route registered
   {
     // Unknown URLs go to '/', which redirects to /login
