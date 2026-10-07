@@ -120,7 +120,7 @@ class WatchlistMyBatisIntegrationTest {
         assertEquals(1, inserted2);
         assertNotNull(alert2.getId());
 
-        assertEquals(2, priceAlertDataMapper.countActiveAlertsByAccountId(1001L));
+        assertEquals(3, priceAlertDataMapper.countActiveAlertsByAccountId(1001L));
 
         // Alert for different account
         PriceAlert alert3 = new PriceAlert();
@@ -134,7 +134,7 @@ class WatchlistMyBatisIntegrationTest {
         assertEquals(1, inserted3);
 
         // Only account 1001's alerts counted for their account
-        assertEquals(2, priceAlertDataMapper.countActiveAlertsByAccountId(1001L));
+        assertEquals(3, priceAlertDataMapper.countActiveAlertsByAccountId(1001L));
         assertEquals(1, priceAlertDataMapper.countActiveAlertsByAccountId(2002L));
     }
 
@@ -159,7 +159,7 @@ class WatchlistMyBatisIntegrationTest {
 
         // Find all ACTIVE alerts by symbol
         List<PriceAlert> activeAaplAlerts = priceAlertDataMapper.findActiveAlertsBySymbol("AAPL");
-        assertEquals(2, activeAaplAlerts.size());
+        assertEquals(3, activeAaplAlerts.size());
 
         // No ACTIVE alerts for MSFT
         List<PriceAlert> activeMsftAlerts = priceAlertDataMapper.findActiveAlertsBySymbol("MSFT");

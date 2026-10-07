@@ -1217,7 +1217,7 @@ class MarketDataServiceImplTest {
         // First call is with null previous price (skipped)
         // Duplicate is ignored, so no additional evaluation
         verify(priceAlertEvaluationService, never())
-                .evaluateAlertsForSymbol("AAPL", new BigDecimal("330.00"), any());
+                .evaluateAlertsForSymbol(eq("AAPL"), eq(new BigDecimal("330.00")), any());
     }
 
     @Test

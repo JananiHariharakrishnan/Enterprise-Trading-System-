@@ -69,9 +69,9 @@ class PriceAlertEvaluationServiceImplTest {
         );
 
         verify(priceAlertDataMapper).updateAlertStatus(
-                1001L,
-                1L,
-                "TRIGGERED",
+                eq(1001L),
+                eq(1L),
+                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -107,9 +107,9 @@ class PriceAlertEvaluationServiceImplTest {
         );
 
         verify(priceAlertDataMapper).updateAlertStatus(
-                1001L,
-                1L,
-                "TRIGGERED",
+                eq(1001L),
+                eq(1L),
+                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -128,9 +128,9 @@ class PriceAlertEvaluationServiceImplTest {
         );
 
         verify(priceAlertDataMapper).updateAlertStatus(
-                1001L,
-                1L,
-                "TRIGGERED",
+                eq(1001L),
+                eq(1L),
+                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -170,9 +170,9 @@ class PriceAlertEvaluationServiceImplTest {
         );
 
         verify(priceAlertDataMapper).updateAlertStatus(
-                1001L,
-                2L,
-                "TRIGGERED",
+                eq(1001L),
+                eq(2L),
+                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -208,9 +208,9 @@ class PriceAlertEvaluationServiceImplTest {
         );
 
         verify(priceAlertDataMapper).updateAlertStatus(
-                1001L,
-                2L,
-                "TRIGGERED",
+                eq(1001L),
+                eq(2L),
+                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -229,9 +229,9 @@ class PriceAlertEvaluationServiceImplTest {
         );
 
         verify(priceAlertDataMapper).updateAlertStatus(
-                1001L,
-                2L,
-                "TRIGGERED",
+                eq(1001L),
+                eq(2L),
+                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -256,9 +256,9 @@ class PriceAlertEvaluationServiceImplTest {
         );
 
         verify(priceAlertDataMapper).updateAlertStatus(
-                1001L,
-                1L,
-                "TRIGGERED",
+                eq(1001L),
+                eq(1L),
+                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
 
@@ -284,19 +284,15 @@ class PriceAlertEvaluationServiceImplTest {
         );
 
         verify(priceAlertDataMapper).updateAlertStatus(
-                1001L,
-                1L,
-                "TRIGGERED",
+                eq(1001L),
+                eq(1L),
+                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
 
     @Test
     void evaluateAlerts_nullPreviousPrice_skipsEvaluation() {
-        PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
-        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
-                .thenReturn(List.of(alert));
-
         // First quote for symbol (no previous price)
         evaluationService.evaluateAlertsForSymbol(
                 "AAPL",
@@ -310,10 +306,6 @@ class PriceAlertEvaluationServiceImplTest {
 
     @Test
     void evaluateAlerts_nullCurrentPrice_skipsEvaluation() {
-        PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
-        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
-                .thenReturn(List.of(alert));
-
         evaluationService.evaluateAlertsForSymbol(
                 "AAPL",
                 new BigDecimal("325"),
@@ -379,9 +371,9 @@ class PriceAlertEvaluationServiceImplTest {
         );
 
         verify(priceAlertDataMapper).updateAlertStatus(
-                1001L,
-                1L,
-                "TRIGGERED",
+                eq(1001L),
+                eq(1L),
+                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
 
@@ -393,9 +385,9 @@ class PriceAlertEvaluationServiceImplTest {
         );
 
         verify(priceAlertDataMapper).updateAlertStatus(
-                1001L,
-                2L,
-                "TRIGGERED",
+                eq(1001L),
+                eq(2L),
+                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }

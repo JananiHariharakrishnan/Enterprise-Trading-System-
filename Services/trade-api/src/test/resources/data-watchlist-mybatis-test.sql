@@ -28,7 +28,7 @@ INSERT INTO tradingsystem.price_alerts (
     created_on, updated_on
 )
 VALUES (
-    501, 1001, 10, 'AAPL', 'ABOVE_OR_EQUAL', 240.00,
+    501, 1001, 10, 'AAPL', 'ABOVE', 240.00,
     'ACTIVE', FALSE, 'PENDING', 0,
     TIMESTAMP '2026-09-11 08:00:00', TIMESTAMP '2026-09-11 08:00:00'
 );

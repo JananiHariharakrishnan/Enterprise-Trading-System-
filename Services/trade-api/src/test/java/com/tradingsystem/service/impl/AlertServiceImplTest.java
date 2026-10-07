@@ -94,7 +94,7 @@ class AlertServiceImplTest {
         when(priceAlertDataMapper.countActiveAlertsByAccountId(1001L)).thenReturn(0);
         when(instrumentDataMapper.findInstrumentBySymbol("AAPL")).thenReturn(testInstrument);
         when(priceAlertDataMapper.insertPriceAlert(any())).thenReturn(1);
-        when(priceAlertDataMapper.findAlertByAccountIdAndId(1001L, any()))
+        when(priceAlertDataMapper.findAlertByAccountIdAndId(eq(1001L), any()))
                 .thenReturn(testAlert);
 
         AlertResponse response = alertService.createAlert(1001L, request);
@@ -183,7 +183,7 @@ class AlertServiceImplTest {
         when(priceAlertDataMapper.countActiveAlertsByAccountId(1001L)).thenReturn(2);
         when(instrumentDataMapper.findInstrumentBySymbol("AAPL")).thenReturn(testInstrument);
         when(priceAlertDataMapper.insertPriceAlert(any())).thenReturn(1);
-        when(priceAlertDataMapper.findAlertByAccountIdAndId(1001L, any()))
+        when(priceAlertDataMapper.findAlertByAccountIdAndId(eq(1001L), any()))
                 .thenReturn(testAlert);
 
         AlertResponse response = alertService.createAlert(1001L, request);
@@ -236,7 +236,7 @@ class AlertServiceImplTest {
         when(priceAlertDataMapper.countActiveAlertsByAccountId(1001L)).thenReturn(4);
         when(instrumentDataMapper.findInstrumentBySymbol("AAPL")).thenReturn(testInstrument);
         when(priceAlertDataMapper.insertPriceAlert(any())).thenReturn(1);
-        when(priceAlertDataMapper.findAlertByAccountIdAndId(1001L, any()))
+        when(priceAlertDataMapper.findAlertByAccountIdAndId(eq(1001L), any()))
                 .thenReturn(testAlert);
 
         AlertResponse response = alertService.createAlert(1001L, request);
@@ -265,7 +265,7 @@ class AlertServiceImplTest {
         when(priceAlertDataMapper.countActiveAlertsByAccountId(1001L)).thenReturn(1);  // Only 1 ACTIVE
         when(instrumentDataMapper.findInstrumentBySymbol("AAPL")).thenReturn(testInstrument);
         when(priceAlertDataMapper.insertPriceAlert(any())).thenReturn(1);
-        when(priceAlertDataMapper.findAlertByAccountIdAndId(1001L, any()))
+        when(priceAlertDataMapper.findAlertByAccountIdAndId(eq(1001L), any()))
                 .thenReturn(testAlert);
 
         AlertResponse response = limitedService.createAlert(1001L, request);
