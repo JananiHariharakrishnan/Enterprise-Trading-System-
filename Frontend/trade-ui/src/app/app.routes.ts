@@ -10,6 +10,7 @@ import { OrdersComponent } from './pages/orders/orders.component';
 import { OrderHistoryComponent } from './pages/orders/order-history.component';
 import { WatchlistsComponent } from './pages/watchlists/watchlists.component';
 import { PositionsComponent } from './pages/positions/positions.component';
+import { PnlComponent } from './pages/pnl/pnl.component';
 
 export const routes: Routes = [
   // '/' now goes straight to sign in (HomeComponent removed)
@@ -53,6 +54,11 @@ export const routes: Routes = [
   {
     path: 'positions',
     component: PositionsComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'pnl',
+    component: PnlComponent,
     canActivate: [authGuard]
   },
   {
