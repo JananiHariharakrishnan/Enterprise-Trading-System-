@@ -42,30 +42,35 @@ describe('AlertsComponent', () => {
   });
 
   it('should reject invalid form submission', () => {
-    component.createAlertForm.setValue({ symbol: '', direction: 'ABOVE', threshold: null });
+    component.createAlertForm.setValue({ direction: 'ABOVE', threshold: null });
     component.createAlert();
     expect(mockApiClient.priceAlerts.createAlert).not.toHaveBeenCalled();
     expect(component.createAlertForm.valid).toBe(false);
   });
 
-  it('should reject missing symbol', () => {
-    component.createAlertForm.setValue({ symbol: '', direction: 'ABOVE', threshold: 100 });
-    expect(component.createAlertForm.valid).toBe(false);
+  it('should reject missing symbol', async () => {
+    component.selectedInstrument.set(null);
+    component.createAlertForm.setValue({ direction: 'ABOVE', threshold: 100 });
+    await component.createAlert();
+    expect(mockApiClient.priceAlerts.createAlert).not.toHaveBeenCalled();
   });
 
   it('should reject non-positive threshold', () => {
-    component.createAlertForm.setValue({ symbol: 'AAPL', direction: 'ABOVE', threshold: -5 });
+    component.selectedInstrument.set({ symbol: 'AAPL', name: 'Apple', assetClass: 'EQUITY', currency: 'USD' });
+    component.createAlertForm.setValue({ direction: 'ABOVE', threshold: -5 });
     expect(component.createAlertForm.valid).toBe(false);
   });
 
   it('should call Create Alert API and refresh list on valid submit', async () => {
-    component.createAlertForm.setValue({ symbol: 'AAPL', direction: 'ABOVE', threshold: 160 });
+    component.selectedInstrument.set({ symbol: 'AAPL', name: 'Apple', assetClass: 'EQUITY', currency: 'USD' });
+    component.createAlertForm.setValue({ direction: 'ABOVE', threshold: 160 });
     await component.createAlert();
     expect(mockApiClient.priceAlerts.createAlert).toHaveBeenCalledWith({
       createAlertRequest: { symbol: 'AAPL', direction: 'ABOVE', threshold: 160 }
     });
     expect(mockApiClient.priceAlerts.listAlerts).toHaveBeenCalledTimes(2); // once on init, once on create
-    expect(component.createAlertForm.value).toEqual({ symbol: '', direction: 'ABOVE', threshold: null });
+    expect(component.createAlertForm.value).toEqual({ direction: 'ABOVE', threshold: null });
+    expect(component.selectedInstrument()).toBeNull();
   });
 
   it('should call Cancel API for ACTIVE alert', async () => {
@@ -90,7 +95,8 @@ describe('AlertsComponent', () => {
   
   it('should handle API failure correctly on create', async () => {
     mockApiClient.priceAlerts.createAlert.mockRejectedValue('API Error');
-    component.createAlertForm.setValue({ symbol: 'AAPL', direction: 'ABOVE', threshold: 160 });
+    component.selectedInstrument.set({ symbol: 'AAPL', name: 'Apple', assetClass: 'EQUITY', currency: 'USD' });
+    component.createAlertForm.setValue({ direction: 'ABOVE', threshold: 160 });
     await component.createAlert();
     
     // Should show error toast
@@ -98,6 +104,6 @@ describe('AlertsComponent', () => {
     expect(component.toasts()[0].type).toBe('error');
     
     // Form should remain usable (not cleared)
-    expect(component.createAlertForm.value.symbol).toBe('AAPL');
+    expect(component.selectedInstrument()?.symbol).toBe('AAPL');
   });
 });

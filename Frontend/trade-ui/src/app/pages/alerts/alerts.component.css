@@ -153,6 +153,91 @@ tr:hover td {
 }
 
 /* ==========================================================
+   Selected Card
+   ========================================================== */
+
+.selected-card {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.selected-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: hsl(var(--hue, 160) 55% 28%);
+  background: hsl(var(--hue, 160) 75% 92%);
+  border-radius: 14px;
+}
+
+.selected-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.selected-title h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.selected-title p {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--ink-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-btn {
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 20px 0 0;
+}
+
+.facts dt {
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+
+.facts dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================
    Toasts
    ========================================================== */
 
