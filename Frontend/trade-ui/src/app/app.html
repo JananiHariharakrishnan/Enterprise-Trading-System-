@@ -4,4 +4,6 @@
   <main class="app-main" [class.app-main-authenticated]="authSession.isAuthenticated()">
     <router-outlet></router-outlet>
   </main>
+
+  <app-chatbot-widget *ngIf="authSession.isAuthenticated()"></app-chatbot-widget>
 </div>

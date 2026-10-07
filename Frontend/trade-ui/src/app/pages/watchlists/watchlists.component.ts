@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
+import { SignalsService, TradeSignalResponse } from '../../services/signals.service';
 import type { WatchlistSummaryResponse, WatchlistDetailResponse } from '../../generated/trade';
 import { InstrumentSearchComponent, type InstrumentListItem } from '../../components/instrument-search/instrument-search.component';
 
@@ -34,6 +35,7 @@ const TONE_COUNT = 6;
 })
 export class WatchlistsComponent implements OnInit, OnDestroy {
   private readonly api = inject(TradeApiClientService);
+  private readonly signalsService = inject(SignalsService, { optional: true });
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
 
@@ -47,6 +49,11 @@ export class WatchlistsComponent implements OnInit, OnDestroy {
   readonly isSavingWatchlist = signal(false);
   readonly isRefreshing = signal(false);
   readonly lastRefreshedAt = signal<Date | null>(null);
+
+  // AI Signal integration for selected instrument
+  readonly instrumentSignal = signal<TradeSignalResponse | null>(null);
+  readonly isSignalLoading = signal(false);
+  readonly signalError = signal<string | null>(null);
 
   /**
    * The popup is driven by the symbol, not the object, so it keeps working
@@ -273,7 +280,25 @@ export class WatchlistsComponent implements OnInit, OnDestroy {
   /** Opens the instrument popup (click the same instrument again to close it). */
   selectInstrument(instrument: WatchlistInstrument | null): void {
     const symbol = instrument?.symbol ?? null;
-    this.selectedSymbol.set(symbol && symbol !== this.selectedSymbol() ? symbol : null);
+    const newSymbol = symbol && symbol !== this.selectedSymbol() ? symbol : null;
+    this.selectedSymbol.set(newSymbol);
+
+    this.instrumentSignal.set(null);
+    this.signalError.set(null);
+
+    if (newSymbol && this.signalsService) {
+      this.isSignalLoading.set(true);
+      this.signalsService.getBySymbol(newSymbol).subscribe({
+        next: (sig) => {
+          this.instrumentSignal.set(sig);
+          this.isSignalLoading.set(false);
+        },
+        error: () => {
+          this.isSignalLoading.set(false);
+          this.signalError.set('No signal yet');
+        }
+      });
+    }
   }
 
   /** Sends the user to the orders page with the instrument and side prefilled in the URL. */

@@ -2,11 +2,12 @@ import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule, ViewportScroller } from '@angular/common';
 import { AppHeaderComponent } from './components/app-header/app-header.component';
+import { ChatbotWidgetComponent } from './components/chatbot/chatbot-widget.component';
 import { AuthSessionService } from './services/auth-session.service';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet, AppHeaderComponent],
+  imports: [CommonModule, RouterOutlet, AppHeaderComponent, ChatbotWidgetComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

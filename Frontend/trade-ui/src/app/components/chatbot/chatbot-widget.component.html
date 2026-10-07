@@ -1,0 +1,193 @@
+<div class="chatbot-wrapper">
+  <!-- Floating Action Button -->
+  <button
+    type="button"
+    class="chatbot-fab"
+    [class.active]="isOpen()"
+    (click)="toggleOpen()"
+    aria-label="Toggle AI Trading Assistant (Alt+C)"
+    title="Open AI Assistant (Alt+C)"
+  >
+    <div class="fab-inner">
+      <svg *ngIf="!isOpen()" class="fab-ico" viewBox="0 0 24 24">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <svg *ngIf="isOpen()" class="fab-ico close-ico" viewBox="0 0 24 24">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </div>
+    <span class="fab-pulse" *ngIf="!isOpen()"></span>
+  </button>
+
+  <!-- Expanded Chat Panel -->
+  <div
+    class="chatbot-panel"
+    *ngIf="isOpen()"
+    role="dialog"
+    aria-label="AI Trading Assistant Chat"
+    aria-modal="false"
+  >
+    <!-- Header -->
+    <header class="panel-header">
+      <div class="header-left">
+        <div class="ai-avatar">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+            <rect x="4" y="8" width="16" height="12" rx="4"/>
+            <circle cx="9" cy="13" r="1.5"/>
+            <circle cx="15" cy="13" r="1.5"/>
+            <path d="M9 17h6"/>
+          </svg>
+        </div>
+        <div class="header-titles">
+          <div class="panel-title">AI Trading Assistant</div>
+          <div class="panel-status">
+            <span class="status-indicator"></span>
+            <span>Online • Quantitative Engine</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button
+          type="button"
+          class="head-btn"
+          (click)="clearChat()"
+          title="Clear chat history"
+          aria-label="Clear chat"
+        >
+          <svg viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="head-btn"
+          (click)="close()"
+          title="Minimize chat (Alt+C)"
+          aria-label="Close chat"
+        >
+          <svg viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Message History Body -->
+    <div class="panel-body" #scrollContainer>
+      <!-- Message Bubbles -->
+      <div
+        *ngFor="let msg of messages()"
+        class="message-row"
+        [ngClass]="msg.role === 'user' ? 'user-row' : 'assistant-row'"
+      >
+        <div class="bubble-avatar" *ngIf="msg.role === 'assistant'">
+          <svg viewBox="0 0 24 24">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+
+        <div class="bubble-wrap">
+          <div class="message-bubble" [ngClass]="msg.role === 'user' ? 'user-bubble' : 'assistant-bubble'">
+            <div class="bubble-text">{{ msg.text }}</div>
+          </div>
+
+          <!-- Referenced Signals Cards -->
+          <div class="related-signals-wrap" *ngIf="msg.signals && msg.signals.length > 0">
+            <div class="signals-chip-title">Referenced Trade Signals:</div>
+            <div class="signal-chip" *ngFor="let s of msg.signals">
+              <div class="chip-top">
+                <span class="chip-symbol">{{ s.symbol }}</span>
+                <span class="chip-badge" [ngClass]="'badge-' + (s.action | lowercase)">
+                  <span class="dot"></span>
+                  {{ s.action }}
+                </span>
+                <span class="chip-conf">{{ (s.confidence * 100) | number:'1.0-0' }}%</span>
+              </div>
+              <div class="chip-reasoning" *ngIf="s.reasoning">
+                "{{ s.reasoning }}"
+              </div>
+              <button
+                type="button"
+                class="chip-action-btn"
+                (click)="navigateToTrade(s.symbol, s.action)"
+              >
+                <span>Trade {{ s.symbol }}</span>
+                <svg viewBox="0 0 24 24" width="12" height="12">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <span class="message-time">{{ msg.timestamp | date:'shortTime' }}</span>
+        </div>
+      </div>
+
+      <!-- Loading / Typing Indicator -->
+      <div class="message-row assistant-row" *ngIf="loading()">
+        <div class="bubble-avatar">
+          <svg viewBox="0 0 24 24">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <div class="typing-bubble">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </div>
+      </div>
+
+      <!-- Quick Prompts (if chat is fresh) -->
+      <div class="quick-prompts-wrap" *ngIf="messages().length <= 2">
+        <div class="quick-prompts-label">Suggested Questions</div>
+        <div class="prompts-list">
+          <button
+            type="button"
+            class="prompt-chip"
+            *ngFor="let p of quickPrompts"
+            (click)="sendQuickPrompt(p)"
+            [disabled]="loading()"
+          >
+            {{ p }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Input Bar -->
+    <footer class="panel-footer">
+      <div class="chat-legal-banner">
+        <span>Decision Support: Informs a customer who trades; does not trade.</span>
+      </div>
+      <form (ngSubmit)="sendMessage()" class="chat-form">
+        <input
+          #messageInput
+          type="text"
+          class="chat-input"
+          placeholder="Ask AI about signals, RSI, orders…"
+          [ngModel]="inputText()"
+          (ngModelChange)="inputText.set($event)"
+          name="chatInput"
+          [disabled]="loading()"
+          autocomplete="off"
+        />
+        <button
+          type="submit"
+          class="send-btn"
+          [disabled]="!inputText().trim() || loading()"
+          aria-label="Send message"
+        >
+          <svg class="send-ico" viewBox="0 0 24 24">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </form>
+    </footer>
+  </div>
+</div>

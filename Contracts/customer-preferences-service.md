@@ -49,7 +49,7 @@ Suggested table shape:
 - defaultAccountId >= 1
 - trading.defaultOrderType in MARKET, LIMIT, STOP
 - trading.defaultTradeQuantity >= 1
-- notifications.tradeFills and notifications.priceAlerts are non-empty unique arrays of PUSH, IN_APP, EMAIL, SMS
+- notifications.tradeFills and notifications.priceAlerts are non-empty unique arrays of IN_APP, EMAIL, SMS
 - display.theme in LIGHT, DARK, SYSTEM
 - display.baseCurrency in USD, INR
 
