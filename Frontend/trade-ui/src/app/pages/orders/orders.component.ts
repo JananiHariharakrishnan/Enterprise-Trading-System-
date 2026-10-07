@@ -45,6 +45,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     quantity: [1, [Validators.required, Validators.min(1), Validators.pattern('^[0-9]+$')]],
     price: [null as number | null, []], // Validation is applied conditionally based on orderType
     orderType: ['MARKET', [Validators.required]],
+    confirmOrder: [false],
   });
 
   /** Form values as a signal, so the summary and button label update as the user types. */
@@ -67,6 +68,8 @@ export class OrdersComponent implements OnInit, AfterViewInit {
    * For LIMIT orders, price is required. For MARKET orders, price is optional.
    */
   constructor() {
+    this.updateConfirmationValidation();
+
     // Set up validator changes based on order type
     this.form.get('orderType')?.valueChanges.subscribe((orderType) => {
       const priceControl = this.form.get('price');
@@ -82,6 +85,22 @@ export class OrdersComponent implements OnInit, AfterViewInit {
         priceControl.updateValueAndValidity();
       }
     });
+  }
+
+  /**
+   * Update confirmation checkbox validator based on user's skipOrderConfirmation preference.
+   * If confirmation is not skipped, user must explicitly check the confirmation checkbox.
+   */
+  updateConfirmationValidation(): void {
+    const confirmControl = this.form.get('confirmOrder');
+    if (!confirmControl) return;
+
+    if (this.skipOrderConfirmation()) {
+      confirmControl.setValidators([]);
+    } else {
+      confirmControl.setValidators([Validators.requiredTrue]);
+    }
+    confirmControl.updateValueAndValidity();
   }
 
     readonly estimatedTotal = computed<number | null>(() => {
@@ -119,8 +138,13 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     if (this.submitting()) return 'Placing order...';
     const instrument = this.selectedInstrument();
     if (!instrument) return 'Select an instrument';
-    this.formValue(); // re-evaluate when the form changes
-    if (this.form.invalid) return 'Fix the highlighted fields';
+    const v = this.formValue(); // re-evaluate when the form changes
+    if (this.form.invalid) {
+      if (!this.skipOrderConfirmation() && !v.confirmOrder && this.form.get('quantity')?.valid && this.form.get('side')?.valid && (v.orderType === 'MARKET' || this.form.get('price')?.valid)) {
+        return 'Please confirm order';
+      }
+      return 'Fix the highlighted fields';
+    }
     const verb = this.side() === 'BUY' ? 'Buy' : 'Sell';
     return `${verb} ${Number(this.form.value.quantity)} ${instrument.symbol}`;
   });
@@ -288,8 +312,10 @@ export class OrdersComponent implements OnInit, AfterViewInit {
         side: side ?? 'BUY',
         quantity: 1,
         price: null,
-        orderType: prevOrderType ?? 'MARKET'
+        orderType: prevOrderType ?? 'MARKET',
+        confirmOrder: false
       });
+      this.updateConfirmationValidation();
       this.selectedInstrument.set(null);
       this.instrumentSearchComponent?.resetSearch();
 
@@ -329,6 +355,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
 
   private applyPreferences(preferences: CustomerPreferences): void {
     this.skipOrderConfirmation.set(Boolean(preferences.trading.skipOrderConfirmation));
+    this.updateConfirmationValidation();
     this.baseCurrency.set(preferences.display.baseCurrency);
 
     const preferredOrderType = preferences.trading.defaultOrderType === 'LIMIT' ? 'LIMIT' : 'MARKET';
