@@ -2,7 +2,6 @@ package com.tradingsystem.mapper;
 
 import com.tradingsystem.enums.AlertDirection;
 import com.tradingsystem.enums.AlertStatus;
-import com.tradingsystem.enums.NotificationStatus;
 import com.tradingsystem.model.PriceAlert;
 import com.tradingsystem.model.Watchlist;
 import com.tradingsystem.model.WatchlistEntry;
@@ -14,7 +13,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -96,71 +95,97 @@ class WatchlistMyBatisIntegrationTest {
     }
 
     @Test
-    void alert_insert_respects_watchlist_membership_and_account_scope() {
-        PriceAlert validAlert = new PriceAlert();
-        validAlert.setAccountId(1001L);
-        validAlert.setWatchlistId(10L);
-        validAlert.setSymbol("AAPL");
-        validAlert.setDirection(AlertDirection.BELOW_OR_EQUAL);
-        validAlert.setThreshold(new BigDecimal("220.00"));
-        validAlert.setStatus(AlertStatus.ACTIVE);
-        validAlert.setNotificationStatus(NotificationStatus.PENDING);
+    void alert_insert_creates_independent_alert_for_any_symbol() {
+        // Alerts are now independent of watchlists and can be created for any supported symbol
+        PriceAlert alert1 = new PriceAlert();
+        alert1.setAccountId(1001L);
+        alert1.setSymbol("AAPL");
+        alert1.setDirection(AlertDirection.BELOW);
+        alert1.setThreshold(new BigDecimal("220.00"));
+        alert1.setStatus(AlertStatus.ACTIVE);
 
-        int inserted = priceAlertDataMapper.insertPriceAlert(validAlert);
+        int inserted = priceAlertDataMapper.insertPriceAlert(alert1);
         assertEquals(1, inserted);
-        assertNotNull(validAlert.getId());
+        assertNotNull(alert1.getId());
+
+        // Alert 2 for a different symbol
+        PriceAlert alert2 = new PriceAlert();
+        alert2.setAccountId(1001L);
+        alert2.setSymbol("MSFT");
+        alert2.setDirection(AlertDirection.ABOVE);
+        alert2.setThreshold(new BigDecimal("400.00"));
+        alert2.setStatus(AlertStatus.ACTIVE);
+
+        int inserted2 = priceAlertDataMapper.insertPriceAlert(alert2);
+        assertEquals(1, inserted2);
+        assertNotNull(alert2.getId());
 
         assertEquals(2, priceAlertDataMapper.countActiveAlertsByAccountId(1001L));
 
-        PriceAlert wrongAccount = new PriceAlert();
-        wrongAccount.setAccountId(2002L);
-        wrongAccount.setWatchlistId(10L);
-        wrongAccount.setSymbol("AAPL");
-        wrongAccount.setDirection(AlertDirection.ABOVE_OR_EQUAL);
-        wrongAccount.setThreshold(new BigDecimal("250.00"));
-        wrongAccount.setStatus(AlertStatus.ACTIVE);
-        wrongAccount.setNotificationStatus(NotificationStatus.PENDING);
+        // Alert for different account
+        PriceAlert alert3 = new PriceAlert();
+        alert3.setAccountId(2002L);
+        alert3.setSymbol("AAPL");
+        alert3.setDirection(AlertDirection.ABOVE);
+        alert3.setThreshold(new BigDecimal("250.00"));
+        alert3.setStatus(AlertStatus.ACTIVE);
 
-        assertThrows(
-                DataIntegrityViolationException.class,
-                () -> priceAlertDataMapper.insertPriceAlert(wrongAccount)
-        );
+        int inserted3 = priceAlertDataMapper.insertPriceAlert(alert3);
+        assertEquals(1, inserted3);
 
-        PriceAlert missingEntry = new PriceAlert();
-        missingEntry.setAccountId(1001L);
-        missingEntry.setWatchlistId(10L);
-        missingEntry.setSymbol("MSFT");
-        missingEntry.setDirection(AlertDirection.ABOVE_OR_EQUAL);
-        missingEntry.setThreshold(new BigDecimal("250.00"));
-        missingEntry.setStatus(AlertStatus.ACTIVE);
-        missingEntry.setNotificationStatus(NotificationStatus.PENDING);
-
-        assertThrows(
-                DataIntegrityViolationException.class,
-                () -> priceAlertDataMapper.insertPriceAlert(missingEntry)
-        );
+        // Only account 1001's alerts counted for their account
+        assertEquals(2, priceAlertDataMapper.countActiveAlertsByAccountId(1001L));
+        assertEquals(1, priceAlertDataMapper.countActiveAlertsByAccountId(2002L));
     }
 
     @Test
-    void deleting_watchlist_cascades_entries_and_alerts() {
+    void alerts_can_be_queried_by_symbol_for_market_data_hot_path() {
+        // Create multiple alerts for the same symbol by different accounts
+        PriceAlert alert1 = new PriceAlert();
+        alert1.setAccountId(1001L);
+        alert1.setSymbol("AAPL");
+        alert1.setDirection(AlertDirection.BELOW);
+        alert1.setThreshold(new BigDecimal("220.00"));
+        alert1.setStatus(AlertStatus.ACTIVE);
+        priceAlertDataMapper.insertPriceAlert(alert1);
+
+        PriceAlert alert2 = new PriceAlert();
+        alert2.setAccountId(2002L);
+        alert2.setSymbol("AAPL");
+        alert2.setDirection(AlertDirection.ABOVE);
+        alert2.setThreshold(new BigDecimal("250.00"));
+        alert2.setStatus(AlertStatus.ACTIVE);
+        priceAlertDataMapper.insertPriceAlert(alert2);
+
+        // Find all ACTIVE alerts by symbol
+        List<PriceAlert> activeAaplAlerts = priceAlertDataMapper.findActiveAlertsBySymbol("AAPL");
+        assertEquals(2, activeAaplAlerts.size());
+
+        // No ACTIVE alerts for MSFT
+        List<PriceAlert> activeMsftAlerts = priceAlertDataMapper.findActiveAlertsBySymbol("MSFT");
+        assertEquals(0, activeMsftAlerts.size());
+    }
+
+    @Test
+    void alert_status_can_be_updated_when_triggered() {
         PriceAlert alert = new PriceAlert();
         alert.setAccountId(1001L);
-        alert.setWatchlistId(10L);
         alert.setSymbol("AAPL");
-        alert.setDirection(AlertDirection.BELOW_OR_EQUAL);
+        alert.setDirection(AlertDirection.BELOW);
         alert.setThreshold(new BigDecimal("210.00"));
         alert.setStatus(AlertStatus.ACTIVE);
-        alert.setNotificationStatus(NotificationStatus.PENDING);
 
         priceAlertDataMapper.insertPriceAlert(alert);
-        assertNotNull(priceAlertDataMapper.findAlertById(alert.getId()));
+        assertNotNull(alert.getId());
+        assertEquals(AlertStatus.ACTIVE, alert.getStatus());
 
-        int deleted = watchlistDataMapper.deleteWatchlist(1001L, 10L);
-        assertEquals(1, deleted);
+        // Mark as triggered
+        OffsetDateTime now = OffsetDateTime.now();
+        priceAlertDataMapper.updateAlertStatus(1001L, alert.getId(), "TRIGGERED", now);
 
-        assertTrue(watchlistDataMapper.findEntriesByWatchlistId(10L).isEmpty());
-        assertNull(priceAlertDataMapper.findAlertById(alert.getId()));
-        assertNull(watchlistDataMapper.findWatchlistById(10L));
+        PriceAlert updated = priceAlertDataMapper.findAlertById(alert.getId());
+        assertEquals(AlertStatus.TRIGGERED, updated.getStatus());
+        assertNotNull(updated.getTriggeredOn());
     }
 }
 
