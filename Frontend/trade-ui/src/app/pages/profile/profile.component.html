@@ -5,9 +5,24 @@
         <h1>Profile &amp; Preferences</h1>
         <span *ngIf="currentUser() as u" class="user-role-badge">Account #{{ u.accountId }}</span>
       </div>
-      <p class="subtitle">Manage your personal credentials, order execution defaults, and notification preferences.</p>
+      <p class="subtitle">Your details and trading preferences sit together. One save stores both.</p>
     </div>
     <div class="header-actions">
+      <button
+        type="button"
+        class="btn-back"
+        (click)="refreshPage()"
+        [disabled]="isLoading() || isSaving()"
+        data-testid="profile-refresh-button"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+          <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+        </svg>
+        Refresh
+      </button>
       <button
         type="button"
         class="btn-back"
@@ -24,13 +39,11 @@
     </div>
   </div>
 
-  <!-- Loading State -->
   <div *ngIf="isLoading()" class="loading-container">
     <div class="spinner"></div>
     <p>Loading profile...</p>
   </div>
 
-  <!-- Alerts -->
   <div *ngIf="errorMessage()" class="alert-banner alert-danger" data-testid="profile-error" role="alert">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="12" cy="12" r="10"></circle>
@@ -41,6 +54,10 @@
       <strong>Error</strong>
       <span>{{ errorMessage() }}</span>
     </div>
+  </div>
+
+  <div *ngIf="emailOptInError()" class="email-opt-in-toast" data-testid="email-notification-error" role="alert">
+    {{ emailOptInError() }}
   </div>
 
   <div *ngIf="successMessage()" class="alert-banner alert-success" data-testid="profile-success" role="status">
@@ -54,11 +71,9 @@
     </div>
   </div>
 
-  <!-- Profile & Preferences Form -->
   <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading() && currentUser()" class="profile-layout">
-    
-    <!-- Section 1: Personal Details Card -->
-    <div class="card glass-card">
+
+    <section class="card glass-card profile-card">
       <div class="card-header">
         <div class="card-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -68,7 +83,7 @@
         </div>
         <div>
           <h2>Personal Information</h2>
-          <p class="card-desc">Your verified contact details and identity information.</p>
+          <p class="card-desc">Name, email, and the phone number on your account.</p>
         </div>
       </div>
 
@@ -91,7 +106,7 @@
                 </svg>
               </span>
             </div>
-            <span class="field-hint">User identifier is immutable</span>
+            <span class="field-hint">Locked. This identifier cannot change.</span>
           </div>
 
           <div class="form-group">
@@ -111,7 +126,28 @@
                 </svg>
               </span>
             </div>
-            <span class="field-hint">Mapped trading ledger ID</span>
+            <span class="field-hint">Locked trading ledger ID.</span>
+          </div>
+
+          <div class="form-group full-col role-field">
+            <label for="role">Role</label>
+            <div class="input-lock-wrapper">
+              <input
+                id="role"
+                type="text"
+                class="form-input read-only-input"
+                [value]="roleLabel()"
+                readonly
+                data-testid="profile-role-input"
+              />
+              <span class="lock-indicator" title="Read only">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </span>
+            </div>
+            <span class="field-hint">Assigned by the platform.</span>
           </div>
 
           <div class="form-group">
@@ -163,7 +199,7 @@
               [readonly]="isSaving()"
               placeholder="name@domain.com"
             />
-            <span class="field-hint">Used for order fill notifications and security alerts</span>
+            <span class="field-hint">Save this before turning on email notifications.</span>
             <div *ngIf="profileForm.get('email')?.hasError('required') && profileForm.get('email')?.touched" class="field-error" data-testid="profile-email-error-required">
               Email is required
             </div>
@@ -186,7 +222,7 @@
                 [attr.disabled]="isSaving() ? true : null"
               >
                 <option *ngFor="let country of countryCodes" [value]="country.code">
-                  {{ country.code }} ({{ country.country }})
+                  {{ country.code }} {{ country.country }}
                 </option>
               </select>
               <input
@@ -199,7 +235,7 @@
                 placeholder="10 digit mobile number"
               />
             </div>
-            <span class="field-hint">10 digits without spaces or hyphens</span>
+            <span class="field-hint">10 digits, no spaces or hyphens.</span>
             <div *ngIf="profileForm.get('phoneNo')?.hasError('minlength') && profileForm.get('phoneNo')?.touched" class="field-error" data-testid="profile-phoneNo-error-minlength">
               Phone number must be exactly 10 digits
             </div>
@@ -208,23 +244,10 @@
             </div>
           </div>
         </div>
-
-        <div class="card-footer">
-          <button
-            type="submit"
-            class="btn-primary"
-            [disabled]="profileForm.invalid || isSaving()"
-            data-testid="profile-save-button"
-          >
-            <span *ngIf="isSaving()" class="btn-spinner"></span>
-            {{ isSaving() ? 'Saving Profile...' : 'Save Profile Changes' }}
-          </button>
-        </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Section 2: Trading & Display Preferences Card -->
-    <div class="card glass-card">
+    <section class="card glass-card preferences-card">
       <div class="card-header">
         <div class="card-icon preferences-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -234,46 +257,18 @@
         </div>
         <div>
           <h2>Trading &amp; System Preferences</h2>
-          <p class="card-desc">Configure order defaults, visual appearance, and notification channels.</p>
+          <p class="card-desc">Order defaults, appearance, and how you get notified.</p>
         </div>
       </div>
 
       <div class="card-body">
         <p *ngIf="isLoadingPreferences()" class="loading-hint">Synchronizing preferences...</p>
 
-        <!-- Subsection A: Order Defaults -->
         <div class="subsection">
-          <h3 class="subsection-title">Order Execution Defaults</h3>
+          <h3 class="subsection-title">Order defaults</h3>
           <div class="form-grid">
-            <div class="form-group">
-              <label for="defaultAccountId">Default Trading Account</label>
-              <input
-                id="defaultAccountId"
-                type="number"
-                formControlName="defaultAccountId"
-                class="form-input"
-                data-testid="profile-defaultAccountId-input"
-                [readonly]="isSaving()"
-              />
-              <span class="field-hint">Default account selector for order placement</span>
-            </div>
-
-            <div class="form-group">
-              <label for="defaultTradeQuantity">Default Trade Quantity</label>
-              <input
-                id="defaultTradeQuantity"
-                type="number"
-                formControlName="defaultTradeQuantity"
-                class="form-input"
-                data-testid="profile-defaultTradeQuantity-input"
-                [readonly]="isSaving()"
-                min="1"
-              />
-              <span class="field-hint">Initial quantity populated in order ticket</span>
-            </div>
-
-            <div class="form-group">
-              <label for="defaultOrderType">Default Order Type</label>
+            <div class="form-group full-col">
+              <label for="defaultOrderType">Default order type</label>
               <select
                 id="defaultOrderType"
                 formControlName="defaultOrderType"
@@ -281,15 +276,14 @@
                 data-testid="profile-defaultOrderType-select"
                 [attr.disabled]="isSaving() ? true : null"
               >
-                <option *ngFor="let orderType of orderTypes" [value]="orderType">{{ orderType }}</option>
+                <option *ngFor="let orderType of orderTypes" [value]="orderType">{{ orderTypeLabel(orderType) }}</option>
               </select>
-              <span class="field-hint">Preselected order execution style</span>
             </div>
 
-            <div class="form-group switch-wrapper">
-              <label class="switch-label">
-                <span class="switch-title">Skip Order Confirmation</span>
-                <span class="switch-desc">Submit orders instantly without secondary modal confirmation</span>
+            <div class="form-group switch-wrapper full-col">
+              <label class="switch-label" for="skipOrderConfirmation">
+                <span class="switch-title">Skip order confirmation</span>
+                <span class="switch-desc">Place orders without a second confirmation step.</span>
               </label>
               <label class="custom-switch">
                 <input
@@ -305,12 +299,11 @@
           </div>
         </div>
 
-        <!-- Subsection B: Display & Appearance -->
         <div class="subsection">
-          <h3 class="subsection-title">Display &amp; Localization</h3>
+          <h3 class="subsection-title">Display</h3>
           <div class="form-grid">
             <div class="form-group">
-              <label for="theme">Application Theme</label>
+              <label for="theme">Theme</label>
               <select
                 id="theme"
                 formControlName="theme"
@@ -318,13 +311,11 @@
                 data-testid="profile-theme-select"
                 [attr.disabled]="isSaving() ? true : null"
               >
-                <option *ngFor="let theme of themeChoices" [value]="theme">{{ theme }}</option>
+                <option *ngFor="let theme of themeChoices" [value]="theme">{{ themeLabel(theme) }}</option>
               </select>
-              <span class="field-hint">Controls light/dark visual theme</span>
             </div>
-
             <div class="form-group">
-              <label for="baseCurrency">Base Display Currency</label>
+              <label for="baseCurrency">Base currency</label>
               <select
                 id="baseCurrency"
                 formControlName="baseCurrency"
@@ -334,41 +325,77 @@
               >
                 <option *ngFor="let currency of baseCurrencies" [value]="currency">{{ currency }}</option>
               </select>
-              <span class="field-hint">Currency used in summary portfolio metrics</span>
             </div>
           </div>
         </div>
 
-    <div class="form-group">
-      <label for="notificationsAndAlerts">Notifications and Alerts</label>
-      <select
-        id="notificationsAndAlerts"
-        formControlName="notificationsAndAlerts"
-        class="form-input"
-        data-testid="profile-notificationsAndAlerts-select"
-        [attr.disabled]="isSaving() ? true : null"
-      >
-        <option value="YES">Yes</option>
-        <option value="NO">No</option>
-      </select>
-      <small class="form-note">
-        Select Yes to receive email notifications and alerts, or No to turn off email notifications and alerts.
-      </small>
-    </div>
+        <div class="subsection">
+          <h3 class="subsection-title">Notifications</h3>
+          <div class="form-group switch-wrapper email-opt-in">
+            <label class="switch-label" for="emailNotificationsEnabled">
+              <span class="switch-title">Email notifications</span>
+              <span class="switch-desc">Also send saved notifications to your profile email.</span>
+            </label>
+            <label class="custom-switch">
+              <input
+                id="emailNotificationsEnabled"
+                type="checkbox"
+                [checked]="emailNotificationsEnabled()"
+                (change)="onEmailNotificationToggle($event)"
+                data-testid="email-notifications-toggle"
+                [disabled]="isSavingEmailPreference() || isSaving()"
+              />
+              <span class="slider"></span>
+            </label>
+          </div>
 
-        <div class="card-footer">
-          <button
-            type="button"
-            class="btn-primary"
-            [disabled]="isSavingPreferences()"
-            (click)="onSavePreferences()"
-            data-testid="profile-save-preferences-button"
-          >
-            <span *ngIf="isSavingPreferences()" class="btn-spinner"></span>
-            {{ isSavingPreferences() ? 'Saving Preferences...' : 'Save Preferences' }}
-          </button>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="tradeFills">Trade fills</label>
+              <select
+                id="tradeFills"
+                multiple
+                size="2"
+                formControlName="tradeFills"
+                class="form-input channel-select"
+                data-testid="profile-tradeFills-select"
+                [attr.disabled]="isSaving() ? true : null"
+              >
+                <option *ngFor="let channel of notificationChannels" [value]="channel">{{ channelLabel(channel) }}</option>
+              </select>
+              <span class="field-hint">Choose one or more channels.</span>
+            </div>
+            <div class="form-group">
+              <label for="priceAlerts">Price alerts</label>
+              <select
+                id="priceAlerts"
+                multiple
+                size="2"
+                formControlName="priceAlerts"
+                class="form-input channel-select"
+                data-testid="profile-priceAlerts-select"
+                [attr.disabled]="isSaving() ? true : null"
+              >
+                <option *ngFor="let channel of notificationChannels" [value]="channel">{{ channelLabel(channel) }}</option>
+              </select>
+              <span class="field-hint">Choose one or more channels.</span>
+            </div>
+          </div>
         </div>
       </div>
+    </section>
+
+    <div class="save-bar">
+      <p>Profile details and preferences are saved together.</p>
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="profileForm.invalid || isSaving()"
+        data-testid="profile-save-button"
+      >
+        <span *ngIf="isSaving()" class="btn-spinner"></span>
+        {{ isSaving() ? 'Saving...' : 'Save changes' }}
+      </button>
     </div>
   </form>
 </div>

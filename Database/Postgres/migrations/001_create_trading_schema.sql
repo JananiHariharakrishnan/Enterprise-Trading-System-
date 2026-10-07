@@ -65,8 +65,8 @@ CREATE TABLE IF NOT EXISTS tradingsystem.instruments(
 CREATE TABLE IF NOT EXISTS tradingsystem.accounts(
     id                BIGINT GENERATED ALWAYS AS IDENTITY,
     account_reference VARCHAR(64)  NOT NULL,
-    cash_balance      NUMERIC(18,2) NOT NULL,
-    buying_power      NUMERIC(18,2) NOT NULL,
+    cash_balance      NUMERIC(18,2) NOT NULL DEFAULT 10000.00,
+    buying_power      NUMERIC(18,2) NOT NULL DEFAULT 10000.00,
     status            VARCHAR(20)  NOT NULL,
     version           INT          NOT NULL DEFAULT 0,
     last_updated      TIMESTAMP    NOT NULL DEFAULT NOW(),

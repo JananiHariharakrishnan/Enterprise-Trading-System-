@@ -1,0 +1,53 @@
+<div class="notification-anchor">
+  <button
+    type="button"
+    class="notification-bell"
+    (click)="toggle($event)"
+    [attr.aria-expanded]="isOpen()"
+    aria-label="Notifications"
+    data-testid="notification-bell"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M6 8a6 6 0 1 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/>
+      <path d="M10 21a2 2 0 0 0 4 0"/>
+    </svg>
+    <span class="notification-count" *ngIf="unreadCount() > 0">{{ unreadCount() > 9 ? '9+' : unreadCount() }}</span>
+  </button>
+
+  <section class="notification-panel" *ngIf="isOpen()" aria-label="Notification list" data-testid="notification-panel">
+    <header class="notification-head">
+      <div>
+        <h2>Notifications</h2>
+        <p>Updates saved for your account</p>
+      </div>
+      <button type="button" class="notification-close" (click)="close()" aria-label="Close notifications">✕</button>
+    </header>
+
+    <p class="notification-status" *ngIf="isLoading()">Loading notifications...</p>
+    <p class="notification-status error" *ngIf="!isLoading() && errorMessage()">{{ errorMessage() }}</p>
+    <p class="notification-status" *ngIf="!isLoading() && !errorMessage() && notifications().length === 0">
+      No notifications yet.
+    </p>
+
+    <ul class="notification-list" *ngIf="!isLoading() && !errorMessage() && notifications().length > 0">
+      <li *ngFor="let item of notifications()" [class.unread]="!item.readAt">
+        <div class="notification-row">
+          <span
+            class="symbol-tile"
+            *ngIf="instrumentSymbol(item) as symbol"
+            [style.font-size.px]="symbolFontSize(symbol)"
+          >{{ symbol }}</span>
+          <div class="notification-copy">
+            <div class="notification-meta">
+              <span class="notification-category">{{ categoryLabel(item.category) }}</span>
+              <time *ngIf="item.createdAt">{{ item.createdAt | date:'MMM d, y, h:mm a' }}</time>
+            </div>
+            <strong>{{ item.title }}</strong>
+            <p>{{ item.body }}</p>
+            <span class="notification-email" *ngIf="item.emailSent">Emailed</span>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </section>
+</div>

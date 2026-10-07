@@ -29,6 +29,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
 
   readonly isLoading = signal(true);
+  readonly isRefreshing = signal(false);
   readonly loadError = signal<string | null>(null);
   readonly toasts = signal<Toast[]>([]);
   private readonly toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
@@ -72,8 +73,16 @@ export class AlertsComponent implements OnInit, OnDestroy {
     this.toasts.update((list) => list.filter((toast) => toast.id !== id));
   }
 
-  private async load(): Promise<void> {
-    this.isLoading.set(true);
+  refresh(): Promise<void> {
+    return this.load(true);
+  }
+
+  private async load(refreshing = false): Promise<void> {
+    if (refreshing) {
+      this.isRefreshing.set(true);
+    } else {
+      this.isLoading.set(true);
+    }
     this.loadError.set(null);
     try {
       const items = await this.api.priceAlerts.listAlerts();
@@ -82,6 +91,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
       this.loadError.set('Unable to load alerts. Please refresh and try again.');
     } finally {
       this.isLoading.set(false);
+      this.isRefreshing.set(false);
     }
   }
 

@@ -66,6 +66,7 @@ fi
 # ------------------------------------------------------------
 
 echo "Applying migrations and seed data to database: ${TARGET_DATABASE}"
+echo "Includes tradingsystem.notification (009) and email opt-in (010)."
 
 mapfile -d '' MIGRATIONS < <(
     find "${MIGRATIONS_DIR}" \
@@ -95,5 +96,21 @@ for migration in "${MIGRATIONS[@]}"; do
         -f "${migration}"
 
 done
+
+echo "Verifying tradingsystem.notification"
+
+NOTIFICATION_TABLE="$(
+    psql \
+        -h "${PGHOST}" \
+        -p "${PGPORT}" \
+        -U "${PGUSER}" \
+        -d "${TARGET_DATABASE}" \
+        -tAc "SELECT to_regclass('tradingsystem.notification')"
+)"
+
+if [[ "${NOTIFICATION_TABLE}" != "tradingsystem.notification" ]]; then
+    echo "ERROR: tradingsystem.notification was not created. Expected migrations/009_create_notification.sql to add it." >&2
+    exit 1
+fi
 
 echo "Database migration and seeding completed successfully."

@@ -73,6 +73,17 @@ describe('AlertsComponent', () => {
     expect(component.selectedInstrument()).toBeNull();
   });
 
+  it('refreshes the alert list from the refresh button', async () => {
+    await fixture.whenStable();
+    mockApiClient.priceAlerts.listAlerts.mockClear();
+
+    await component.refresh();
+
+    expect(mockApiClient.priceAlerts.listAlerts).toHaveBeenCalledTimes(1);
+    expect(component.alerts().length).toBe(3);
+    expect(component.isRefreshing()).toBe(false);
+  });
+
   it('should call Cancel API for ACTIVE alert', async () => {
     await component.cancelAlert(1);
     expect(mockApiClient.priceAlerts.cancelAlert).toHaveBeenCalledWith({ alertId: 1 });

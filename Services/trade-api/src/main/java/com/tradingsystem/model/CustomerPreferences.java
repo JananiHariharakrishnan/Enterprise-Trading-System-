@@ -15,6 +15,7 @@ public class CustomerPreferences {
 
     private List<String> notificationsTradeFills;
     private List<String> notificationsPriceAlerts;
+    private boolean emailNotificationsEnabled;
 
     private String displayTheme;
     private String displayBaseCurrency;
@@ -53,6 +54,11 @@ public class CustomerPreferences {
     public void setNotificationsPriceAlerts(List<String> notificationsPriceAlerts) { this.notificationsPriceAlerts = notificationsPriceAlerts; }
 
     @JsonIgnore
+    public boolean isEmailNotificationsEnabled() { return emailNotificationsEnabled; }
+    @JsonIgnore
+    public void setEmailNotificationsEnabled(boolean emailNotificationsEnabled) { this.emailNotificationsEnabled = emailNotificationsEnabled; }
+
+    @JsonIgnore
     public String getDisplayTheme() { return displayTheme; }
     @JsonIgnore
     public void setDisplayTheme(String displayTheme) { this.displayTheme = displayTheme; }
@@ -86,6 +92,7 @@ public class CustomerPreferences {
         NotificationPreferences notifications = new NotificationPreferences();
         notifications.setTradeFills(notificationsTradeFills);
         notifications.setPriceAlerts(notificationsPriceAlerts);
+        notifications.setEmailEnabled(emailNotificationsEnabled);
         return notifications;
     }
 
@@ -95,6 +102,7 @@ public class CustomerPreferences {
         }
         this.notificationsTradeFills = notifications.getTradeFills();
         this.notificationsPriceAlerts = notifications.getPriceAlerts();
+        this.emailNotificationsEnabled = notifications.isEmailEnabled();
     }
 
     public DisplayPreferences getDisplay() {
@@ -130,12 +138,16 @@ public class CustomerPreferences {
     public static class NotificationPreferences {
         private List<String> tradeFills;
         private List<String> priceAlerts;
+        private boolean emailEnabled;
 
         public List<String> getTradeFills() { return tradeFills; }
         public void setTradeFills(List<String> tradeFills) { this.tradeFills = tradeFills; }
 
         public List<String> getPriceAlerts() { return priceAlerts; }
         public void setPriceAlerts(List<String> priceAlerts) { this.priceAlerts = priceAlerts; }
+
+        public boolean isEmailEnabled() { return emailEnabled; }
+        public void setEmailEnabled(boolean emailEnabled) { this.emailEnabled = emailEnabled; }
     }
 
     public static class DisplayPreferences {

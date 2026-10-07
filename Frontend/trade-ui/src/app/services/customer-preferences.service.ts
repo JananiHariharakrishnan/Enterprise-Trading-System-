@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { TokenStorageService } from './token-storage.service';
 
-export type NotificationChannel = 'NO NOTIFICATION' | 'IN_APP' | 'EMAIL';
+export type NotificationChannel = 'PUSH' | 'IN_APP' | 'EMAIL' | 'SMS';
 export type ThemeChoice = 'LIGHT' | 'DARK' | 'SYSTEM';
 export type BaseCurrency = 'USD' | 'INR';
 export type OrderType = 'MARKET' | 'LIMIT' | 'STOP';
@@ -19,6 +19,7 @@ export type CustomerPreferences = {
   notifications: {
     tradeFills: NotificationChannel[];
     priceAlerts: NotificationChannel[];
+    emailEnabled?: boolean;
   };
   display: {
     theme: ThemeChoice;
@@ -46,12 +47,13 @@ export class CustomerPreferencesService {
         defaultTradeQuantity: 1,
       },
       notifications: {
-        tradeFills: ['IN_APP', 'EMAIL'],
-        priceAlerts: ['IN_APP', 'EMAIL'],
+        tradeFills: ['IN_APP'],
+        priceAlerts: ['IN_APP'],
+        emailEnabled: false,
       },
       display: {
         theme: 'SYSTEM',
-        baseCurrency: 'USD',
+        baseCurrency: 'INR',
       },
     };
   }
@@ -101,9 +103,8 @@ export class CustomerPreferencesService {
     try {
       const payloadRaw = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
       const payload = JSON.parse(payloadRaw) as { accountId?: unknown };
-      const parsed = Number(payload.accountId);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return parsed;
+      if (typeof payload.accountId === 'number' && Number.isFinite(payload.accountId)) {
+        return payload.accountId;
       }
     } catch {
       // Fallback to provided value when token payload is not parseable.
