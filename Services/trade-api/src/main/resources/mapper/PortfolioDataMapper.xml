@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tradingsystem.mapper.PortfolioDataMapper">
+
+    <resultMap id="holdingResultMap" type="com.tradingsystem.model.Holding">
+        <result property="symbol" column="symbol"/>
+        <result property="quantity" column="qty"/>
+        <result property="averageCost" column="avg_cost"/>
+        <result property="currency" column="currency"/>
+    </resultMap>
+
+    <resultMap id="fillResultMap" type="com.tradingsystem.model.FillRecord">
+        <result property="symbol" column="symbol"/>
+        <result property="side" column="side"/>
+        <result property="quantity" column="quantity"/>
+        <result property="price" column="price"/>
+        <result property="executedAt" column="executed_at"/>
+        <result property="currency" column="currency"/>
+    </resultMap>
+
+    <!-- READ ONLY. Open positions with the instrument's own currency. -->
+    <select id="findHoldings" resultMap="holdingResultMap">
+        SELECT
+            p.symbol,
+            p.qty,
+            p.avg_cost,
+            i.currency
+        FROM positions p
+        JOIN instruments i ON i.symbol = p.symbol
+        WHERE p.account_id = #{accountId}
+          AND p.qty &gt; 0
+        ORDER BY p.symbol ASC
+    </select>
+
+    <!--
+        READ ONLY. Executions carry no side or symbol, so join orders.
+        Only FILLED orders count: the executor also writes an execution row
+        for REJECTED orders, and those are not trades.
+        Oldest first, so the average-cost replay sees buys before the sells.
+        Do not filter by date here: the replay needs the full history.
+    -->
+    <select id="findFilledExecutions" resultMap="fillResultMap">
+        SELECT
+            o.symbol,
+            o.side,
+            e.quantity,
+            e.price,
+            e.executed_at,
+            i.currency
+        FROM executions e
+        JOIN orders o      ON o.id = e.order_id
+        JOIN instruments i ON i.symbol = o.symbol
+        WHERE o.account_id = #{accountId}
+          AND o.status = 'FILLED'
+        ORDER BY e.executed_at ASC, e.id ASC
+    </select>
+
+    <select id="ping" resultType="int">
+        SELECT 1
+    </select>
+
+</mapper>

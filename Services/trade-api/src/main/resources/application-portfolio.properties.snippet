@@ -1,0 +1,7 @@
+# ---- Portfolio and P&L (append to application.properties) ----
+# Currency the totals are expressed in. Only USD and INR can be converted.
+portfolio.base-currency=USD
+# Same fixed rate the executor uses for cash (ExecutionProcessingService divides .NS prices by 96).
+portfolio.inr-per-usd=96
+# A cached quote older than this is served but marked stale.
+portfolio.quote-max-age-seconds=300

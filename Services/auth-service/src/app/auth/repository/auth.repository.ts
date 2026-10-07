@@ -5,6 +5,9 @@ import { logger } from '../../common/logger.js';
 import { parseRefreshToken } from '../tokens/auth.tokens.js';
 import { TradeApiClient, UserRecord as TradeApiUserRecord } from '../../trade-api/trade-api.client.js';
 
+// Determine test mode using same signals as the in-memory DB helper
+const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST_POOL_ID) || process.env.VITEST === 'true';
+
 export type UserRecord = {
   id: string;
   username: string;
@@ -72,7 +75,7 @@ const tradeApiClient = new TradeApiClient();
 
 export async function accountExists(accountId: number): Promise<boolean> {
   // During tests prefer direct DB queries so tests can mock `db.query`.
-  if (process.env.NODE_ENV === 'test') {
+  if (isTest) {
     const result = await db.query(
       `
       SELECT 1
@@ -96,7 +99,7 @@ export async function accountExists(accountId: number): Promise<boolean> {
 }
 
 export async function findAvailableAccountId(): Promise<number | null> {
-  if (process.env.NODE_ENV === 'test') {
+  if (isTest) {
     const result = await db.query(
       `
       SELECT a.id
@@ -119,7 +122,7 @@ export async function findAvailableAccountId(): Promise<number | null> {
 }
 
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
-  if (process.env.NODE_ENV === 'test') {
+  if (isTest) {
     const result = await db.query(
       `
       SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
@@ -137,7 +140,7 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
 }
 
 export async function findUserById(id: string): Promise<UserRecord | null> {
-  if (process.env.NODE_ENV === 'test') {
+  if (isTest) {
     const result = await db.query(
       `
       SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
@@ -155,7 +158,7 @@ export async function findUserById(id: string): Promise<UserRecord | null> {
 }
 
 export async function findUserByAccountId(accountId: number): Promise<UserRecord | null> {
-  if (process.env.NODE_ENV === 'test') {
+  if (isTest) {
     const result = await db.query(
       `
       SELECT id, username, account_id, first_name, last_name, email, phone_no, roles, created_on
@@ -186,7 +189,7 @@ export async function updateUserProfile(
   if (!user) {
     throw new Error('User not found');
   }
-  if (process.env.NODE_ENV === 'test') {
+  if (isTest) {
     const updateFields = [];
     const params: any[] = [userId];
     let paramCount = 2;

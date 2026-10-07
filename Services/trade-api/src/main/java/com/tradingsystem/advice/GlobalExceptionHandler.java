@@ -350,6 +350,49 @@ public class GlobalExceptionHandler {
     }
 
     // =========================================================
+    // PORTFOLIO MODULE (portfolio-api.yaml)
+    // =========================================================
+
+    @ExceptionHandler(PricingUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handlePricingUnavailable(
+            PricingUnavailableException ex) {
+
+        log.warn("Pricing unavailable: {}", ex.getMessage());
+
+        return error(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(AccountAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccountAccessDenied(
+            AccountAccessDeniedException ex) {
+
+        log.warn("Account access denied: {}", ex.getMessage());
+
+        return error(
+                HttpStatus.FORBIDDEN,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(InvalidPortfolioInputException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPortfolioInput(
+            InvalidPortfolioInputException ex) {
+
+        log.warn("Invalid portfolio input: {}", ex.getMessage());
+
+        return error(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    // =========================================================
     // TRADING DOMAIN EXCEPTION
     // =========================================================
 
