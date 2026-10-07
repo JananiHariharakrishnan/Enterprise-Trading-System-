@@ -119,6 +119,58 @@ public class GlobalExceptionHandler {
     }
 
     // =========================================================
+    // PRICE ALERT EXCEPTIONS
+    // =========================================================
+
+    @ExceptionHandler(AlertNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleAlertNotFound(
+            AlertNotFoundException ex) {
+
+        log.warn(
+                "Alert lookup failed: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.NOT_FOUND,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(AlertStateException.class)
+    public ResponseEntity<ErrorResponse> handleAlertStateException(
+            AlertStateException ex) {
+
+        log.warn(
+                "Alert state error: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.CONFLICT,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(AlertLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleAlertLimitExceeded(
+            AlertLimitExceededException ex) {
+
+        log.warn(
+                "Alert limit exceeded: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.BAD_REQUEST,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    // =========================================================
     // ORDER BUSINESS EXCEPTIONS
     // =========================================================
 
@@ -346,6 +398,49 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT,
                 "ORD-409",
                 "Order already exists or violates a database constraint"
+        );
+    }
+
+    // =========================================================
+    // PORTFOLIO MODULE (portfolio-api.yaml)
+    // =========================================================
+
+    @ExceptionHandler(PricingUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handlePricingUnavailable(
+            PricingUnavailableException ex) {
+
+        log.warn("Pricing unavailable: {}", ex.getMessage());
+
+        return error(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(AccountAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccountAccessDenied(
+            AccountAccessDeniedException ex) {
+
+        log.warn("Account access denied: {}", ex.getMessage());
+
+        return error(
+                HttpStatus.FORBIDDEN,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(InvalidPortfolioInputException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPortfolioInput(
+            InvalidPortfolioInputException ex) {
+
+        log.warn("Invalid portfolio input: {}", ex.getMessage());
+
+        return error(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                ex.getCode(),
+                ex.getMessage()
         );
     }
 

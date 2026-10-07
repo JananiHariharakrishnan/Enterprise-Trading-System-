@@ -116,6 +116,11 @@ export class ProfileComponent implements OnInit {
         accountId: user.accountId
       });
 
+      // Mark profile load complete before loading optional preferences to
+      // avoid test timing races where `isLoading` remains true while
+      // background preference loading occurs.
+      this.isLoading.set(false);
+
       await this.loadPreferences(user.accountId);
     } catch {
       // Error loading profile - display user-friendly message without interrupting component lifecycle
@@ -125,47 +130,70 @@ export class ProfileComponent implements OnInit {
     }
   }
 
-  async onSubmit(): Promise<void> {
-    if (this.profileForm.invalid) {
-      this.errorMessage.set('Please fix the errors in the form.');
-      return;
-    }
 
-    this.isSaving.set(true);
-    this.successMessage.set(null);
-    this.errorMessage.set(null);
+async onSubmit(): Promise<void> {
+  if (this.profileForm.invalid) {
+    this.errorMessage.set('Please fix the errors in the form.');
+    return;
+  }
 
-    try {
-      const formValue = this.profileForm.getRawValue();
-      // Combine country code with phone number
-      const fullPhoneNo = formValue.phoneNo ? `${formValue.countryCode}${formValue.phoneNo}` : '';
+  this.isSaving.set(true);
+  this.successMessage.set(null);
+  this.errorMessage.set(null);
 
-      // Call backend endpoint to update profile via PATCH /auth/profile
-      await this.authApi.client.authProfilePatch({
-        updateProfileRequest: {
-          firstName: formValue.firstName,
-          lastName: formValue.lastName,
-          email: formValue.email,
-          phoneNo: fullPhoneNo
-        }
-      });
+  try {
+    const formValue = this.profileForm.getRawValue();
 
-      if (this.preferencesApi) {
-        await this.preferencesApi.upsertPreferences(Number(formValue.accountId), this.toPreferencesPayload(formValue));
-        this.themeService.applyThemePreference(formValue.theme as ThemeChoice);
+    // Combine country code with phone number
+    const fullPhoneNo = formValue.phoneNo
+      ? `${formValue.countryCode}${formValue.phoneNo}`
+      : '';
+
+    // Update profile
+    await this.authApi.client.authProfilePatch({
+      updateProfileRequest: {
+        firstName: formValue.firstName,
+        lastName: formValue.lastName,
+        email: formValue.email,
+        phoneNo: fullPhoneNo
+      }
+    });
+
+    // Update preferences if the preferences service is available
+    if (this.preferencesApi) {
+      const accountId = Number(formValue.accountId);
+
+      if (!Number.isFinite(accountId) || accountId < 1) {
+        this.errorMessage.set('Unable to determine account for preferences.');
+        return;
       }
 
-      this.successMessage.set('Profile updated successfully!');
-      // Clear auth cache and reload profile to reflect changes from database
-      this.authSession.clearCurrentUserCache();
-      await this.loadProfile();
-    } catch {
-      // Error updating profile - display user-friendly message without interrupting component lifecycle
-      this.errorMessage.set('Failed to update profile. Please try again.');
-    } finally {
-      this.isSaving.set(false);
+      await this.preferencesApi.upsertPreferences(
+        accountId,
+        this.toPreferencesPayload(formValue)
+      );
+
+      this.themeService.applyThemePreference(
+        formValue.theme as ThemeChoice
+      );
     }
+
+    // Clear cached user so the next profile load gets fresh data
+    this.authSession.clearCurrentUserCache();
+
+    // Show success only after every requested update has completed
+    this.successMessage.set('Profile updated successfully!');
+
+  } catch {
+    this.errorMessage.set(
+      'Failed to update profile. Please try again.'
+    );
+    this.successMessage.set(null);
+
+  } finally {
+    this.isSaving.set(false);
   }
+}
 
   goBack(): void {
     void this.router.navigate(['/dashboard']);

@@ -15,6 +15,9 @@ const tradeErrorMap: Record<string, string> = {
   'ORD-409': 'Order conflict: duplicate, not cancellable, or insufficient holdings.',
   'WAT-404': 'Watchlist or instrument not found.',
   'WAT-409': 'Duplicate watchlist or duplicate instrument in watchlist.',
+  'ALT-400': 'Maximum active alerts per account exceeded.',
+  'ALT-404': 'Price alert not found.',
+  'ALT-409': 'Alert is already cancelled.',
   'VAL-422': 'Validation failed — check the request and try again.',
   'AUTH-401': 'Authentication required — please sign in.'
 };
@@ -45,4 +48,5 @@ export function mapErrorCodeToMessage(code?: string | null, serverMessage?: stri
 
   return `Unknown error (${code}). Please contact support.`;
 }
+
 

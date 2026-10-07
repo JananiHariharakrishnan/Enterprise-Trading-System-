@@ -100,7 +100,7 @@
           formControlName="countryCode"
           class="form-input country-code-select"
           data-testid="profile-countryCode-select"
-          [disabled]="isSaving()"
+          [attr.disabled]="isSaving() ? true : null"
         >
           <option *ngFor="let country of countryCodes" [value]="country.code">
             {{ country.code }} {{ country.country }}
@@ -197,7 +197,7 @@
           formControlName="defaultOrderType"
           class="form-input"
           data-testid="profile-defaultOrderType-select"
-          [disabled]="isSaving()"
+          [attr.disabled]="isSaving() ? true : null"
         >
           <option *ngFor="let orderType of orderTypes" [value]="orderType">{{ orderType }}</option>
         </select>
@@ -210,7 +210,7 @@
           formControlName="theme"
           class="form-input"
           data-testid="profile-theme-select"
-          [disabled]="isSaving()"
+          [attr.disabled]="isSaving() ? true : null"
         >
           <option *ngFor="let theme of themeChoices" [value]="theme">{{ theme }}</option>
         </select>
@@ -225,7 +225,7 @@
           formControlName="baseCurrency"
           class="form-input"
           data-testid="profile-baseCurrency-select"
-          [disabled]="isSaving()"
+          [attr.disabled]="isSaving() ? true : null"
         >
           <option *ngFor="let currency of baseCurrencies" [value]="currency">{{ currency }}</option>
         </select>
@@ -238,7 +238,7 @@
           type="checkbox"
           formControlName="skipOrderConfirmation"
           data-testid="profile-skipOrderConfirmation-checkbox"
-          [disabled]="isSaving()"
+          [attr.disabled]="isSaving() ? true : null"
         />
       </div>
     </div>
@@ -251,7 +251,7 @@
         formControlName="tradeFills"
         class="form-input"
         data-testid="profile-tradeFills-select"
-        [disabled]="isSaving()"
+        [attr.disabled]="isSaving() ? true : null"
       >
         <option *ngFor="let channel of notificationChannels" [value]="channel">{{ channel }}</option>
       </select>
@@ -265,7 +265,7 @@
         formControlName="priceAlerts"
         class="form-input"
         data-testid="profile-priceAlerts-select"
-        [disabled]="isSaving()"
+        [attr.disabled]="isSaving() ? true : null"
       >
         <option *ngFor="let channel of notificationChannels" [value]="channel">{{ channel }}</option>
       </select>

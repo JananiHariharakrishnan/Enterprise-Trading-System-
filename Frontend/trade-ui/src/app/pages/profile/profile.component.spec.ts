@@ -9,12 +9,17 @@ import { AuthSessionService } from '../../services/auth-session.service';
 import { AuthApiClientService } from '../../services/auth-api-client.service';
 // Removed raw template/style imports; rely on TestBed to compile component resources.
 
+import { CustomerPreferencesService } from '../../services/customer-preferences.service';
+import { ThemeService } from '../../services/theme.service';
+
 describe('ProfileComponent', () => {
   let component: ProfileComponent;
   let fixture: ComponentFixture<ProfileComponent>;
   let mockAuthSession: AuthSessionService;
   let mockAuthApi: AuthApiClientService;
   let mockRouter: Router;
+  let mockPreferencesApi: CustomerPreferencesService;
+  let mockThemeService: ThemeService;
 
   const renderWithoutInit = () => {
     vi.spyOn(component, 'ngOnInit').mockImplementation(() => undefined);
@@ -37,6 +42,21 @@ describe('ProfileComponent', () => {
       navigate: vi.fn()
     } as unknown as Router;
 
+    mockPreferencesApi = {
+      upsertPreferences: vi.fn().mockResolvedValue(null),
+      getPreferences: vi.fn().mockResolvedValue(null),
+      defaultPreferences: vi.fn().mockReturnValue({
+        defaultAccountId: 1,
+        trading: { defaultOrderType: 'MARKET', skipOrderConfirmation: false, defaultTradeQuantity: 1 },
+        notifications: { tradeFills: ['IN_APP'], priceAlerts: ['IN_APP'] },
+        display: { theme: 'SYSTEM', baseCurrency: 'USD' }
+      })
+    } as unknown as CustomerPreferencesService;
+
+    mockThemeService = {
+      applyThemePreference: vi.fn()
+    } as unknown as ThemeService;
+
     // Component resources are provided centrally in src/test-setup.ts
 
     await TestBed.configureTestingModule({
@@ -44,7 +64,9 @@ describe('ProfileComponent', () => {
       providers: [
         { provide: AuthSessionService, useValue: mockAuthSession },
         { provide: AuthApiClientService, useValue: mockAuthApi },
-        { provide: Router, useValue: mockRouter }
+        { provide: Router, useValue: mockRouter },
+        { provide: CustomerPreferencesService, useValue: mockPreferencesApi },
+        { provide: ThemeService, useValue: mockThemeService }
       ]
     }).compileComponents();
 

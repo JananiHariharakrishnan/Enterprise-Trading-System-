@@ -31,6 +31,9 @@ export interface ErrorResponse {
      * | `ORD-409` | 409 | Insufficient holdings, duplicate order, or order not cancellable |
      * | `WAT-404` | 404 | Watchlist or watchlist instrument not found |
      * | `WAT-409` | 409 | Duplicate watchlist name or duplicate watchlist instrument |
+     * | `ALT-400` | 400 | Maximum active alerts per account exceeded |
+     * | `ALT-404` | 404 | Price alert not found |
+     * | `ALT-409` | 409 | Alert is already cancelled |
      * | `VAL-422` | 422 | Invalid input |
      * | `AUTH-401` | 401 | Unauthorised or invalid token |
      * 
@@ -60,6 +63,9 @@ export const ErrorResponseErrorCodeEnum = {
     Ord409: 'ORD-409',
     Wat404: 'WAT-404',
     Wat409: 'WAT-409',
+    Alt400: 'ALT-400',
+    Alt404: 'ALT-404',
+    Alt409: 'ALT-409',
     Val422: 'VAL-422',
     Auth401: 'AUTH-401'
 } as const;

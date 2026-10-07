@@ -2,29 +2,21 @@ package com.tradingsystem.model;
 
 import com.tradingsystem.enums.AlertDirection;
 import com.tradingsystem.enums.AlertStatus;
-import com.tradingsystem.enums.NotificationStatus;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 public class PriceAlert {
 
     private Long id;
     private Long accountId;
-    private Long watchlistId;
     private String symbol;
     private AlertDirection direction;
     private BigDecimal threshold;
     private AlertStatus status;
-    private boolean lastConditionMet;
-    private BigDecimal lastEvaluatedPrice;
-    private LocalDateTime lastQuoteAsOf;
-    private LocalDateTime triggeredOn;
-    private NotificationStatus notificationStatus;
-    private int notificationAttempts;
-    private String lastNotificationError;
-    private LocalDateTime createdOn;
-    private LocalDateTime updatedOn;
+    private OffsetDateTime triggeredOn;
+    private OffsetDateTime createdOn;
+    private OffsetDateTime updatedOn;
 
     public Long getId() {
         return id;
@@ -40,14 +32,6 @@ public class PriceAlert {
 
     public void setAccountId(Long accountId) {
         this.accountId = accountId;
-    }
-
-    public Long getWatchlistId() {
-        return watchlistId;
-    }
-
-    public void setWatchlistId(Long watchlistId) {
-        this.watchlistId = watchlistId;
     }
 
     public String getSymbol() {
@@ -82,75 +66,27 @@ public class PriceAlert {
         this.status = status;
     }
 
-    public boolean isLastConditionMet() {
-        return lastConditionMet;
-    }
-
-    public void setLastConditionMet(boolean lastConditionMet) {
-        this.lastConditionMet = lastConditionMet;
-    }
-
-    public BigDecimal getLastEvaluatedPrice() {
-        return lastEvaluatedPrice;
-    }
-
-    public void setLastEvaluatedPrice(BigDecimal lastEvaluatedPrice) {
-        this.lastEvaluatedPrice = lastEvaluatedPrice;
-    }
-
-    public LocalDateTime getLastQuoteAsOf() {
-        return lastQuoteAsOf;
-    }
-
-    public void setLastQuoteAsOf(LocalDateTime lastQuoteAsOf) {
-        this.lastQuoteAsOf = lastQuoteAsOf;
-    }
-
-    public LocalDateTime getTriggeredOn() {
+    public OffsetDateTime getTriggeredOn() {
         return triggeredOn;
     }
 
-    public void setTriggeredOn(LocalDateTime triggeredOn) {
+    public void setTriggeredOn(OffsetDateTime triggeredOn) {
         this.triggeredOn = triggeredOn;
     }
 
-    public NotificationStatus getNotificationStatus() {
-        return notificationStatus;
-    }
-
-    public void setNotificationStatus(NotificationStatus notificationStatus) {
-        this.notificationStatus = notificationStatus;
-    }
-
-    public int getNotificationAttempts() {
-        return notificationAttempts;
-    }
-
-    public void setNotificationAttempts(int notificationAttempts) {
-        this.notificationAttempts = notificationAttempts;
-    }
-
-    public String getLastNotificationError() {
-        return lastNotificationError;
-    }
-
-    public void setLastNotificationError(String lastNotificationError) {
-        this.lastNotificationError = lastNotificationError;
-    }
-
-    public LocalDateTime getCreatedOn() {
+    public OffsetDateTime getCreatedOn() {
         return createdOn;
     }
 
-    public void setCreatedOn(LocalDateTime createdOn) {
+    public void setCreatedOn(OffsetDateTime createdOn) {
         this.createdOn = createdOn;
     }
 
-    public LocalDateTime getUpdatedOn() {
+    public OffsetDateTime getUpdatedOn() {
         return updatedOn;
     }
 
-    public void setUpdatedOn(LocalDateTime updatedOn) {
+    public void setUpdatedOn(OffsetDateTime updatedOn) {
         this.updatedOn = updatedOn;
     }
 
@@ -161,9 +97,6 @@ public class PriceAlert {
     public void validate() {
         if (accountId == null || accountId <= 0) {
             throw new IllegalArgumentException("accountId required");
-        }
-        if (watchlistId == null || watchlistId <= 0) {
-            throw new IllegalArgumentException("watchlistId required");
         }
         if (symbol == null || symbol.trim().isEmpty()) {
             throw new IllegalArgumentException("symbol required");

@@ -1,0 +1,222 @@
+<section class="pnl-page" data-testid="pnl-page">
+  <header class="pnl-header">
+    <div>
+      <h1>Portfolio &amp; P&amp;L</h1>
+      <p>Your holdings at current prices, with realised and unrealised profit and loss.</p>
+    </div>
+    <div class="header-actions">
+      @if (lastUpdated(); as t) {
+      <span class="updated">Updated {{ t | date:'shortTime' }}</span>
+      }
+      <button type="button" class="btn-secondary" (click)="refresh()" [disabled]="isLoading()">
+        {{ isLoading() ? 'Refreshing…' : 'Refresh' }}
+      </button>
+    </div>
+  </header>
+
+  <!-- Loading -->
+  @if (isLoading() && !summary() && positions().length === 0) {
+  <div class="panel" aria-busy="true" data-testid="pnl-loading">
+    <span class="sr-only">Loading portfolio...</span>
+    @for (i of [1, 2, 3, 4]; track i) { <div class="sk sk-row"></div> }
+  </div>
+  }
+
+  <!-- Hard error -->
+  @if (loadError(); as error) {
+  <div class="error-card" role="alert" data-testid="pnl-error">
+    <span class="error-icon">!</span>
+    <div class="error-text">
+      <strong>Couldn't load your portfolio</strong>
+      <p>{{ error }}</p>
+    </div>
+    <button type="button" class="btn-secondary" (click)="refresh()">Retry</button>
+  </div>
+  }
+
+  <!-- MKT-503: pricing unavailable for every holding -->
+  @if (pricingDown()) {
+  <div class="banner banner-warn" role="status" data-testid="pricing-down">
+    <strong>Live prices are unavailable.</strong>
+    <span>Showing your holdings at cost. Market value and profit and loss will return when pricing recovers.</span>
+  </div>
+  }
+
+  <!-- Stale / partial marker: never present stale figures as live -->
+  @if (showStaleBanner()) {
+  <div class="banner banner-warn" role="status" data-testid="stale-banner">
+    <strong>Some figures are not live.</strong>
+    <span>
+      @if (staleSymbols().length) { Delayed price: {{ staleSymbols().join(', ') }}. }
+      @if (unpricedSymbols().length) { No price: {{ unpricedSymbols().join(', ') }}
+        (left out of market value and unrealised P&amp;L). }
+    </span>
+  </div>
+  }
+
+  <!-- Summary cards -->
+  @if (summary(); as s) {
+  <div class="stats" data-testid="pnl-summary">
+    <div class="stat">
+      <span class="stat-label">Total portfolio value</span>
+      <span class="stat-value">{{ money(s.totalValue, s.baseCurrency) }}</span>
+      <span class="stat-sub">Cash + market value</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Cash</span>
+      <span class="stat-value">{{ money(s.cashBalance, s.baseCurrency) }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Market value</span>
+      <span class="stat-value">{{ money(s.marketValue, s.baseCurrency) }}</span>
+      <span class="stat-sub">Cost basis {{ money(s.costBasis, s.baseCurrency) }}</span>
+    </div>
+    <div class="stat" [class]="'stat tone-' + tone(s.unrealisedPnl)">
+      <span class="stat-label">Unrealised P&amp;L</span>
+      <span class="stat-value">{{ signedMoney(s.unrealisedPnl, s.baseCurrency) }}</span>
+      <span class="stat-sub">{{ pct(s.unrealisedPnlPercent) }} on cost</span>
+    </div>
+    <div class="stat" [class]="'stat tone-' + tone(s.realisedPnl)">
+      <span class="stat-label">Realised P&amp;L (lifetime)</span>
+      <span class="stat-value">{{ signedMoney(s.realisedPnl, s.baseCurrency) }}</span>
+      <span class="stat-sub">Booked at sale, never repriced</span>
+    </div>
+    <div class="stat" [class]="'stat tone-' + tone(totalPnl())">
+      <span class="stat-label">Total P&amp;L</span>
+      <span class="stat-value">{{ signedMoney(totalPnl(), s.baseCurrency) }}</span>
+      <span class="stat-sub">Realised + unrealised</span>
+    </div>
+  </div>
+  }
+
+  <!-- Top gainers / losers -->
+  @if (movers(); as m) {
+  <div class="panel" data-testid="pnl-movers">
+    <div class="panel-head">
+      <h2>Top gainers &amp; losers</h2>
+      <div class="toggle" role="group" aria-label="Movers basis">
+        <button type="button" [class.active]="moversBasis() === 'total'" (click)="setBasis('total')">Since purchase</button>
+        <button type="button" [class.active]="moversBasis() === 'day'" (click)="setBasis('day')">Today</button>
+      </div>
+    </div>
+    <div class="movers">
+      <div>
+        <h3>Gainers</h3>
+        @for (g of m.gainers; track g.symbol) {
+        <div class="mover tone-gain">
+          <span class="sym">{{ g.symbol }}@if (g.stale) { <span class="badge">stale</span> }</span>
+          <span class="amt">{{ signedMoney(g.pnl, m.baseCurrency) }} <small>{{ pct(g.pnlPercent) }}</small></span>
+        </div>
+        } @empty { <p class="muted">No gainers.</p> }
+      </div>
+      <div>
+        <h3>Losers</h3>
+        @for (l of m.losers; track l.symbol) {
+        <div class="mover tone-loss">
+          <span class="sym">{{ l.symbol }}@if (l.stale) { <span class="badge">stale</span> }</span>
+          <span class="amt">{{ signedMoney(l.pnl, m.baseCurrency) }} <small>{{ pct(l.pnlPercent) }}</small></span>
+        </div>
+        } @empty { <p class="muted">No losers.</p> }
+      </div>
+    </div>
+    <p class="muted note">Amounts in {{ m.baseCurrency }}. Unpriced holdings are not ranked.</p>
+  </div>
+  }
+
+  <!-- Holdings -->
+  @if (positions().length > 0) {
+  <div class="panel" data-testid="pnl-holdings">
+    <h2>Holdings</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th class="num">Qty</th>
+            <th class="num">Avg cost</th>
+            <th class="num">Last price</th>
+            <th class="num">Market value</th>
+            <th class="num">Unrealised P&amp;L</th>
+            <th class="num">%</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of positions(); track p.symbol) {
+          <tr [class.row-stale]="p.stale">
+            <td class="sym">{{ p.symbol }}</td>
+            <td class="num">{{ p.quantity }}</td>
+            <td class="num">{{ money(p.averageCost, p.currency) }}</td>
+            <td class="num">{{ money(p.lastPrice, p.currency) }}</td>
+            <td class="num">{{ money(p.marketValue, p.currency) }}</td>
+            <td class="num" [class]="'num tone-' + tone(p.unrealisedPnl)">{{ signedMoney(p.unrealisedPnl, p.currency) }}</td>
+            <td class="num" [class]="'num tone-' + tone(p.unrealisedPnlPercent)">{{ pct(p.unrealisedPnlPercent) }}</td>
+            <td>
+              @if (p.lastPrice == null) { <span class="badge badge-warn">No price</span> }
+              @else if (p.stale) { <span class="badge badge-warn">Stale · {{ ago(p.priceAsOf) }}</span> }
+              @else { <span class="badge badge-ok">Live · {{ ago(p.priceAsOf) }}</span> }
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="muted note">Each holding is shown in its own currency; the cards above are in {{ baseCurrency() }}.</p>
+  </div>
+  }
+
+  <!-- P&L by symbol -->
+  @if (pnl(); as p) {
+  <div class="panel" data-testid="pnl-by-symbol">
+    <div class="panel-head">
+      <h2>Profit &amp; loss by instrument</h2>
+      <div class="range">
+        <label>Realised from <input type="date" [value]="fromDate()" (change)="onFromChange($event)" /></label>
+        <label>to <input type="date" [value]="toDate()" (change)="onToChange($event)" /></label>
+        @if (fromDate() || toDate()) { <button type="button" class="btn-link" (click)="clearRange()">Clear</button> }
+      </div>
+    </div>
+    @if (rangeError(); as err) { <p class="field-error" role="alert">{{ err }}</p> }
+    <p class="muted note">The date range applies to realised P&amp;L only. Unrealised is always as at now.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Instrument</th>
+            <th class="num">Realised</th>
+            <th class="num">Unrealised</th>
+            <th class="num">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of p.bySymbol ?? []; track row.symbol) {
+          <tr>
+            <td class="sym">{{ row.symbol }}</td>
+            <td class="num" [class]="'num tone-' + tone(row.realisedPnl)">{{ signedMoney(row.realisedPnl, p.baseCurrency) }}</td>
+            <td class="num" [class]="'num tone-' + tone(row.unrealisedPnl)">{{ signedMoney(row.unrealisedPnl, p.baseCurrency) }}</td>
+            <td class="num" [class]="'num tone-' + tone(row.totalPnl)">{{ signedMoney(row.totalPnl, p.baseCurrency) }}</td>
+          </tr>
+          } @empty {
+          <tr><td colspan="4" class="muted">No profit or loss to show yet.</td></tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td class="num" [class]="'num tone-' + tone(p.realisedPnl)">{{ signedMoney(p.realisedPnl, p.baseCurrency) }}</td>
+            <td class="num" [class]="'num tone-' + tone(p.unrealisedPnl)">{{ signedMoney(p.unrealisedPnl, p.baseCurrency) }}</td>
+            <td class="num" [class]="'num tone-' + tone(p.totalPnl)">{{ signedMoney(p.totalPnl, p.baseCurrency) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  }
+
+  @if (!isLoading() && !loadError() && !pricingDown() && summary() && positions().length === 0) {
+  <div class="panel empty" data-testid="pnl-empty">
+    <p>You don't hold any positions yet. Realised P&amp;L and holdings will appear after your first trades.</p>
+  </div>
+  }
+</section>

@@ -195,10 +195,25 @@ const database = process.env.POSTGRES_DB ?? process.env.DB_NAME ?? process.env.P
 const user = process.env.POSTGRES_USER ?? process.env.DB_USER ?? process.env.PGUSER;
 const password = process.env.POSTGRES_PASSWORD ?? process.env.DB_PASSWORD ?? process.env.PGPASSWORD;
 
-export const db = isTest
-  ? createInMemoryDb()
-  : new Pool(
-      databaseUrl
-        ? { connectionString: databaseUrl.startsWith('jdbc:') ? databaseUrl.replace(/^jdbc:/, '') : databaseUrl }
-        : { host, port, database, user, password },
-    );
+let _dbImpl: any = null;
+
+function createPool() {
+  return new Pool(
+    databaseUrl
+      ? { connectionString: databaseUrl.startsWith('jdbc:') ? databaseUrl.replace(/^jdbc:/, '') : databaseUrl }
+      : { host, port, database, user, password },
+  );
+}
+
+function getDbImpl() {
+  if (_dbImpl) return _dbImpl;
+  const testMode = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST_POOL_ID) || process.env.VITEST === 'true';
+  _dbImpl = testMode ? createInMemoryDb() : createPool();
+  return _dbImpl;
+}
+
+export const db = {
+  query(sql: string, params: any[] = []) {
+    return getDbImpl().query(sql, params);
+  },
+};
