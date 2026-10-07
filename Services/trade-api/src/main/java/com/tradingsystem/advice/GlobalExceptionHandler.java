@@ -431,6 +431,32 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(AdminAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAdminAccessDenied(
+            AdminAccessDeniedException ex) {
+
+        log.warn("Admin access denied: {}", ex.getMessage());
+
+        return error(
+                HttpStatus.FORBIDDEN,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(InvalidWalletPasswordException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidWalletPassword(
+            InvalidWalletPasswordException ex) {
+
+        log.warn("Wallet password invalid: {}", ex.getMessage());
+
+        return error(
+                HttpStatus.UNAUTHORIZED,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
     @ExceptionHandler(InvalidPortfolioInputException.class)
     public ResponseEntity<ErrorResponse> handleInvalidPortfolioInput(
             InvalidPortfolioInputException ex) {

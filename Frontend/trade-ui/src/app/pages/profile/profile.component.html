@@ -1,286 +1,393 @@
-<div class="profile-container">
-  <div class="profile-header">
-    <h1>My Profile</h1>
-  </div>
-
-  <!-- Loading State -->
-  <div *ngIf="isLoading()" class="loading-spinner">
-    <p>Loading profile...</p>
-  </div>
-
-  <!-- Error Message -->
-  <div *ngIf="errorMessage()" class="error-message" data-testid="profile-error">
-    <strong>Error:</strong> {{ errorMessage() }}
-  </div>
-
-  <!-- Success Message -->
-  <div *ngIf="successMessage()" class="success-message" data-testid="profile-success">
-    <strong>Success!</strong> {{ successMessage() }}
-  </div>
-
-  <!-- Profile Form -->
-  <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading() && currentUser()" class="profile-form">
-    <div class="form-group">
-      <label for="username">Username</label>
-      <input
-        id="username"
-        type="text"
-        formControlName="username"
-        class="form-input"
-        data-testid="profile-username-input"
-      />
-      <small class="form-note">(Read-only)</small>
+<div class="profile-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-with-badge">
+        <h1>Profile &amp; Preferences</h1>
+        <span *ngIf="currentUser() as u" class="user-role-badge">Account #{{ u.accountId }}</span>
+      </div>
+      <p class="subtitle">Manage your personal credentials, order execution defaults, and notification preferences.</p>
     </div>
-
-    <div class="form-row">
-      <div class="form-group">
-        <label for="firstName">First Name</label>
-        <input
-          id="firstName"
-          type="text"
-          formControlName="firstName"
-          class="form-input"
-          data-testid="profile-firstName-input"
-          [readonly]="isSaving()"
-        />
-        <div *ngIf="profileForm.get('firstName')?.hasError('required') && profileForm.get('firstName')?.touched" class="form-error" data-testid="profile-firstName-error-required">
-          First name is required
-        </div>
-        <div *ngIf="profileForm.get('firstName')?.hasError('maxlength') && profileForm.get('firstName')?.touched" class="form-error" data-testid="profile-firstName-error-maxlength">
-          First name cannot exceed 100 characters
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="lastName">Last Name</label>
-        <input
-          id="lastName"
-          type="text"
-          formControlName="lastName"
-          class="form-input"
-          data-testid="profile-lastName-input"
-          [readonly]="isSaving()"
-        />
-        <div *ngIf="profileForm.get('lastName')?.hasError('required') && profileForm.get('lastName')?.touched" class="form-error" data-testid="profile-lastName-error-required">
-          Last name is required
-        </div>
-        <div *ngIf="profileForm.get('lastName')?.hasError('maxlength') && profileForm.get('lastName')?.touched" class="form-error" data-testid="profile-lastName-error-maxlength">
-          Last name cannot exceed 100 characters
-        </div>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label for="email">Email Address</label>
-      <input
-        id="email"
-        type="email"
-        formControlName="email"
-        class="form-input"
-        data-testid="profile-email-input"
-        [readonly]="isSaving()"
-      />
-      <small class="form-note">We'll never share your email</small>
-      <div *ngIf="profileForm.get('email')?.hasError('required') && profileForm.get('email')?.touched" class="form-error" data-testid="profile-email-error-required">
-        Email is required
-      </div>
-      <div *ngIf="profileForm.get('email')?.hasError('email') && profileForm.get('email')?.touched" class="form-error" data-testid="profile-email-error-invalid">
-        Please enter a valid email address
-      </div>
-      <div *ngIf="profileForm.get('email')?.hasError('maxlength') && profileForm.get('email')?.touched" class="form-error" data-testid="profile-email-error-maxlength">
-        Email cannot exceed 255 characters
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label for="phoneNo">Phone Number</label>
-      <div class="phone-input-group">
-        <select
-          id="countryCode"
-          formControlName="countryCode"
-          class="form-input country-code-select"
-          data-testid="profile-countryCode-select"
-          [attr.disabled]="isSaving() ? true : null"
-        >
-          <option *ngFor="let country of countryCodes" [value]="country.code">
-            {{ country.code }} {{ country.country }}
-          </option>
-        </select>
-        <input
-          id="phoneNo"
-          type="tel"
-          formControlName="phoneNo"
-          class="form-input phone-number-input"
-          data-testid="profile-phoneNo-input"
-          [readonly]="isSaving()"
-          placeholder="9876543210"
-        />
-      </div>
-      <small class="form-note">(Optional) 10 digits only. Examples: 9876543210, 5551234567</small>
-      <div *ngIf="profileForm.get('phoneNo')?.hasError('minlength') && profileForm.get('phoneNo')?.touched" class="form-error" data-testid="profile-phoneNo-error-minlength">
-        Phone number must be exactly 10 digits
-      </div>
-      <div *ngIf="profileForm.get('phoneNo')?.hasError('maxlength') && profileForm.get('phoneNo')?.touched" class="form-error" data-testid="profile-phoneNo-error-maxlength">
-        Phone number must be exactly 10 digits
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label for="accountId">Account ID</label>
-      <input
-        id="accountId"
-        type="text"
-        formControlName="accountId"
-        class="form-input"
-        data-testid="profile-accountid-input"
-      />
-      <small class="form-note">(Read-only)</small>
-    </div>
-
-    <div class="form-actions">
-      <button
-        type="submit"
-        class="btn btn-primary"
-        [disabled]="profileForm.invalid || isSaving()"
-        data-testid="profile-save-button"
-      >
-        {{ isSaving() ? 'Saving...' : 'Save Changes' }}
-      </button>
+    <div class="header-actions">
       <button
         type="button"
-        class="btn btn-secondary"
+        class="btn-back"
         (click)="goBack()"
         [disabled]="isSaving()"
         data-testid="profile-back-button"
       >
-        Back to Dashboard
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        Dashboard
       </button>
     </div>
+  </div>
 
-    <hr />
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading profile...</p>
+  </div>
 
-    <h2>Customer Preferences</h2>
+  <!-- Alerts -->
+  <div *ngIf="errorMessage()" class="alert-banner alert-danger" data-testid="profile-error" role="alert">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <div class="alert-content">
+      <strong>Error</strong>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  </div>
 
-    <p *ngIf="isLoadingPreferences()" class="form-note">Loading preferences...</p>
+  <div *ngIf="successMessage()" class="alert-banner alert-success" data-testid="profile-success" role="status">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    </svg>
+    <div class="alert-content">
+      <strong>Success</strong>
+      <span>{{ successMessage() }}</span>
+    </div>
+  </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label for="defaultAccountId">Default Account ID</label>
-        <input
-          id="defaultAccountId"
-          type="number"
-          formControlName="defaultAccountId"
-          class="form-input"
-          data-testid="profile-defaultAccountId-input"
-          [readonly]="isSaving()"
-        />
+  <!-- Profile & Preferences Form -->
+  <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading() && currentUser()" class="profile-layout">
+    
+    <!-- Section 1: Personal Details Card -->
+    <div class="card glass-card">
+      <div class="card-header">
+        <div class="card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div>
+          <h2>Personal Information</h2>
+          <p class="card-desc">Your verified contact details and identity information.</p>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label for="defaultTradeQuantity">Default Trade Quantity</label>
-        <input
-          id="defaultTradeQuantity"
-          type="number"
-          formControlName="defaultTradeQuantity"
-          class="form-input"
-          data-testid="profile-defaultTradeQuantity-input"
-          [readonly]="isSaving()"
-        />
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <div class="input-lock-wrapper">
+              <input
+                id="username"
+                type="text"
+                formControlName="username"
+                class="form-input read-only-input"
+                data-testid="profile-username-input"
+              />
+              <span class="lock-indicator" title="Read only">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </span>
+            </div>
+            <span class="field-hint">User identifier is immutable</span>
+          </div>
+
+          <div class="form-group">
+            <label for="accountId">Primary Account ID</label>
+            <div class="input-lock-wrapper">
+              <input
+                id="accountId"
+                type="text"
+                formControlName="accountId"
+                class="form-input read-only-input"
+                data-testid="profile-accountid-input"
+              />
+              <span class="lock-indicator" title="Read only">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </span>
+            </div>
+            <span class="field-hint">Mapped trading ledger ID</span>
+          </div>
+
+          <div class="form-group">
+            <label for="firstName">First Name <span class="required">*</span></label>
+            <input
+              id="firstName"
+              type="text"
+              formControlName="firstName"
+              class="form-input"
+              data-testid="profile-firstName-input"
+              [readonly]="isSaving()"
+              placeholder="e.g. Alex"
+            />
+            <div *ngIf="profileForm.get('firstName')?.hasError('required') && profileForm.get('firstName')?.touched" class="field-error" data-testid="profile-firstName-error-required">
+              First name is required
+            </div>
+            <div *ngIf="profileForm.get('firstName')?.hasError('maxlength') && profileForm.get('firstName')?.touched" class="field-error" data-testid="profile-firstName-error-maxlength">
+              First name cannot exceed 100 characters
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="lastName">Last Name <span class="required">*</span></label>
+            <input
+              id="lastName"
+              type="text"
+              formControlName="lastName"
+              class="form-input"
+              data-testid="profile-lastName-input"
+              [readonly]="isSaving()"
+              placeholder="e.g. Morgan"
+            />
+            <div *ngIf="profileForm.get('lastName')?.hasError('required') && profileForm.get('lastName')?.touched" class="field-error" data-testid="profile-lastName-error-required">
+              Last name is required
+            </div>
+            <div *ngIf="profileForm.get('lastName')?.hasError('maxlength') && profileForm.get('lastName')?.touched" class="field-error" data-testid="profile-lastName-error-maxlength">
+              Last name cannot exceed 100 characters
+            </div>
+          </div>
+
+          <div class="form-group full-col">
+            <label for="email">Email Address <span class="required">*</span></label>
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              class="form-input"
+              data-testid="profile-email-input"
+              [readonly]="isSaving()"
+              placeholder="name@domain.com"
+            />
+            <span class="field-hint">Used for order fill notifications and security alerts</span>
+            <div *ngIf="profileForm.get('email')?.hasError('required') && profileForm.get('email')?.touched" class="field-error" data-testid="profile-email-error-required">
+              Email is required
+            </div>
+            <div *ngIf="profileForm.get('email')?.hasError('email') && profileForm.get('email')?.touched" class="field-error" data-testid="profile-email-error-invalid">
+              Please enter a valid email address
+            </div>
+            <div *ngIf="profileForm.get('email')?.hasError('maxlength') && profileForm.get('email')?.touched" class="field-error" data-testid="profile-email-error-maxlength">
+              Email cannot exceed 255 characters
+            </div>
+          </div>
+
+          <div class="form-group full-col">
+            <label for="phoneNo">Phone Number</label>
+            <div class="phone-input-row">
+              <select
+                id="countryCode"
+                formControlName="countryCode"
+                class="form-input country-code-select"
+                data-testid="profile-countryCode-select"
+                [attr.disabled]="isSaving() ? true : null"
+              >
+                <option *ngFor="let country of countryCodes" [value]="country.code">
+                  {{ country.code }} ({{ country.country }})
+                </option>
+              </select>
+              <input
+                id="phoneNo"
+                type="tel"
+                formControlName="phoneNo"
+                class="form-input phone-number-input"
+                data-testid="profile-phoneNo-input"
+                [readonly]="isSaving()"
+                placeholder="10 digit mobile number"
+              />
+            </div>
+            <span class="field-hint">10 digits without spaces or hyphens</span>
+            <div *ngIf="profileForm.get('phoneNo')?.hasError('minlength') && profileForm.get('phoneNo')?.touched" class="field-error" data-testid="profile-phoneNo-error-minlength">
+              Phone number must be exactly 10 digits
+            </div>
+            <div *ngIf="profileForm.get('phoneNo')?.hasError('maxlength') && profileForm.get('phoneNo')?.touched" class="field-error" data-testid="profile-phoneNo-error-maxlength">
+              Phone number must be exactly 10 digits
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="profileForm.invalid || isSaving()"
+            data-testid="profile-save-button"
+          >
+            <span *ngIf="isSaving()" class="btn-spinner"></span>
+            {{ isSaving() ? 'Saving Profile...' : 'Save Profile Changes' }}
+          </button>
+        </div>
       </div>
     </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label for="defaultOrderType">Default Order Type</label>
-        <select
-          id="defaultOrderType"
-          formControlName="defaultOrderType"
-          class="form-input"
-          data-testid="profile-defaultOrderType-select"
-          [attr.disabled]="isSaving() ? true : null"
-        >
-          <option *ngFor="let orderType of orderTypes" [value]="orderType">{{ orderType }}</option>
-        </select>
+    <!-- Section 2: Trading & Display Preferences Card -->
+    <div class="card glass-card">
+      <div class="card-header">
+        <div class="card-icon preferences-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </div>
+        <div>
+          <h2>Trading &amp; System Preferences</h2>
+          <p class="card-desc">Configure order defaults, visual appearance, and notification channels.</p>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label for="theme">Theme</label>
-        <select
-          id="theme"
-          formControlName="theme"
-          class="form-input"
-          data-testid="profile-theme-select"
-          [attr.disabled]="isSaving() ? true : null"
-        >
-          <option *ngFor="let theme of themeChoices" [value]="theme">{{ theme }}</option>
-        </select>
+      <div class="card-body">
+        <p *ngIf="isLoadingPreferences()" class="loading-hint">Synchronizing preferences...</p>
+
+        <!-- Subsection A: Order Defaults -->
+        <div class="subsection">
+          <h3 class="subsection-title">Order Execution Defaults</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="defaultAccountId">Default Trading Account</label>
+              <input
+                id="defaultAccountId"
+                type="number"
+                formControlName="defaultAccountId"
+                class="form-input"
+                data-testid="profile-defaultAccountId-input"
+                [readonly]="isSaving()"
+              />
+              <span class="field-hint">Default account selector for order placement</span>
+            </div>
+
+            <div class="form-group">
+              <label for="defaultTradeQuantity">Default Trade Quantity</label>
+              <input
+                id="defaultTradeQuantity"
+                type="number"
+                formControlName="defaultTradeQuantity"
+                class="form-input"
+                data-testid="profile-defaultTradeQuantity-input"
+                [readonly]="isSaving()"
+                min="1"
+              />
+              <span class="field-hint">Initial quantity populated in order ticket</span>
+            </div>
+
+            <div class="form-group">
+              <label for="defaultOrderType">Default Order Type</label>
+              <select
+                id="defaultOrderType"
+                formControlName="defaultOrderType"
+                class="form-input"
+                data-testid="profile-defaultOrderType-select"
+                [attr.disabled]="isSaving() ? true : null"
+              >
+                <option *ngFor="let orderType of orderTypes" [value]="orderType">{{ orderType }}</option>
+              </select>
+              <span class="field-hint">Preselected order execution style</span>
+            </div>
+
+            <div class="form-group switch-wrapper">
+              <label class="switch-label">
+                <span class="switch-title">Skip Order Confirmation</span>
+                <span class="switch-desc">Submit orders instantly without secondary modal confirmation</span>
+              </label>
+              <label class="custom-switch">
+                <input
+                  id="skipOrderConfirmation"
+                  type="checkbox"
+                  formControlName="skipOrderConfirmation"
+                  data-testid="profile-skipOrderConfirmation-checkbox"
+                  [attr.disabled]="isSaving() ? true : null"
+                />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subsection B: Display & Appearance -->
+        <div class="subsection">
+          <h3 class="subsection-title">Display &amp; Localization</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="theme">Application Theme</label>
+              <select
+                id="theme"
+                formControlName="theme"
+                class="form-input"
+                data-testid="profile-theme-select"
+                [attr.disabled]="isSaving() ? true : null"
+              >
+                <option *ngFor="let theme of themeChoices" [value]="theme">{{ theme }}</option>
+              </select>
+              <span class="field-hint">Controls light/dark visual theme</span>
+            </div>
+
+            <div class="form-group">
+              <label for="baseCurrency">Base Display Currency</label>
+              <select
+                id="baseCurrency"
+                formControlName="baseCurrency"
+                class="form-input"
+                data-testid="profile-baseCurrency-select"
+                [attr.disabled]="isSaving() ? true : null"
+              >
+                <option *ngFor="let currency of baseCurrencies" [value]="currency">{{ currency }}</option>
+              </select>
+              <span class="field-hint">Currency used in summary portfolio metrics</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subsection C: Notification Channels -->
+        <div class="subsection">
+          <h3 class="subsection-title">Notification Channels</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="tradeFills">Trade Fill Notifications</label>
+              <select
+                id="tradeFills"
+                multiple
+                formControlName="tradeFills"
+                class="form-input multi-select"
+                data-testid="profile-tradeFills-select"
+                [attr.disabled]="isSaving() ? true : null"
+              >
+                <option *ngFor="let channel of notificationChannels" [value]="channel">{{ channel }}</option>
+              </select>
+              <span class="field-hint">Hold Ctrl / Cmd to select multiple channels</span>
+            </div>
+
+            <div class="form-group">
+              <label for="priceAlerts">Price Alert Notifications</label>
+              <select
+                id="priceAlerts"
+                multiple
+                formControlName="priceAlerts"
+                class="form-input multi-select"
+                data-testid="profile-priceAlerts-select"
+                [attr.disabled]="isSaving() ? true : null"
+              >
+                <option *ngFor="let channel of notificationChannels" [value]="channel">{{ channel }}</option>
+              </select>
+              <span class="field-hint">Hold Ctrl / Cmd to select multiple channels</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <button
+            type="button"
+            class="btn-primary"
+            [disabled]="isSavingPreferences()"
+            (click)="onSavePreferences()"
+            data-testid="profile-save-preferences-button"
+          >
+            <span *ngIf="isSavingPreferences()" class="btn-spinner"></span>
+            {{ isSavingPreferences() ? 'Saving Preferences...' : 'Save Preferences' }}
+          </button>
+        </div>
       </div>
-    </div>
-
-    <div class="form-row">
-      <div class="form-group">
-        <label for="baseCurrency">Base Currency</label>
-        <select
-          id="baseCurrency"
-          formControlName="baseCurrency"
-          class="form-input"
-          data-testid="profile-baseCurrency-select"
-          [attr.disabled]="isSaving() ? true : null"
-        >
-          <option *ngFor="let currency of baseCurrencies" [value]="currency">{{ currency }}</option>
-        </select>
-      </div>
-
-      <div class="form-group toggle-row">
-        <label for="skipOrderConfirmation">Skip Order Confirmation</label>
-        <input
-          id="skipOrderConfirmation"
-          type="checkbox"
-          formControlName="skipOrderConfirmation"
-          data-testid="profile-skipOrderConfirmation-checkbox"
-          [attr.disabled]="isSaving() ? true : null"
-        />
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label for="tradeFills">Trade Fill Notification Channels</label>
-      <select
-        id="tradeFills"
-        multiple
-        formControlName="tradeFills"
-        class="form-input"
-        data-testid="profile-tradeFills-select"
-        [attr.disabled]="isSaving() ? true : null"
-      >
-        <option *ngFor="let channel of notificationChannels" [value]="channel">{{ channel }}</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label for="priceAlerts">Price Alert Notification Channels</label>
-      <select
-        id="priceAlerts"
-        multiple
-        formControlName="priceAlerts"
-        class="form-input"
-        data-testid="profile-priceAlerts-select"
-        [attr.disabled]="isSaving() ? true : null"
-      >
-        <option *ngFor="let channel of notificationChannels" [value]="channel">{{ channel }}</option>
-      </select>
-    </div>
-
-    <div class="form-actions">
-      <button
-        type="button"
-        class="btn btn-primary"
-        [disabled]="isSavingPreferences()"
-        (click)="onSavePreferences()"
-        data-testid="profile-save-preferences-button"
-      >
-        {{ isSavingPreferences() ? 'Saving preferences...' : 'Save Preferences' }}
-      </button>
     </div>
   </form>
 </div>

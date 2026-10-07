@@ -99,4 +99,40 @@
         )
     </delete>
 
+    <resultMap id="adminUserRecordResultMap" type="com.tradingsystem.model.AdminUserRecord">
+        <id property="userId" column="user_id"/>
+        <result property="accountId" column="account_id"/>
+        <result property="username" column="username"/>
+        <result property="firstName" column="first_name"/>
+        <result property="lastName" column="last_name"/>
+        <result property="email" column="email"/>
+        <result property="phoneNo" column="phone_no"/>
+        <result property="rolesString" column="roles" javaType="java.lang.String"/>
+        <result property="createdOn" column="created_on"/>
+        <result property="accountReference" column="account_reference"/>
+        <result property="accountStatus" column="account_status"/>
+        <result property="cashBalance" column="cash_balance"/>
+        <result property="buyingPower" column="buying_power"/>
+    </resultMap>
+
+    <select id="findAllUsersWithAccountDetails" resultMap="adminUserRecordResultMap">
+        SELECT
+            u.id AS user_id,
+            u.account_id,
+            u.username,
+            u.first_name,
+            u.last_name,
+            u.email,
+            u.phone_no,
+            u.roles,
+            u.created_on,
+            a.account_reference,
+            a.status AS account_status,
+            a.cash_balance,
+            a.buying_power
+        FROM tradingsystem.users u
+        JOIN tradingsystem.accounts a ON a.id = u.account_id
+        ORDER BY u.created_on DESC
+    </select>
+
 </mapper>

@@ -4,6 +4,7 @@ export interface TokenInterceptorOptions {
   allowedOrigins: string[];
   unauthenticatedPaths?: string[];
   sessionExpiryDelaySeconds?: number; // Delay before reloading on session expiry (default: 0)
+  reloadHandler?: () => void;
 }
 
 export function createTokenInterceptor(tokenStorage: TokenStorageService, opts: TokenInterceptorOptions) {
@@ -65,7 +66,11 @@ export function createTokenInterceptor(tokenStorage: TokenStorageService, opts: 
             tokenStorage.clear();
             // Reload page after configured delay
             setTimeout(() => {
-              window.location.reload();
+              if (opts.reloadHandler) {
+                opts.reloadHandler();
+              } else {
+                window.location.reload();
+              }
             }, expiryDelay);
           }
         } catch (e) {

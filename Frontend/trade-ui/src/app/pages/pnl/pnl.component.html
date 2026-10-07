@@ -1,221 +1,380 @@
 <section class="pnl-page" data-testid="pnl-page">
   <header class="pnl-header">
-    <div>
-      <h1>Portfolio &amp; P&amp;L</h1>
-      <p>Your holdings at current prices, with realised and unrealised profit and loss.</p>
+    <div class="header-info">
+      <div class="title-row">
+        <h1>Portfolio &amp; P&amp;L Performance</h1>
+        @if (lastUpdated(); as t) {
+          <span class="live-status-pill">
+            <span class="pulse-dot"></span>
+            Updated {{ t | date:'shortTime' }}
+          </span>
+        }
+      </div>
+      <p class="subtitle">Real-time valuation of your holdings, market pricing, and booked versus unrealised profit &amp; loss.</p>
     </div>
     <div class="header-actions">
-      @if (lastUpdated(); as t) {
-      <span class="updated">Updated {{ t | date:'shortTime' }}</span>
-      }
-      <button type="button" class="btn-secondary" (click)="refresh()" [disabled]="isLoading()">
+      <button type="button" class="btn-refresh" (click)="refresh()" [disabled]="isLoading()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [class.spin]="isLoading()">
+          <path d="M23 4v6h-6"></path>
+          <path d="M1 20v-6h6"></path>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
         {{ isLoading() ? 'Refreshing…' : 'Refresh' }}
       </button>
     </div>
   </header>
 
-  <!-- Loading -->
+  <!-- Loading State -->
   @if (isLoading() && !summary() && positions().length === 0) {
-  <div class="panel" aria-busy="true" data-testid="pnl-loading">
+  <div class="panel loading-panel" aria-busy="true" data-testid="pnl-loading">
     <span class="sr-only">Loading portfolio...</span>
-    @for (i of [1, 2, 3, 4]; track i) { <div class="sk sk-row"></div> }
+    <div class="skeleton-grid">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="sk-card"></div>
+      }
+    </div>
   </div>
   }
 
   <!-- Hard error -->
   @if (loadError(); as error) {
   <div class="error-card" role="alert" data-testid="pnl-error">
-    <span class="error-icon">!</span>
+    <div class="error-icon-box">!</div>
     <div class="error-text">
       <strong>Couldn't load your portfolio</strong>
       <p>{{ error }}</p>
     </div>
-    <button type="button" class="btn-secondary" (click)="refresh()">Retry</button>
+    <button type="button" class="btn-retry" (click)="refresh()">Retry</button>
   </div>
   }
 
   <!-- MKT-503: pricing unavailable for every holding -->
   @if (pricingDown()) {
   <div class="banner banner-warn" role="status" data-testid="pricing-down">
-    <strong>Live prices are unavailable.</strong>
-    <span>Showing your holdings at cost. Market value and profit and loss will return when pricing recovers.</span>
+    <div class="banner-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+    </div>
+    <div class="banner-content">
+      <strong>Live prices are unavailable</strong>
+      <span>Showing your holdings at cost. Market value and profit and loss will return when pricing recovers.</span>
+    </div>
   </div>
   }
 
   <!-- Stale / partial marker: never present stale figures as live -->
   @if (showStaleBanner()) {
   <div class="banner banner-warn" role="status" data-testid="stale-banner">
-    <strong>Some figures are not live.</strong>
-    <span>
-      @if (staleSymbols().length) { Delayed price: {{ staleSymbols().join(', ') }}. }
-      @if (unpricedSymbols().length) { No price: {{ unpricedSymbols().join(', ') }}
-        (left out of market value and unrealised P&amp;L). }
-    </span>
+    <div class="banner-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+    </div>
+    <div class="banner-content">
+      <strong>Some figures are delayed or unpriced</strong>
+      <span>
+        @if (staleSymbols().length) { Delayed price: {{ staleSymbols().join(', ') }}. }
+        @if (unpricedSymbols().length) { No price: {{ unpricedSymbols().join(', ') }}
+          (excluded from market value and unrealised P&amp;L). }
+      </span>
+    </div>
   </div>
   }
 
-  <!-- Summary cards -->
+  <!-- Summary Cards Grid -->
   @if (summary(); as s) {
-  <div class="stats" data-testid="pnl-summary">
-    <div class="stat">
-      <span class="stat-label">Total portfolio value</span>
-      <span class="stat-value">{{ money(s.totalValue, s.baseCurrency) }}</span>
-      <span class="stat-sub">Cash + market value</span>
+  <div class="stats-grid" data-testid="pnl-summary">
+    <!-- Total Portfolio Value -->
+    <div class="stat-card hero-stat">
+      <div class="stat-top">
+        <span class="stat-label">Total Portfolio Value</span>
+        <span class="stat-badge-currency">{{ s.baseCurrency }}</span>
+      </div>
+      <div class="stat-value">{{ money(s.totalValue, s.baseCurrency) }}</div>
+      <div class="stat-sub">Cash balance + active market value</div>
     </div>
-    <div class="stat">
-      <span class="stat-label">Cash</span>
-      <span class="stat-value">{{ money(s.cashBalance, s.baseCurrency) }}</span>
+
+    <!-- Cash Balance -->
+    <div class="stat-card">
+      <div class="stat-top">
+        <span class="stat-label">Available Cash</span>
+        <span class="stat-badge-neutral">Liquid</span>
+      </div>
+      <div class="stat-value">{{ money(s.cashBalance, s.baseCurrency) }}</div>
+      <div class="stat-sub">Settled funds available for trade</div>
     </div>
-    <div class="stat">
-      <span class="stat-label">Market value</span>
-      <span class="stat-value">{{ money(s.marketValue, s.baseCurrency) }}</span>
-      <span class="stat-sub">Cost basis {{ money(s.costBasis, s.baseCurrency) }}</span>
+
+    <!-- Market Value -->
+    <div class="stat-card">
+      <div class="stat-top">
+        <span class="stat-label">Holdings Market Value</span>
+        <span class="stat-badge-neutral">Equity</span>
+      </div>
+      <div class="stat-value">{{ money(s.marketValue, s.baseCurrency) }}</div>
+      <div class="stat-sub">Cost basis: {{ money(s.costBasis, s.baseCurrency) }}</div>
     </div>
-    <div class="stat" [class]="'stat tone-' + tone(s.unrealisedPnl)">
-      <span class="stat-label">Unrealised P&amp;L</span>
-      <span class="stat-value">{{ signedMoney(s.unrealisedPnl, s.baseCurrency) }}</span>
-      <span class="stat-sub">{{ pct(s.unrealisedPnlPercent) }} on cost</span>
+
+    <!-- Unrealised P&L -->
+    <div class="stat-card" [class]="'tone-card-' + tone(s.unrealisedPnl)">
+      <div class="stat-top">
+        <span class="stat-label">Unrealised P&amp;L</span>
+        <span class="trend-chip" [class]="'tone-' + tone(s.unrealisedPnl)">
+          {{ pct(s.unrealisedPnlPercent) }}
+        </span>
+      </div>
+      <div class="stat-value" [class]="'tone-' + tone(s.unrealisedPnl)">
+        {{ signedMoney(s.unrealisedPnl, s.baseCurrency) }}
+      </div>
+      <div class="stat-sub">Current open positions return</div>
     </div>
-    <div class="stat" [class]="'stat tone-' + tone(s.realisedPnl)">
-      <span class="stat-label">Realised P&amp;L (lifetime)</span>
-      <span class="stat-value">{{ signedMoney(s.realisedPnl, s.baseCurrency) }}</span>
-      <span class="stat-sub">Booked at sale, never repriced</span>
+
+    <!-- Realised P&L -->
+    <div class="stat-card" [class]="'tone-card-' + tone(s.realisedPnl)">
+      <div class="stat-top">
+        <span class="stat-label">Realised P&amp;L (Lifetime)</span>
+        <span class="stat-badge-neutral">Closed Trades</span>
+      </div>
+      <div class="stat-value" [class]="'tone-' + tone(s.realisedPnl)">
+        {{ signedMoney(s.realisedPnl, s.baseCurrency) }}
+      </div>
+      <div class="stat-sub">Booked at sale, permanent ledger</div>
     </div>
-    <div class="stat" [class]="'stat tone-' + tone(totalPnl())">
-      <span class="stat-label">Total P&amp;L</span>
-      <span class="stat-value">{{ signedMoney(totalPnl(), s.baseCurrency) }}</span>
-      <span class="stat-sub">Realised + unrealised</span>
+
+    <!-- Total Net P&L -->
+    <div class="stat-card net-pnl-card" [class]="'tone-card-' + tone(totalPnl())">
+      <div class="stat-top">
+        <span class="stat-label">Net Total P&amp;L</span>
+        <span class="stat-badge-highlight">Combined</span>
+      </div>
+      <div class="stat-value" [class]="'tone-' + tone(totalPnl())">
+        {{ signedMoney(totalPnl(), s.baseCurrency) }}
+      </div>
+      <div class="stat-sub">Realised + unrealised cumulative</div>
     </div>
   </div>
   }
 
-  <!-- Top gainers / losers -->
+  <!-- Top Gainers / Losers -->
   @if (movers(); as m) {
-  <div class="panel" data-testid="pnl-movers">
+  <div class="panel glass-panel" data-testid="pnl-movers">
     <div class="panel-head">
-      <h2>Top gainers &amp; losers</h2>
-      <div class="toggle" role="group" aria-label="Movers basis">
-        <button type="button" [class.active]="moversBasis() === 'total'" (click)="setBasis('total')">Since purchase</button>
+      <div class="panel-title-group">
+        <h2>Top Market Movers</h2>
+        <p class="panel-subtitle">Best and lowest performing positions in your portfolio.</p>
+      </div>
+      <div class="segmented-control" role="group" aria-label="Movers basis">
+        <button type="button" [class.active]="moversBasis() === 'total'" (click)="setBasis('total')">Since Purchase</button>
         <button type="button" [class.active]="moversBasis() === 'day'" (click)="setBasis('day')">Today</button>
       </div>
     </div>
-    <div class="movers">
-      <div>
-        <h3>Gainers</h3>
-        @for (g of m.gainers; track g.symbol) {
-        <div class="mover tone-gain">
-          <span class="sym">{{ g.symbol }}@if (g.stale) { <span class="badge">stale</span> }</span>
-          <span class="amt">{{ signedMoney(g.pnl, m.baseCurrency) }} <small>{{ pct(g.pnlPercent) }}</small></span>
+
+    <div class="movers-grid">
+      <div class="movers-column">
+        <div class="movers-col-head gain-head">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>
+          </svg>
+          <h3>Top Gainers</h3>
         </div>
-        } @empty { <p class="muted">No gainers.</p> }
+        <div class="movers-list">
+          @for (g of m.gainers; track g.symbol) {
+          <div class="mover-card tone-gain-card">
+            <div class="mover-sym-info">
+              <span class="sym">{{ g.symbol }}</span>
+              @if (g.stale) { <span class="badge badge-warn">stale</span> }
+            </div>
+            <div class="mover-amt-info">
+              <span class="amt">{{ signedMoney(g.pnl, m.baseCurrency) }}</span>
+              <span class="pct-pill tone-gain">{{ pct(g.pnlPercent) }}</span>
+            </div>
+          </div>
+          } @empty {
+            <div class="empty-mover">No gainers in portfolio</div>
+          }
+        </div>
       </div>
-      <div>
-        <h3>Losers</h3>
-        @for (l of m.losers; track l.symbol) {
-        <div class="mover tone-loss">
-          <span class="sym">{{ l.symbol }}@if (l.stale) { <span class="badge">stale</span> }</span>
-          <span class="amt">{{ signedMoney(l.pnl, m.baseCurrency) }} <small>{{ pct(l.pnlPercent) }}</small></span>
+
+      <div class="movers-column">
+        <div class="movers-col-head loss-head">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+            <polyline points="17 18 23 18 23 12"></polyline>
+          </svg>
+          <h3>Top Losers</h3>
         </div>
-        } @empty { <p class="muted">No losers.</p> }
+        <div class="movers-list">
+          @for (l of m.losers; track l.symbol) {
+          <div class="mover-card tone-loss-card">
+            <div class="mover-sym-info">
+              <span class="sym">{{ l.symbol }}</span>
+              @if (l.stale) { <span class="badge badge-warn">stale</span> }
+            </div>
+            <div class="mover-amt-info">
+              <span class="amt">{{ signedMoney(l.pnl, m.baseCurrency) }}</span>
+              <span class="pct-pill tone-loss">{{ pct(l.pnlPercent) }}</span>
+            </div>
+          </div>
+          } @empty {
+            <div class="empty-mover">No losers in portfolio</div>
+          }
+        </div>
       </div>
     </div>
-    <p class="muted note">Amounts in {{ m.baseCurrency }}. Unpriced holdings are not ranked.</p>
+    <p class="muted-note">Amounts in {{ m.baseCurrency }}. Unpriced holdings are omitted from ranking.</p>
   </div>
   }
 
-  <!-- Holdings -->
+  <!-- Current Holdings Table -->
   @if (positions().length > 0) {
-  <div class="panel" data-testid="pnl-holdings">
-    <h2>Holdings</h2>
-    <div class="table-wrap">
-      <table>
+  <div class="panel glass-panel" data-testid="pnl-holdings">
+    <div class="panel-head">
+      <div class="panel-title-group">
+        <h2>Portfolio Holdings</h2>
+        <p class="panel-subtitle">Individual instrument positions with latest quotes and unrealised return.</p>
+      </div>
+      <span class="count-badge">{{ positions().length }} Assets</span>
+    </div>
+
+    <div class="table-container">
+      <table class="modern-table">
         <thead>
           <tr>
-            <th>Symbol</th>
-            <th class="num">Qty</th>
-            <th class="num">Avg cost</th>
-            <th class="num">Last price</th>
-            <th class="num">Market value</th>
+            <th>Instrument</th>
+            <th class="num">Quantity</th>
+            <th class="num">Avg Cost</th>
+            <th class="num">Last Price</th>
+            <th class="num">Market Value</th>
             <th class="num">Unrealised P&amp;L</th>
-            <th class="num">%</th>
-            <th>Price</th>
+            <th class="num">Return %</th>
+            <th>Pricing Status</th>
           </tr>
         </thead>
         <tbody>
           @for (p of positions(); track p.symbol) {
           <tr [class.row-stale]="p.stale">
-            <td class="sym">{{ p.symbol }}</td>
-            <td class="num">{{ p.quantity }}</td>
-            <td class="num">{{ money(p.averageCost, p.currency) }}</td>
-            <td class="num">{{ money(p.lastPrice, p.currency) }}</td>
-            <td class="num">{{ money(p.marketValue, p.currency) }}</td>
-            <td class="num" [class]="'num tone-' + tone(p.unrealisedPnl)">{{ signedMoney(p.unrealisedPnl, p.currency) }}</td>
-            <td class="num" [class]="'num tone-' + tone(p.unrealisedPnlPercent)">{{ pct(p.unrealisedPnlPercent) }}</td>
+            <td class="sym-cell">
+              <div class="sym-chip">{{ p.symbol }}</div>
+            </td>
+            <td class="num font-mono">{{ p.quantity }}</td>
+            <td class="num font-mono">{{ money(p.averageCost, p.currency) }}</td>
+            <td class="num font-mono">{{ money(p.lastPrice, p.currency) }}</td>
+            <td class="num font-mono font-bold">{{ money(p.marketValue, p.currency) }}</td>
+            <td class="num font-mono" [class]="'tone-' + tone(p.unrealisedPnl)">
+              {{ signedMoney(p.unrealisedPnl, p.currency) }}
+            </td>
+            <td class="num font-mono" [class]="'tone-' + tone(p.unrealisedPnlPercent)">
+              <span class="table-pct-pill" [class]="'tone-' + tone(p.unrealisedPnlPercent)">
+                {{ pct(p.unrealisedPnlPercent) }}
+              </span>
+            </td>
             <td>
-              @if (p.lastPrice == null) { <span class="badge badge-warn">No price</span> }
-              @else if (p.stale) { <span class="badge badge-warn">Stale · {{ ago(p.priceAsOf) }}</span> }
-              @else { <span class="badge badge-ok">Live · {{ ago(p.priceAsOf) }}</span> }
+              @if (p.lastPrice == null) {
+                <span class="badge badge-error">No price</span>
+              } @else if (p.stale) {
+                <span class="badge badge-warn">Stale · {{ ago(p.priceAsOf) }}</span>
+              } @else {
+                <span class="badge badge-ok">Live · {{ ago(p.priceAsOf) }}</span>
+              }
             </td>
           </tr>
           }
         </tbody>
       </table>
     </div>
-    <p class="muted note">Each holding is shown in its own currency; the cards above are in {{ baseCurrency() }}.</p>
+    <p class="muted-note">Each holding is priced in its traded currency. Aggregated cards above are translated to {{ baseCurrency() }}.</p>
   </div>
   }
 
-  <!-- P&L by symbol -->
+  <!-- P&L by Instrument with Date Range Filter -->
   @if (pnl(); as p) {
-  <div class="panel" data-testid="pnl-by-symbol">
-    <div class="panel-head">
-      <h2>Profit &amp; loss by instrument</h2>
-      <div class="range">
-        <label>Realised from <input type="date" [value]="fromDate()" (change)="onFromChange($event)" /></label>
-        <label>to <input type="date" [value]="toDate()" (change)="onToChange($event)" /></label>
-        @if (fromDate() || toDate()) { <button type="button" class="btn-link" (click)="clearRange()">Clear</button> }
+  <div class="panel glass-panel" data-testid="pnl-by-symbol">
+    <div class="panel-head filter-head">
+      <div class="panel-title-group">
+        <h2>Profit &amp; Loss by Instrument</h2>
+        <p class="panel-subtitle">Realised versus unrealised breakdown per ticker across specified trading dates.</p>
+      </div>
+      <div class="range-controls">
+        <div class="date-input-group">
+          <label>From</label>
+          <input type="date" class="date-input" [value]="fromDate()" (change)="onFromChange($event)" />
+        </div>
+        <div class="date-input-group">
+          <label>To</label>
+          <input type="date" class="date-input" [value]="toDate()" (change)="onToChange($event)" />
+        </div>
+        @if (fromDate() || toDate()) {
+          <button type="button" class="btn-clear-range" (click)="clearRange()">Clear Filter</button>
+        }
       </div>
     </div>
-    @if (rangeError(); as err) { <p class="field-error" role="alert">{{ err }}</p> }
-    <p class="muted note">The date range applies to realised P&amp;L only. Unrealised is always as at now.</p>
+    @if (rangeError(); as err) {
+      <div class="range-error-banner" role="alert">{{ err }}</div>
+    }
 
-    <div class="table-wrap">
-      <table>
+    <div class="table-container">
+      <table class="modern-table">
         <thead>
           <tr>
             <th>Instrument</th>
-            <th class="num">Realised</th>
-            <th class="num">Unrealised</th>
-            <th class="num">Total</th>
+            <th class="num">Realised P&amp;L</th>
+            <th class="num">Unrealised P&amp;L</th>
+            <th class="num">Total P&amp;L</th>
           </tr>
         </thead>
         <tbody>
           @for (row of p.bySymbol ?? []; track row.symbol) {
           <tr>
-            <td class="sym">{{ row.symbol }}</td>
-            <td class="num" [class]="'num tone-' + tone(row.realisedPnl)">{{ signedMoney(row.realisedPnl, p.baseCurrency) }}</td>
-            <td class="num" [class]="'num tone-' + tone(row.unrealisedPnl)">{{ signedMoney(row.unrealisedPnl, p.baseCurrency) }}</td>
-            <td class="num" [class]="'num tone-' + tone(row.totalPnl)">{{ signedMoney(row.totalPnl, p.baseCurrency) }}</td>
+            <td class="sym-cell">
+              <div class="sym-chip">{{ row.symbol }}</div>
+            </td>
+            <td class="num font-mono" [class]="'tone-' + tone(row.realisedPnl)">
+              {{ signedMoney(row.realisedPnl, p.baseCurrency) }}
+            </td>
+            <td class="num font-mono" [class]="'tone-' + tone(row.unrealisedPnl)">
+              {{ signedMoney(row.unrealisedPnl, p.baseCurrency) }}
+            </td>
+            <td class="num font-mono font-bold" [class]="'tone-' + tone(row.totalPnl)">
+              {{ signedMoney(row.totalPnl, p.baseCurrency) }}
+            </td>
           </tr>
           } @empty {
-          <tr><td colspan="4" class="muted">No profit or loss to show yet.</td></tr>
+          <tr><td colspan="4" class="empty-table-cell">No profit or loss recorded for this period yet.</td></tr>
           }
         </tbody>
         <tfoot>
-          <tr>
-            <td>Total</td>
-            <td class="num" [class]="'num tone-' + tone(p.realisedPnl)">{{ signedMoney(p.realisedPnl, p.baseCurrency) }}</td>
-            <td class="num" [class]="'num tone-' + tone(p.unrealisedPnl)">{{ signedMoney(p.unrealisedPnl, p.baseCurrency) }}</td>
-            <td class="num" [class]="'num tone-' + tone(p.totalPnl)">{{ signedMoney(p.totalPnl, p.baseCurrency) }}</td>
+          <tr class="tfoot-row">
+            <td>Portfolio Total</td>
+            <td class="num font-mono font-bold" [class]="'tone-' + tone(p.realisedPnl)">
+              {{ signedMoney(p.realisedPnl, p.baseCurrency) }}
+            </td>
+            <td class="num font-mono font-bold" [class]="'tone-' + tone(p.unrealisedPnl)">
+              {{ signedMoney(p.unrealisedPnl, p.baseCurrency) }}
+            </td>
+            <td class="num font-mono font-bold" [class]="'tone-' + tone(p.totalPnl)">
+              {{ signedMoney(p.totalPnl, p.baseCurrency) }}
+            </td>
           </tr>
         </tfoot>
       </table>
     </div>
+    <p class="muted-note">The date range applies to realised P&amp;L only. Unrealised is calculated against current live market quotes.</p>
   </div>
   }
 
+  <!-- Empty state -->
   @if (!isLoading() && !loadError() && !pricingDown() && summary() && positions().length === 0) {
-  <div class="panel empty" data-testid="pnl-empty">
+  <div class="panel empty-panel" data-testid="pnl-empty">
+    <div class="empty-icon-wrap">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+      </svg>
+    </div>
+    <h3>No Trading Positions Yet</h3>
     <p>You don't hold any positions yet. Realised P&amp;L and holdings will appear after your first trades.</p>
   </div>
   }

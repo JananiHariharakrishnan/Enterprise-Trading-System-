@@ -21,6 +21,9 @@ public class JwtTokenVerifier {
     private static final Pattern ALG_FIELD = Pattern.compile("\"alg\"\\s*:\\s*\"([^\"]*)\"");
     private static final Pattern ISS_FIELD = Pattern.compile("\"iss\"\\s*:\\s*\"([^\"]*)\"");
 
+    private static final Pattern ROLES_FIELD = Pattern.compile("\"roles\"\\s*:\\s*\\[([^\\]]*)\\]");
+    private static final Pattern SUB_FIELD = Pattern.compile("\"sub\"\\s*:\\s*\"([^\"]*)\"");
+
     private final byte[] secret;
     private final String issuer;
 
@@ -32,7 +35,7 @@ public class JwtTokenVerifier {
         this.issuer = issuer;
     }
 
-    public Long verifyAndGetAccountId(String token) {
+    public JwtClaims verifyToken(String token) {
         if (token == null || token.isBlank()) {
             return null;
         }
@@ -98,7 +101,35 @@ public class JwtTokenVerifier {
             return null;
         }
 
-        return accountId;
+        java.util.List<String> roles = extractRoles(payload);
+        String subject = extractString(payload, SUB_FIELD);
+
+        return new JwtClaims(accountId, roles, subject);
+    }
+
+    public Long verifyAndGetAccountId(String token) {
+        JwtClaims claims = verifyToken(token);
+        return claims != null ? claims.accountId() : null;
+    }
+
+    private java.util.List<String> extractRoles(String json) {
+        java.util.List<String> roles = new java.util.ArrayList<>();
+        Matcher matcher = ROLES_FIELD.matcher(json);
+        if (matcher.find()) {
+            String content = matcher.group(1);
+            if (content != null && !content.isBlank()) {
+                for (String part : content.split(",")) {
+                    String role = part.replace("\"", "").trim();
+                    if (!role.isEmpty()) {
+                        roles.add(role);
+                    }
+                }
+            }
+        }
+        if (roles.isEmpty()) {
+            roles.add("CUSTOMER");
+        }
+        return roles;
     }
 
     private String sign(String value) {

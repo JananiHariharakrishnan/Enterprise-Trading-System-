@@ -16,6 +16,7 @@ class AuthSessionServiceStub {
   sessionRemainingSeconds = signal(900);
   sessionExpiresIn = signal('15:00');
   isSessionExpiringSoon = signal(false);
+  isAdmin = signal(false);
   logout = vi.fn().mockResolvedValue(undefined);
 }
 
