@@ -1,6 +1,8 @@
 package com.tradingsystem.service;
 
+import com.tradingsystem.mapper.CustomerPreferencesDataMapper;
 import com.tradingsystem.messaging.TradeEventPayload;
+import com.tradingsystem.model.CustomerPreferences;
 import com.tradingsystem.model.User;
 import com.tradingsystem.service.Impl.NotificationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +18,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -317,5 +320,103 @@ class NotificationServiceImplTest {
         SimpleMailMessage sent = captor.getValue();
         assertTrue(sent.getSubject().contains("N/A"));
         assertTrue(sent.getText().contains("N/A"));
+    }
+
+    @Test
+    void sendOrderFilledNotification_skippedWhenPreferencesDisabled() {
+        CustomerPreferencesDataMapper mockMapper = mock(CustomerPreferencesDataMapper.class);
+        notificationService.setCustomerPreferencesDataMapper(mockMapper);
+
+        CustomerPreferences prefs = new CustomerPreferences();
+        prefs.setNotificationsTradeFills(List.of("NO NOTIFICATION"));
+        when(mockMapper.findByAccountId(1L)).thenReturn(prefs);
+
+        User user = new User();
+        user.setAccountId(1L);
+        user.setEmail("alice@example.com");
+        TradeEventPayload payload = new TradeEventPayload();
+        payload.setAccountId(1L);
+
+        notificationService.sendOrderFilledNotification(user, payload);
+
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void sendOrderFilledNotification_sentWhenPreferencesEnabled() {
+        CustomerPreferencesDataMapper mockMapper = mock(CustomerPreferencesDataMapper.class);
+        notificationService.setCustomerPreferencesDataMapper(mockMapper);
+
+        CustomerPreferences prefs = new CustomerPreferences();
+        prefs.setNotificationsTradeFills(List.of("IN_APP", "EMAIL"));
+        when(mockMapper.findByAccountId(1L)).thenReturn(prefs);
+
+        User user = new User();
+        user.setAccountId(1L);
+        user.setEmail("alice@example.com");
+        user.setFirstName("Alice");
+        TradeEventPayload payload = new TradeEventPayload();
+        payload.setAccountId(1L);
+        payload.setOrderId("ord-1");
+        payload.setSymbol("AAPL");
+        payload.setSide("BUY");
+        payload.setQuantity(new BigDecimal("10"));
+        payload.setPrice(new BigDecimal("150.00"));
+        payload.setExecutedPrice(new BigDecimal("149.50"));
+
+        notificationService.sendOrderFilledNotification(user, payload);
+
+        verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void sendPriceAlertTriggeredNotification_skippedWhenPreferencesDisabled() {
+        CustomerPreferencesDataMapper mockMapper = mock(CustomerPreferencesDataMapper.class);
+        notificationService.setCustomerPreferencesDataMapper(mockMapper);
+
+        CustomerPreferences prefs = new CustomerPreferences();
+        prefs.setNotificationsPriceAlerts(List.of("NO NOTIFICATION"));
+        when(mockMapper.findByAccountId(1001L)).thenReturn(prefs);
+
+        User user = new User();
+        user.setAccountId(1001L);
+        user.setEmail("alice@example.com");
+
+        notificationService.sendPriceAlertTriggeredNotification(
+                user,
+                "AAPL",
+                "ABOVE",
+                new BigDecimal("330.00"),
+                new BigDecimal("335.00"),
+                OffsetDateTime.now()
+        );
+
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void sendPriceAlertTriggeredNotification_sentWhenPreferencesEnabled() {
+        CustomerPreferencesDataMapper mockMapper = mock(CustomerPreferencesDataMapper.class);
+        notificationService.setCustomerPreferencesDataMapper(mockMapper);
+
+        CustomerPreferences prefs = new CustomerPreferences();
+        prefs.setNotificationsPriceAlerts(List.of("IN_APP", "EMAIL"));
+        when(mockMapper.findByAccountId(1001L)).thenReturn(prefs);
+
+        User user = new User();
+        user.setAccountId(1001L);
+        user.setEmail("alice@example.com");
+        user.setFirstName("Alice");
+
+        notificationService.sendPriceAlertTriggeredNotification(
+                user,
+                "AAPL",
+                "ABOVE",
+                new BigDecimal("330.00"),
+                new BigDecimal("335.00"),
+                OffsetDateTime.now()
+        );
+
+        verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
     }
 }

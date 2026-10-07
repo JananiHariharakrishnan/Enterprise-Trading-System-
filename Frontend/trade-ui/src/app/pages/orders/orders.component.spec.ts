@@ -128,7 +128,8 @@ describe('OrdersComponent', () => {
       side: 'BUY',
       quantity: 10,
       price: null,
-      orderType: 'MARKET'
+      orderType: 'MARKET',
+      confirmOrder: true
     });
 
     await component.submit();
@@ -157,7 +158,8 @@ describe('OrdersComponent', () => {
       side: 'BUY',
       quantity: 10,
       price: null,
-      orderType: 'MARKET'
+      orderType: 'MARKET',
+      confirmOrder: true
     });
 
     await component.submit();
@@ -179,14 +181,15 @@ describe('OrdersComponent', () => {
     expect(submitButton.textContent).toContain('Select an instrument');
   });
 
-  it('renders active submit button text when form is valid', () => {
+  it('renders active submit button text when form is valid and confirmed', () => {
     const instrument = { symbol: 'AAPL', name: 'Apple Inc', assetClass: 'equity', currency: 'USD' };
     component.onInstrumentSelected(instrument);
     component.form.patchValue({
       side: 'BUY',
       quantity: 2,
       price: 100.5,
-      orderType: 'LIMIT'
+      orderType: 'LIMIT',
+      confirmOrder: true
     });
 
     fixture.detectChanges();
@@ -195,6 +198,70 @@ describe('OrdersComponent', () => {
       '[data-testid="place-order-button"]'
     ) as HTMLButtonElement;
 
+    expect(component.form.valid).toBe(true);
+    expect(submitButton.disabled).toBe(false);
+    expect(submitButton.textContent).toContain('Buy 2 AAPL');
+  });
+
+  it('requires confirmation checkbox when skipOrderConfirmation is false', () => {
+    const instrument = { symbol: 'AAPL', name: 'Apple Inc', assetClass: 'equity', currency: 'USD' };
+    component.onInstrumentSelected(instrument);
+    component.form.patchValue({
+      side: 'BUY',
+      quantity: 2,
+      price: 100.5,
+      orderType: 'LIMIT',
+      confirmOrder: false
+    });
+
+    fixture.detectChanges();
+
+    const submitButton = fixture.nativeElement.querySelector(
+      '[data-testid="place-order-button"]'
+    ) as HTMLButtonElement;
+    const confirmSection = fixture.nativeElement.querySelector(
+      '[data-testid="order-confirm-section"]'
+    ) as HTMLElement;
+
+    expect(confirmSection).toBeTruthy();
+    expect(component.form.valid).toBe(false);
+    expect(submitButton.disabled).toBe(true);
+    expect(submitButton.textContent).toContain('Please confirm order');
+
+    // Now check the confirmation checkbox
+    component.form.patchValue({ confirmOrder: true });
+    fixture.detectChanges();
+
+    expect(component.form.valid).toBe(true);
+    expect(submitButton.disabled).toBe(false);
+    expect(submitButton.textContent).toContain('Buy 2 AAPL');
+  });
+
+  it('bypasses confirmation checkbox requirement when skipOrderConfirmation is true', () => {
+    component.skipOrderConfirmation.set(true);
+    component.updateConfirmationValidation();
+
+    const instrument = { symbol: 'AAPL', name: 'Apple Inc', assetClass: 'equity', currency: 'USD' };
+    component.onInstrumentSelected(instrument);
+    component.form.patchValue({
+      side: 'BUY',
+      quantity: 2,
+      price: 100.5,
+      orderType: 'LIMIT',
+      confirmOrder: false
+    });
+
+    fixture.detectChanges();
+
+    const submitButton = fixture.nativeElement.querySelector(
+      '[data-testid="place-order-button"]'
+    ) as HTMLButtonElement;
+    const confirmSection = fixture.nativeElement.querySelector(
+      '[data-testid="order-confirm-section"]'
+    );
+
+    // Section should be hidden and submit enabled without confirmation
+    expect(confirmSection).toBeNull();
     expect(component.form.valid).toBe(true);
     expect(submitButton.disabled).toBe(false);
     expect(submitButton.textContent).toContain('Buy 2 AAPL');
@@ -209,7 +276,8 @@ describe('OrdersComponent', () => {
       side: 'BUY',
       quantity: 2,
       price: null,
-      orderType: 'MARKET'
+      orderType: 'MARKET',
+      confirmOrder: true
     });
     fixture.detectChanges();
 
@@ -232,7 +300,8 @@ describe('OrdersComponent', () => {
       side: 'BUY',
       quantity: 2,
       price: null,
-      orderType: 'MARKET'
+      orderType: 'MARKET',
+      confirmOrder: true
     });
     fixture.detectChanges();
 

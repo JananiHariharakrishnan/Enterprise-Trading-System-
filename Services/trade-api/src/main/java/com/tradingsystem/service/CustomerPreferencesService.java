@@ -43,7 +43,7 @@ public class CustomerPreferencesService {
     public List<String> resolveChannels(Long accountId, String eventType) {
         CustomerPreferences prefs = mapper.findByAccountId(accountId);
         if (prefs == null) {
-            return List.of("IN_APP");
+            return List.of("IN_APP", "EMAIL");
         }
         return "PRICE_ALERTS".equals(eventType) ? prefs.getNotificationsPriceAlerts() : prefs.getNotificationsTradeFills();
     }

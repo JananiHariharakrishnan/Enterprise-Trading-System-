@@ -371,7 +371,7 @@ components:
 
     NotificationChannel:
       type: string
-      enum: [PUSH, IN_APP, EMAIL, SMS]
+      enum: [NO_NOTIFICATION, IN_APP, EMAIL]
 
     Theme:
       type: string

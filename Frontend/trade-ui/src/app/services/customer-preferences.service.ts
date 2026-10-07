@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { TokenStorageService } from './token-storage.service';
 
-export type NotificationChannel = 'PUSH' | 'IN_APP' | 'EMAIL' | 'SMS';
+export type NotificationChannel = 'NO NOTIFICATION' | 'IN_APP' | 'EMAIL';
 export type ThemeChoice = 'LIGHT' | 'DARK' | 'SYSTEM';
 export type BaseCurrency = 'USD' | 'INR';
 export type OrderType = 'MARKET' | 'LIMIT' | 'STOP';
@@ -46,8 +46,8 @@ export class CustomerPreferencesService {
         defaultTradeQuantity: 1,
       },
       notifications: {
-        tradeFills: ['IN_APP'],
-        priceAlerts: ['IN_APP'],
+        tradeFills: ['IN_APP', 'EMAIL'],
+        priceAlerts: ['IN_APP', 'EMAIL'],
       },
       display: {
         theme: 'SYSTEM',
@@ -101,8 +101,9 @@ export class CustomerPreferencesService {
     try {
       const payloadRaw = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
       const payload = JSON.parse(payloadRaw) as { accountId?: unknown };
-      if (typeof payload.accountId === 'number' && Number.isFinite(payload.accountId)) {
-        return payload.accountId;
+      const parsed = Number(payload.accountId);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
       }
     } catch {
       // Fallback to provided value when token payload is not parseable.

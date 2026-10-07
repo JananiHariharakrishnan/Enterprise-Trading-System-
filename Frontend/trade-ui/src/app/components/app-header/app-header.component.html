@@ -97,16 +97,7 @@
     </div>
   </header>
 
-  <div class="market-strip">
-    <div class="snapshot"><span class="live-dot"></span><div><b>MARKET SNAPSHOT</b><small>{{ marketFeedLabel() }}</small></div></div>
-    <div *ngFor="let item of marketItems()">
-      <small>{{ item.label }}</small>
-      <strong>{{ item.value | number:'1.2-2' }}</strong>
-      <em [class.up]="item.changePct >= 0" [class.down]="item.changePct < 0">
-        {{ item.changePct >= 0 ? '↗' : '↘' }} {{ item.changePct >= 0 ? '+' : '' }}{{ item.changePct | number:'1.2-2' }}%
-      </em>
-    </div>
-  </div>
+  <!-- Market strip removed -->
 
   <div class="asset-search-modal" *ngIf="isAssetSearchOpen()" (click)="closeAssetSearch()">
     <div class="asset-search-panel" (click)="$event.stopPropagation()">
