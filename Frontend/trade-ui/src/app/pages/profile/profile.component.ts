@@ -37,7 +37,11 @@ export class ProfileComponent implements OnInit {
   readonly isLoadingPreferences = signal(false);
 
   readonly orderTypes: OrderType[] = ['MARKET', 'LIMIT', 'STOP'];
-  readonly notificationChannels: NotificationChannel[] = ['PUSH', 'IN_APP', 'EMAIL', 'SMS'];
+  readonly notificationChannels: NotificationChannel[] = [
+    'NO NOTIFICATION',
+    'IN_APP',
+    'EMAIL'
+  ];
   readonly themeChoices: ThemeChoice[] = ['LIGHT', 'DARK', 'SYSTEM'];
   readonly baseCurrencies: BaseCurrency[] = ['USD', 'INR'];
 
@@ -225,7 +229,11 @@ export class ProfileComponent implements OnInit {
   }
 
   private normalizeChannels(value: unknown): NotificationChannel[] {
-    const allowed = new Set<NotificationChannel>(['PUSH', 'IN_APP', 'EMAIL', 'SMS']);
+    const allowed = new Set<NotificationChannel>([
+      'NO NOTIFICATION',
+      'IN_APP',
+      'EMAIL'
+    ]);
     const source = Array.isArray(value)
       ? value
       : typeof value === 'string'

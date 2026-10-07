@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { TokenStorageService } from './token-storage.service';
 
-export type NotificationChannel = 'PUSH' | 'IN_APP' | 'EMAIL' | 'SMS';
+export type NotificationChannel = 'NO NOTIFICATION' | 'IN_APP' | 'EMAIL';
 export type ThemeChoice = 'LIGHT' | 'DARK' | 'SYSTEM';
 export type BaseCurrency = 'USD' | 'INR';
 export type OrderType = 'MARKET' | 'LIMIT' | 'STOP';
