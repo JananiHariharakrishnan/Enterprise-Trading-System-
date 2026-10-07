@@ -3,15 +3,21 @@ package com.tradingsystem.service.impl;
 import com.tradingsystem.dto.response.LatestMarketPrice;
 import com.tradingsystem.messaging.QuotePayload;
 import com.tradingsystem.service.Impl.MarketDataServiceImpl;
+import com.tradingsystem.service.PriceAlertEvaluationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 /**
  * Unit tests for MarketDataServiceImpl.
@@ -27,16 +33,19 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Cache retrieval
  * - Concurrent access
  * - Cache integrity
- * - Cache clearing
+ * - Alert evaluation integration
  */
 @ExtendWith(MockitoExtension.class)
 class MarketDataServiceImplTest {
+
+    @Mock
+    private PriceAlertEvaluationService priceAlertEvaluationService;
 
     private MarketDataServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new MarketDataServiceImpl();
+        service = new MarketDataServiceImpl(priceAlertEvaluationService);
     }
 
     // ============================================================
@@ -1006,6 +1015,251 @@ class MarketDataServiceImplTest {
 
         assertTrue(
                 service.getAllCachedPrices().isEmpty()
+        );
+    }
+
+    // ============================================================
+    // Price Alert Evaluation Integration Tests
+    // ============================================================
+
+    @Test
+    void processQuote_firstQuoteForSymbol_doesNotEvaluateAlerts() {
+        // First quote has no previous price, so alerts can't be evaluated
+        QuotePayload quote = new QuotePayload(
+                "AAPL",
+                new BigDecimal("325.00"),
+                "USD",
+                null,
+                null,
+                null,
+                "open",
+                false,
+                "2026-09-28T09:14:58Z"
+        );
+
+        service.processQuote(
+                "event-1",
+                "QUOTE",
+                quote
+        );
+
+        // Alert evaluation service should NOT be called (no previous price)
+        verify(priceAlertEvaluationService, never())
+                .evaluateAlertsForSymbol(any(), any(), any());
+    }
+
+    @Test
+    void processQuote_secondQuoteForSymbol_evaluatesAlerts() {
+        // First quote
+        QuotePayload quote1 = new QuotePayload(
+                "AAPL",
+                new BigDecimal("325.00"),
+                "USD",
+                null,
+                null,
+                null,
+                "open",
+                false,
+                "2026-09-28T09:14:58Z"
+        );
+
+        service.processQuote(
+                "event-1",
+                "QUOTE",
+                quote1
+        );
+
+        // Second quote - now alerts should be evaluated
+        QuotePayload quote2 = new QuotePayload(
+                "AAPL",
+                new BigDecimal("330.00"),
+                "USD",
+                null,
+                null,
+                null,
+                "open",
+                false,
+                "2026-09-28T09:15:00Z"
+        );
+
+        service.processQuote(
+                "event-2",
+                "QUOTE",
+                quote2
+        );
+
+        // Verify alert evaluation was called with correct previous and current prices
+        verify(priceAlertEvaluationService).evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("325.00"),
+                new BigDecimal("330.00")
+        );
+    }
+
+    @Test
+    void processQuote_multiplePriceUpdates_tracksPreviousPriceCorrectly() {
+        // Process three quotes: 320 -> 330 -> 335
+        QuotePayload quote1 = new QuotePayload(
+                "AAPL",
+                new BigDecimal("320.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:14:00Z"
+        );
+
+        QuotePayload quote2 = new QuotePayload(
+                "AAPL",
+                new BigDecimal("330.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:15:00Z"
+        );
+
+        QuotePayload quote3 = new QuotePayload(
+                "AAPL",
+                new BigDecimal("335.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:16:00Z"
+        );
+
+        service.processQuote("event-1", "QUOTE", quote1);
+        service.processQuote("event-2", "QUOTE", quote2);
+        service.processQuote("event-3", "QUOTE", quote3);
+
+        // First evaluation: 320 -> 330
+        verify(priceAlertEvaluationService).evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("320.00"),
+                new BigDecimal("330.00")
+        );
+
+        // Second evaluation: 330 -> 335
+        verify(priceAlertEvaluationService).evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("330.00"),
+                new BigDecimal("335.00")
+        );
+    }
+
+    @Test
+    void processQuote_multipleSymbols_evaluatesEachIndependently() {
+        // AAPL: 325 -> 330
+        QuotePayload aaplQuote1 = new QuotePayload(
+                "AAPL",
+                new BigDecimal("325.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:14:00Z"
+        );
+
+        QuotePayload aaplQuote2 = new QuotePayload(
+                "AAPL",
+                new BigDecimal("330.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:15:00Z"
+        );
+
+        // MSFT: 380 -> 385
+        QuotePayload msftQuote1 = new QuotePayload(
+                "MSFT",
+                new BigDecimal("380.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:14:00Z"
+        );
+
+        QuotePayload msftQuote2 = new QuotePayload(
+                "MSFT",
+                new BigDecimal("385.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:15:00Z"
+        );
+
+        service.processQuote("event-1", "QUOTE", aaplQuote1);
+        service.processQuote("event-2", "QUOTE", msftQuote1);
+        service.processQuote("event-3", "QUOTE", aaplQuote2);
+        service.processQuote("event-4", "QUOTE", msftQuote2);
+
+        // Verify AAPL evaluation
+        verify(priceAlertEvaluationService).evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("325.00"),
+                new BigDecimal("330.00")
+        );
+
+        // Verify MSFT evaluation
+        verify(priceAlertEvaluationService).evaluateAlertsForSymbol(
+                "MSFT",
+                new BigDecimal("380.00"),
+                new BigDecimal("385.00")
+        );
+    }
+
+    @Test
+    void processQuote_duplicateEvent_doesNotCallEvaluationService() {
+        // First quote
+        QuotePayload quote = new QuotePayload(
+                "AAPL",
+                new BigDecimal("325.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:14:00Z"
+        );
+
+        service.processQuote("event-1", "QUOTE", quote);
+
+        // Retry with same event ID (duplicate)
+        QuotePayload duplicateQuote = new QuotePayload(
+                "AAPL",
+                new BigDecimal("330.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:15:00Z"
+        );
+
+        service.processQuote("event-1", "QUOTE", duplicateQuote);
+
+        // Evaluation should only happen once (for the second quote in the sequence)
+        // First call is with null previous price (skipped)
+        // Duplicate is ignored, so no additional evaluation
+        verify(priceAlertEvaluationService, never())
+                .evaluateAlertsForSymbol("AAPL", new BigDecimal("330.00"), any());
+    }
+
+    @Test
+    void processQuote_priceChangeAcrossMultipleQuotes_correctlyTracksForEvaluation() {
+        // Simulate: AAPL 328 -> 329 -> 331 (ABOVE 330 should trigger at 329->331)
+        QuotePayload q1 = new QuotePayload(
+                "AAPL",
+                new BigDecimal("328.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:14:00Z"
+        );
+
+        QuotePayload q2 = new QuotePayload(
+                "AAPL",
+                new BigDecimal("329.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:15:00Z"
+        );
+
+        QuotePayload q3 = new QuotePayload(
+                "AAPL",
+                new BigDecimal("331.00"),
+                "USD",
+                null, null, null, "open", false, "2026-09-28T09:16:00Z"
+        );
+
+        service.processQuote("event-1", "QUOTE", q1);
+        service.processQuote("event-2", "QUOTE", q2);
+        service.processQuote("event-3", "QUOTE", q3);
+
+        // First evaluation: 328 -> 329 (does not trigger ABOVE 330)
+        verify(priceAlertEvaluationService).evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("328.00"),
+                new BigDecimal("329.00")
+        );
+
+        // Second evaluation: 329 -> 331 (should trigger ABOVE 330)
+        verify(priceAlertEvaluationService).evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329.00"),
+                new BigDecimal("331.00")
         );
     }
 }

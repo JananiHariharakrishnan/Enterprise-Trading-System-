@@ -3,10 +3,12 @@ package com.tradingsystem.service.Impl;
 import com.tradingsystem.dto.response.LatestMarketPrice;
 import com.tradingsystem.messaging.QuotePayload;
 import com.tradingsystem.service.MarketDataService;
+import com.tradingsystem.service.PriceAlertEvaluationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * The cache contains only the latest quote for each symbol.
  * Historical market-data is not stored here.
+ * 
+ * Delegates price alert evaluation to PriceAlertEvaluationService
+ * for triggering alerts based on price crossings.
  */
 @Service
 public class MarketDataServiceImpl implements MarketDataService {
@@ -34,6 +39,13 @@ public class MarketDataServiceImpl implements MarketDataService {
             new ConcurrentHashMap<>();
 
     /**
+     * Previous price for each symbol.
+     * Used to detect price crossings for alert evaluation.
+     */
+    private final ConcurrentHashMap<String, BigDecimal> priceHistory =
+            new ConcurrentHashMap<>();
+
+    /**
      * Processed event IDs used for idempotency.
      *
      * Kafka provides at-least-once delivery, so the same event can
@@ -41,6 +53,14 @@ public class MarketDataServiceImpl implements MarketDataService {
      */
     private final ConcurrentHashMap<String, String> processedEvents =
             new ConcurrentHashMap<>();
+
+    private final PriceAlertEvaluationService priceAlertEvaluationService;
+
+    public MarketDataServiceImpl(
+            PriceAlertEvaluationService priceAlertEvaluationService
+    ) {
+        this.priceAlertEvaluationService = priceAlertEvaluationService;
+    }
 
     @Override
     public void processQuote(
@@ -117,11 +137,36 @@ public class MarketDataServiceImpl implements MarketDataService {
                 quote.getQuoteAsOf()
         );
 
+        // Get previous price for this symbol (if any)
+        BigDecimal previousPrice = priceHistory.get(quote.getSymbol());
+
         // Replace the previous quote for this symbol
         priceCache.put(
                 quote.getSymbol(),
                 latestPrice
         );
+
+        // Evaluate ACTIVE price alerts for this symbol
+        // Only evaluate if we have a previous price (can't detect crossing on first quote)
+        if (previousPrice != null) {
+            try {
+                priceAlertEvaluationService.evaluateAlertsForSymbol(
+                        quote.getSymbol(),
+                        previousPrice,
+                        quote.getPrice()
+                );
+            } catch (Exception e) {
+                logger.error(
+                        "Error evaluating alerts for symbol {}",
+                        quote.getSymbol(),
+                        e
+                );
+                // Don't fail the quote processing if alert evaluation fails
+            }
+        }
+
+        // Update price history for next quote
+        priceHistory.put(quote.getSymbol(), quote.getPrice());
 
         logger.info(
                 "Updated price cache for {}: {} {} ({})",
@@ -156,6 +201,7 @@ public class MarketDataServiceImpl implements MarketDataService {
      */
     public void clearCache() {
         priceCache.clear();
+        priceHistory.clear();
         processedEvents.clear();
     }
 
