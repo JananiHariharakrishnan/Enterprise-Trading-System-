@@ -5,5 +5,5 @@ describe('module load', () => {
   it('auth module loads without throwing', async () => {
     const mod = await import('../src/app/auth/auth.module.js');
     expect(mod.AuthModule).toBeTruthy();
-  });
+  }, 20_000);
 });

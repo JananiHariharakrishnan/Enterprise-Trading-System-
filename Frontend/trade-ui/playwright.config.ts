@@ -25,7 +25,7 @@ export default defineConfig({
     {
       command: 'npm run start:dev',
       url: 'http://127.0.0.1:3000/docs',
-      cwd: '../services/auth-service',
+      cwd: '../../Services/auth-service',
       reuseExistingServer: true,
       timeout: 120_000
     }

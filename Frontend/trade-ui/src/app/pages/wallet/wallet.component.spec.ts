@@ -56,6 +56,7 @@ describe('WalletComponent', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('loads wallet details on initialization', () => {
@@ -72,8 +73,15 @@ describe('WalletComponent', () => {
   it('opens password confirmation modal when amount is valid', () => {
     component.depositAmount = 1000;
     component.openConfirmation();
+    component.successMessage.set('Funds added');
+    component.errorMessage.set('Try again');
+    component.modalErrorMessage.set('Invalid password');
+    component.isSubmitting.set(true);
+    fixture.detectChanges();
     expect(component.isPasswordModalOpen()).toBe(true);
     expect(component.confirmPassword).toBe('');
+    expect(fixture.nativeElement.querySelector('[data-testid="wallet-success"]')).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('Processing');
   });
 
   it('shows error if opening confirmation with an amount outside the presets', () => {

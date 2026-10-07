@@ -82,6 +82,25 @@ describe('OrdersComponent', () => {
     expect(component.account()?.accountId).toBe('ACC-101');
   });
 
+  it('scrolls to the top on refresh and clears a refresh error after 5 seconds', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    tradeApi.accounts.getAccount.mockRejectedValue(new Error('down'));
+
+    vi.useFakeTimers();
+    try {
+      const pending = component.refresh();
+      await vi.advanceTimersByTimeAsync(0);
+      await pending;
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+      expect(component.errorMessage()).toBe('Unable to refresh the order page. Please try again.');
+
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(component.errorMessage()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('refreshes the account balance without placing an order', async () => {
     await component.ngOnInit();
     tradeApi.accounts.getAccount.mockClear();

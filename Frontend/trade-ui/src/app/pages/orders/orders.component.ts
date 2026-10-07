@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -6,7 +6,8 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { AuthSessionService } from '../../services/auth-session.service';
 import { CustomerPreferencesService, type BaseCurrency, type CustomerPreferences } from '../../services/customer-preferences.service';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
-import type { PlaceOrderRequest, OrderHistoryEntry, AccountResponse, OrderResponse } from '../../generated/trade';
+import { ResponseError, type PlaceOrderRequest, type OrderHistoryEntry, type AccountResponse, type OrderResponse } from '../../generated/trade';
+import { mapErrorCodeToMessage } from '../../errors/error-messages';
 import { InstrumentSearchComponent, type InstrumentListItem } from '../../components/instrument-search/instrument-search.component';
 
 @Component({
@@ -16,7 +17,7 @@ import { InstrumentSearchComponent, type InstrumentListItem } from '../../compon
   templateUrl: './orders.component.html',
   styleUrls: ['./orders.component.css']
 })
-export class OrdersComponent implements OnInit, AfterViewInit {
+export class OrdersComponent implements OnInit, AfterViewInit, OnDestroy {
   private fb = inject(FormBuilder);
   private auth = inject(AuthSessionService);
   private api = inject(TradeApiClientService);
@@ -39,6 +40,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   readonly baseCurrency = signal<BaseCurrency>('USD');
 
   private currentIdempotencyKey: string | null = null;
+  private errorClearTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly form = this.fb.group({
     symbol: [''], // Not required - validated by selectedInstrument() instead
@@ -186,21 +188,33 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     void this.prefillFromUrl();
   }
 
+  ngOnDestroy(): void {
+    if (this.errorClearTimer) {
+      clearTimeout(this.errorClearTimer);
+      this.errorClearTimer = null;
+    }
+  }
+
   async refresh(): Promise<void> {
     if (this.isRefreshing() || this.submitting()) {
       return;
     }
 
+    this.scrollToTop();
+    this.errorMessage.set(null);
     this.isRefreshing.set(true);
     try {
       const user = await this.auth.loadCurrentUser();
-      if (user) {
-        const acct = await this.api.accounts.getAccount({ id: user.accountId });
-        this.account.set(acct);
+      if (!user) {
+        this.showTimedError('Unable to refresh. Please sign in again.');
+        return;
       }
+      const acct = await this.api.accounts.getAccount({ id: user.accountId });
+      this.account.set(acct);
       await this.refreshQuote();
     } catch (e) {
       console.error('Failed to refresh order page', e);
+      this.showTimedError('Unable to refresh the order page. Please try again.');
     } finally {
       this.isRefreshing.set(false);
     }
@@ -349,9 +363,8 @@ export class OrdersComponent implements OnInit, AfterViewInit {
       this.currentIdempotencyKey = null;
     } catch (err: unknown) {
       console.error('Place order failed', err);
-      // Map business-rule rejection if present
-      const mapped = err && typeof err === 'object' && 'message' in (err as any) ? (err as any).message : 'Failed to place order';
-      this.errorMessage.set(String(mapped));
+      const mapped = await this.readableOrderError(err);
+      this.showTimedError(mapped);
       this.successMessage.set(null);
 
       // Keep idempotency key on error - user can retry and backend will deduplicate
@@ -363,6 +376,44 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  private async readableOrderError(err: unknown): Promise<string> {
+    if (err instanceof ResponseError) {
+      try {
+        const body = await err.response.clone().json();
+        const code = body && typeof body.errorCode === 'string' ? body.errorCode : undefined;
+        const serverMessage = body && typeof body.message === 'string' ? body.message : null;
+        return mapErrorCodeToMessage(code, serverMessage);
+      } catch {
+        return 'Failed to place order. Please try again.';
+      }
+    }
+
+    if (err instanceof Error && err.message.trim().length > 0) {
+      return err.message;
+    }
+
+    return 'Failed to place order. Please try again.';
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    document.querySelector('.app-main')?.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  private showTimedError(message: string): void {
+    this.errorMessage.set(message);
+    this.scrollToTop();
+    if (this.errorClearTimer) {
+      clearTimeout(this.errorClearTimer);
+    }
+    this.errorClearTimer = setTimeout(() => {
+      this.errorMessage.set(null);
+      this.errorClearTimer = null;
+    }, 5000);
   }
 
   private async loadAndApplyPreferences(accountId: number): Promise<void> {

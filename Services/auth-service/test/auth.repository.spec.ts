@@ -146,4 +146,102 @@ describe('auth.repository', () => {
     expect(await repo.consumeRefreshToken('t4')).toBeNull();
     expect(warnSpy).toHaveBeenCalled();
   });
+
+  it('updates last name, email, and phone together', async () => {
+    const existing = { id: 'u3', username: 'cara', account_id: 3, roles: ['CUSTOMER'], created_on: new Date().toISOString() };
+    const updatedRow = { ...existing, last_name: 'Ng', email: 'cara@example.com', phone_no: '555' };
+    (db.query as any).mockResolvedValueOnce({ rows: [existing], rowCount: 1 });
+    (db.query as any).mockResolvedValueOnce({ rows: [updatedRow], rowCount: 1 });
+
+    const updated = await repo.updateUserProfile('u3', { lastName: 'Ng', email: 'cara@example.com', phoneNo: '555' });
+    expect(updated.lastName).toBe('Ng');
+    expect(updated.email).toBe('cara@example.com');
+    expect(updated.phoneNo).toBe('555');
+  });
+
+  it('returns null when user insert conflicts', async () => {
+    (db.query as any).mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    await expect(repo.createUser('taken', 1)).resolves.toBeNull();
+  });
+
+  it('deletes a credential by username and reports orphan cleanup', async () => {
+    (db.query as any).mockResolvedValueOnce({ rows: [], rowCount: 1 });
+    await repo.deleteCredentialByUsername('bob');
+    expect(db.query).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM authentication.credentials'), ['bob']);
+
+    (db.query as any).mockResolvedValueOnce({ rowCount: 4 });
+    await expect(repo.deleteOrphanCredentials()).resolves.toBe(4);
+
+    (db.query as any).mockResolvedValueOnce({});
+    await expect(repo.deleteOrphanCredentials()).resolves.toBe(0);
+  });
+
+  it('rejects a refresh token that cannot be parsed', async () => {
+    const tokens = await import('../src/app/auth/tokens/auth.tokens.js');
+    if ((tokens.parseRefreshToken as any).mock) {
+      (tokens.parseRefreshToken as any).mockReturnValueOnce(null);
+    } else {
+      vi.spyOn(tokens, 'parseRefreshToken').mockReturnValueOnce(null);
+    }
+
+    await expect(repo.saveRefreshToken('not-a-token', 'u1')).rejects.toThrow('Invalid refresh token format');
+  });
+
+  it('returns the original password when base64 decoding throws', async () => {
+    const argon2 = await import('argon2');
+    (argon2.hash as any).mockResolvedValue('$argon$hash');
+    const warnSpy = vi.spyOn((await import('../src/app/common/logger.js')).logger, 'warn');
+    const bufferSpy = vi.spyOn(Buffer, 'from').mockImplementation(() => {
+      throw new Error('bad base64');
+    });
+
+    try {
+      (db.query as any).mockResolvedValueOnce({
+        rows: [{ id: 'c1', account_id: 1, username: 'bob', password_hash: '$argon$hash', params: {}, created_at: new Date().toISOString() }],
+        rowCount: 1,
+      });
+      const cred = await repo.createCredential(1, 'bob', '%%%');
+      expect(cred.passwordHash).toBe('$argon$hash');
+      expect(argon2.hash).toHaveBeenCalledWith('%%%', expect.any(Object));
+      expect(warnSpy).toHaveBeenCalled();
+    } finally {
+      bufferSpy.mockRestore();
+    }
+  });
+
+  it('revokes the session when a refresh token is consumed by a racing request', async () => {
+    const tokens = await import('../src/app/auth/tokens/auth.tokens.js');
+    const bcrypt = await import('bcrypt');
+    const parsed = { tokenId: 't9', secret: 's9' };
+    if ((tokens.parseRefreshToken as any).mock) {
+      (tokens.parseRefreshToken as any).mockReturnValue(parsed);
+    } else {
+      vi.spyOn(tokens, 'parseRefreshToken').mockReturnValue(parsed as any);
+    }
+    (bcrypt.compare as any).mockResolvedValue(true);
+
+    const stored = {
+      id: 't9',
+      session_id: 'sess',
+      user_id: 'u',
+      token_hash: 'h',
+      algorithm: 'bcrypt',
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+      consumed_at: null,
+      revoked_at: null,
+      replaced_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const latest = { ...stored, consumed_at: new Date().toISOString() };
+
+    (db.query as any)
+      .mockResolvedValueOnce({ rows: [stored], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+      .mockResolvedValueOnce({ rows: [latest], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+    await expect(repo.consumeRefreshToken('t9.s9')).resolves.toBeNull();
+    expect(db.query).toHaveBeenCalledTimes(4);
+  });
 });

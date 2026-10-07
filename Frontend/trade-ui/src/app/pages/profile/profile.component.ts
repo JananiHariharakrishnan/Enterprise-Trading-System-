@@ -54,6 +54,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   // Mobile number regex: accepts exactly 10 digits, no special characters
   private readonly phonePattern = /^[0-9]{10}$/;
   private emailOptInTimer: ReturnType<typeof setTimeout> | null = null;
+  private errorClearTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.profileForm = this.formBuilder.group({
@@ -80,6 +81,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   refreshPage(): void {
+    this.scrollToTop();
     this.successMessage.set(null);
     this.errorMessage.set(null);
     void this.loadProfile();
@@ -105,6 +107,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
       clearTimeout(this.emailOptInTimer);
       this.emailOptInTimer = null;
     }
+    if (this.errorClearTimer) {
+      clearTimeout(this.errorClearTimer);
+      this.errorClearTimer = null;
+    }
   }
 
   private async loadProfile(): Promise<void> {
@@ -114,7 +120,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     try {
       const user = await this.authSession.loadCurrentUser();
       if (!user) {
-        this.errorMessage.set('Unable to load profile. Please sign in again.');
+        this.showTimedError('Unable to load profile. Please sign in again.');
         return;
       }
 
@@ -157,8 +163,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       await this.loadPreferences(user.accountId);
     } catch {
-      // Error loading profile - display user-friendly message without interrupting component lifecycle
-      this.errorMessage.set('Failed to load profile information.');
+      this.showTimedError('Failed to load profile information.');
     } finally {
       this.isLoading.set(false);
     }
@@ -230,9 +235,7 @@ async onSubmit(): Promise<void> {
     this.successMessage.set('Profile and preferences saved.');
 
   } catch {
-    this.errorMessage.set(
-      'Failed to update profile. Please try again.'
-    );
+    this.showTimedError('Failed to update profile. Please try again.');
     this.successMessage.set(null);
 
   } finally {
@@ -347,7 +350,7 @@ async onSubmit(): Promise<void> {
       this.themeService.applyThemePreference(formValue.theme as ThemeChoice);
       this.successMessage.set('Preferences saved successfully!');
     } catch {
-      this.errorMessage.set('Failed to save preferences. Please try again.');
+      this.showTimedError('Failed to save preferences. Please try again.');
     } finally {
       this.isSavingPreferences.set(false);
     }
@@ -389,6 +392,25 @@ async onSubmit(): Promise<void> {
     return (this.currentUser()?.email?.trim() ?? '').length > 0;
   }
 
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    document.querySelector('.app-main')?.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  private showTimedError(message: string): void {
+    this.errorMessage.set(message);
+    this.scrollToTop();
+    if (this.errorClearTimer) {
+      clearTimeout(this.errorClearTimer);
+    }
+    this.errorClearTimer = setTimeout(() => {
+      this.errorMessage.set(null);
+      this.errorClearTimer = null;
+    }, 5000);
+  }
+
   private showEmailRequiredNotice(): void {
     this.emailOptInError.set('Update your email first to enable this');
     if (this.emailOptInTimer) {
@@ -418,7 +440,7 @@ async onSubmit(): Promise<void> {
       await this.preferencesApi.upsertPreferences(accountId, this.toPreferencesPayload(this.profileForm.getRawValue()));
       return true;
     } catch {
-      this.errorMessage.set('Failed to update email notification preference. Please try again.');
+      this.showTimedError('Failed to update email notification preference. Please try again.');
       return false;
     } finally {
       this.isSavingEmailPreference.set(false);

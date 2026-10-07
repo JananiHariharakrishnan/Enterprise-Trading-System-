@@ -77,6 +77,7 @@ describe('AdminComponent', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('loads and displays stats and users on init', () => {
@@ -132,6 +133,44 @@ describe('AdminComponent', () => {
     expect(adminServiceSpy.createBatchAccounts).toHaveBeenCalledWith(10, 50000);
     expect(component.successMessage()).toContain('Successfully created 10 active accounts');
     expect(component.recentlyCreatedBatch().length).toBe(2);
+  });
+
+  it('renders the dashboard, user directory, and account provisioning tabs', () => {
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.dashboard-tab')).toBeTruthy();
+
+    component.stats.set({ ...mockStats, unmappedAccounts: 1 });
+    component.successMessage.set('Saved');
+    component.errorMessage.set('Failed');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="admin-success"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="admin-error"]')).toBeTruthy();
+
+    component.users.set([
+      ...mockUsers,
+      {
+        ...mockUsers[0],
+        userId: 'u-3',
+        username: 'cara',
+        accountStatus: 'CLOSED',
+        roles: ['ADMIN'],
+        email: undefined,
+        firstName: undefined,
+        lastName: undefined
+      }
+    ]);
+    component.switchTab('users');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.users-tab')).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('cara');
+
+    component.switchTab('create');
+    component.accountBatchCount = 500;
+    component.isCreatingBatch.set(true);
+    component.recentlyCreatedBatch.set([{ accountReference: 'ETP-9', cashBalance: 1000 }]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.create-tab')).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('ETP-9');
   });
 
   it('calls createUnmappedAccount when generating single account', async () => {

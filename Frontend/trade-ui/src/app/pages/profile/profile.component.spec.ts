@@ -113,6 +113,27 @@ describe('ProfileComponent', () => {
     expect(component.isLoading()).toBe(false);
   });
 
+  it('scrolls to the top on refresh and clears a load error after 5 seconds', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    vi.mocked(mockAuthSession.loadCurrentUser).mockRejectedValue(new Error('Load failed'));
+    renderWithoutInit();
+
+    vi.useFakeTimers();
+    try {
+      component.refreshPage();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+      expect(component.errorMessage()).toBe('Failed to load profile information.');
+
+      await vi.advanceTimersByTimeAsync(4999);
+      expect(component.errorMessage()).toBe('Failed to load profile information.');
+      await vi.advanceTimersByTimeAsync(1);
+      expect(component.errorMessage()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('should validate firstName field', () => {
     const firstNameControl = component.profileForm.get('firstName');
 
@@ -356,19 +377,19 @@ describe('ProfileComponent', () => {
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/dashboard']);
   });
 
-  it('should initialize notificationsAndAlerts as YES by default and update channels', () => {
-    expect(component.profileForm.get('notificationsAndAlerts')?.value).toBe('YES');
+  it('should initialize notification channels as in-app and keep email optional', () => {
+    expect(component.profileForm.get('tradeFills')?.value).toEqual(['IN_APP']);
+    expect(component.profileForm.get('priceAlerts')?.value).toEqual(['IN_APP']);
 
-    component.profileForm.patchValue({ notificationsAndAlerts: 'NO' });
-    expect(component.profileForm.get('tradeFills')?.value).toEqual(['NO NOTIFICATION']);
-    expect(component.profileForm.get('priceAlerts')?.value).toEqual(['NO NOTIFICATION']);
-
-    component.profileForm.patchValue({ notificationsAndAlerts: 'YES' });
+    component.profileForm.patchValue({
+      tradeFills: ['IN_APP', 'EMAIL'],
+      priceAlerts: ['EMAIL']
+    });
     expect(component.profileForm.get('tradeFills')?.value).toEqual(['IN_APP', 'EMAIL']);
-    expect(component.profileForm.get('priceAlerts')?.value).toEqual(['IN_APP', 'EMAIL']);
+    expect(component.profileForm.get('priceAlerts')?.value).toEqual(['EMAIL']);
   });
 
-  it('should render Notifications and Alerts select with only Yes and No options', () => {
+  it('should render trade fill and price alert selects with in-app and email', () => {
     renderWithoutInit();
     component.isLoading.set(false);
     component.currentUser.set({
@@ -382,16 +403,15 @@ describe('ProfileComponent', () => {
     } as any);
     fixture.detectChanges();
 
-    const select = fixture.nativeElement.querySelector('[data-testid="profile-notificationsAndAlerts-select"]') as HTMLSelectElement;
-    expect(select).toBeTruthy();
-    expect(select.options.length).toBe(2);
-    expect(select.options[0].value).toBe('YES');
-    expect(select.options[0].text.trim()).toBe('Yes');
-    expect(select.options[1].value).toBe('NO');
-    expect(select.options[1].text.trim()).toBe('No');
+    const fills = fixture.nativeElement.querySelector('[data-testid="profile-tradeFills-select"]') as HTMLSelectElement;
+    const alerts = fixture.nativeElement.querySelector('[data-testid="profile-priceAlerts-select"]') as HTMLSelectElement;
+    expect(fills).toBeTruthy();
+    expect(alerts).toBeTruthy();
+    expect([...fills.options].map((option) => option.text.trim())).toEqual(['In app', 'Email']);
+    expect([...alerts.options].map((option) => option.text.trim())).toEqual(['In app', 'Email']);
   });
 
-  it('should correctly save preferences with notificationsAndAlerts NO and YES', async () => {
+  it('should save the selected notification channels', async () => {
     renderWithoutInit();
     component.currentUser.set({
       id: '1',
@@ -404,29 +424,85 @@ describe('ProfileComponent', () => {
     } as any);
     component.profileForm.patchValue({
       accountId: 8,
-      notificationsAndAlerts: 'NO'
+      tradeFills: ['IN_APP'],
+      priceAlerts: ['IN_APP', 'EMAIL']
     });
 
     await component.onSavePreferences();
 
     expect(mockPreferencesApi.upsertPreferences).toHaveBeenCalledWith(8, expect.objectContaining({
-      notifications: {
-        tradeFills: ['NO NOTIFICATION'],
-        priceAlerts: ['NO NOTIFICATION']
-      }
-    }));
-
-    component.profileForm.patchValue({
-      notificationsAndAlerts: 'YES'
-    });
-
-    await component.onSavePreferences();
-
-    expect(mockPreferencesApi.upsertPreferences).toHaveBeenCalledWith(8, expect.objectContaining({
-      notifications: {
-        tradeFills: ['IN_APP', 'EMAIL'],
+      notifications: expect.objectContaining({
+        tradeFills: ['IN_APP'],
         priceAlerts: ['IN_APP', 'EMAIL']
-      }
+      })
     }));
+  });
+
+  it('labels roles and preference choices', () => {
+    expect(component.roleLabel()).toBe('Customer');
+    component.currentUser.set({ roles: 'admin' } as any);
+    expect(component.roleLabel()).toBe('Admin');
+    component.currentUser.set({ roles: ['CUSTOMER', 'TRADER'] } as any);
+    expect(component.roleLabel()).toBe('Customer, TRADER');
+
+    component.setChoice('theme', 'DARK');
+    expect(component.isChoice('theme', 'DARK')).toBe(true);
+    component.isSaving.set(true);
+    component.setChoice('theme', 'LIGHT');
+    expect(component.isChoice('theme', 'DARK')).toBe(true);
+    component.isSaving.set(false);
+
+    expect(component.channelLabel('IN_APP')).toBe('In app');
+    expect(component.channelLabel('EMAIL')).toBe('Email');
+    expect(component.channelLabel('SMS')).toBe('SMS');
+    expect(component.orderTypeLabel('MARKET')).toBe('Market');
+    expect(component.orderTypeLabel('LIMIT')).toBe('Limit');
+    expect(component.orderTypeLabel('STOP')).toBe('Stop');
+    expect(component.themeLabel('LIGHT')).toBe('Light');
+    expect(component.themeLabel('DARK')).toBe('Dark');
+    expect(component.themeLabel('SYSTEM')).toBe('System');
+  });
+
+  it('toggles channels and explains when email alerts need a saved address', async () => {
+    expect(component.isChannelSelected('tradeFills', 'IN_APP')).toBe(true);
+    component.toggleChannel('tradeFills', 'EMAIL');
+    expect(component.isChannelSelected('tradeFills', 'EMAIL')).toBe(true);
+    component.toggleChannel('tradeFills', 'IN_APP');
+    expect(component.isChannelSelected('tradeFills', 'IN_APP')).toBe(false);
+    component.isSaving.set(true);
+    component.toggleChannel('priceAlerts', 'EMAIL');
+    component.isSaving.set(false);
+
+    component.currentUser.set({ email: '   ' } as any);
+    const blocked = document.createElement('input');
+    blocked.checked = true;
+    await component.onEmailNotificationToggle({ target: blocked } as unknown as Event);
+    expect(blocked.checked).toBe(false);
+    expect(component.emailOptInError()).toBe('Update your email first to enable this');
+
+    component.currentUser.set({ email: 'ada@example.com' } as any);
+    component.profileForm.patchValue({ accountId: 8 });
+    const enabled = document.createElement('input');
+    enabled.checked = true;
+    await component.onEmailNotificationToggle({ target: enabled } as unknown as Event);
+    expect(component.emailNotificationsEnabled()).toBe(true);
+
+    vi.mocked(mockPreferencesApi.upsertPreferences).mockRejectedValueOnce(new Error('down'));
+    const failed = document.createElement('input');
+    failed.checked = false;
+    await component.onEmailNotificationToggle({ target: failed } as unknown as Event);
+    expect(component.errorMessage()).toContain('Failed to update email notification preference');
+    expect(failed.checked).toBe(true);
+  });
+
+  it('rejects a preference save without an account and reports a save failure', async () => {
+    component.profileForm.patchValue({ accountId: 0 });
+    await component.onSavePreferences();
+    expect(component.errorMessage()).toContain('Unable to determine account');
+
+    component.profileForm.patchValue({ accountId: 8 });
+    vi.mocked(mockPreferencesApi.upsertPreferences).mockRejectedValueOnce(new Error('down'));
+    await component.onSavePreferences();
+    expect(component.errorMessage()).toContain('Failed to save preferences');
   });
 });
