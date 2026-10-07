@@ -1,0 +1,479 @@
+<section class="signals-page" data-testid="signals-page">
+  <!-- Toast Notification -->
+  <div *ngIf="toastMessage()" class="toast-banner" [class.is-error]="toastType() === 'error'" role="alert">
+    <span class="toast-icon">{{ toastType() === 'error' ? '⚠' : '✓' }}</span>
+    <span class="toast-text">{{ toastMessage() }}</span>
+  </div>
+
+  <!-- Header -->
+  <header class="signals-header">
+    <div class="header-info">
+      <div class="tag-row">
+        <span class="engine-badge">
+          <span class="pulse-dot"></span>
+          <span>QUANT ENGINE v2.4</span>
+        </span>
+        <span class="model-badge">Gemini Flash LLM</span>
+      </div>
+      <h1>AI Trading Signals</h1>
+      <p class="header-sub">
+        Real-time quantitative trade recommendations driven by RSI momentum, Exponential Moving Average crossovers, and institutional LLM analysis.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <span class="updated" *ngIf="lastUpdated()">
+        Updated {{ lastUpdated() | date:'shortTime' }}
+      </span>
+      <button
+        type="button"
+        class="btn-secondary"
+        (click)="fetchSignals(false)"
+        [disabled]="isLoading() || isRefreshing()"
+        title="Check for new signals"
+      >
+        <svg class="ico" [class.spinning]="isRefreshing()" viewBox="0 0 24 24">
+          <path d="M21 12a9 9 0 1 1-3-6.7"/>
+          <path d="M21 4v5h-5"/>
+        </svg>
+        <span>{{ isRefreshing() ? 'Refreshing…' : 'Refresh' }}</span>
+      </button>
+      <button
+        type="button"
+        class="btn-primary"
+        (click)="refreshAllSignals()"
+        [disabled]="isRefreshing() || isAnalyzing()"
+        title="Recalculate AI signals across all instruments"
+      >
+        <svg class="ico" viewBox="0 0 24 24">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+        <span>Re-analyze All</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading() && signals().length === 0" class="loading-state" aria-busy="true">
+    <div class="stats">
+      <div class="stat skeleton-card" *ngFor="let i of [1, 2, 3, 4, 5]">
+        <span class="sk sk-sm"></span>
+        <span class="sk sk-lg"></span>
+      </div>
+    </div>
+    <div class="panel skeleton-panel">
+      <div class="sk sk-row" *ngFor="let i of [1, 2, 3, 4]"></div>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error() && !isLoading()" class="error-card" role="alert">
+    <span class="error-icon">!</span>
+    <div class="error-text">
+      <strong>Unable to load AI signals</strong>
+      <p>{{ error() }}</p>
+    </div>
+    <button type="button" class="btn-secondary" (click)="fetchSignals(true)">Retry</button>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="!isLoading() || signals().length > 0" class="content">
+
+    <!-- Methodology, Cadence & Legal Framework Banner -->
+    <section class="methodology-banner" aria-label="Signal Methodology and Service Boundaries">
+      <div class="banner-badge-row">
+        <span class="methodology-pill">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          Defensible Methodology: RSI(14) + EMA(9/21)
+        </span>
+        <span class="cadence-pill">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Cadence: 60s Fixed Interval • 24h EOD Candle Cache
+        </span>
+        <span class="legal-pill">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          Decision Support: Informs a customer who trades; it does not trade
+        </span>
+      </div>
+      <div class="methodology-body">
+        <p>
+          <strong>Operational Principles:</strong> Live quotes stream from <code>market-data</code> to capture real-time prices, while lookback indicators consume daily candles from Fauxnance <code>GET /candles</code> (cached for 24h to eliminate quota waste). Signals are computed on a fixed 60s cadence to suppress noisy ticks and provide one defensible quantitative thesis with clear numbers.
+        </p>
+      </div>
+    </section>
+
+    <!-- KPI Summary Row -->
+    <section class="stats">
+      <div class="stat">
+        <span class="stat-label">Active Signals</span>
+        <strong class="stat-value">{{ totalCount() }}</strong>
+        <span class="stat-sub">Tracked symbols</span>
+      </div>
+
+      <div class="stat tone-gain">
+        <span class="stat-label">BUY Recommendations</span>
+        <strong class="stat-value">{{ buyCount() }}</strong>
+        <span class="stat-sub">Bullish momentum</span>
+      </div>
+
+      <div class="stat tone-loss">
+        <span class="stat-label">SELL Recommendations</span>
+        <strong class="stat-value">{{ sellCount() }}</strong>
+        <span class="stat-sub">Bearish breakdown</span>
+      </div>
+
+      <div class="stat">
+        <span class="stat-label">HOLD / Neutral</span>
+        <strong class="stat-value">{{ holdCount() }}</strong>
+        <span class="stat-sub">Range consolidation</span>
+      </div>
+
+      <div class="stat">
+        <span class="stat-label">Avg Conviction</span>
+        <strong class="stat-value">{{ avgConfidence() }}%</strong>
+        <span class="stat-sub">Model certainty</span>
+      </div>
+    </section>
+
+    <!-- Main Table & Control Panel -->
+    <section class="panel">
+      <!-- Toolbar -->
+      <div class="panel-toolbar">
+        <div class="filter-tabs" role="tablist">
+          <button
+            type="button"
+            class="tab-btn"
+            [class.active]="filterAction() === 'ALL'"
+            (click)="setFilter('ALL')"
+          >
+            All <span class="tab-count">{{ totalCount() }}</span>
+          </button>
+          <button
+            type="button"
+            class="tab-btn buy-tab"
+            [class.active]="filterAction() === 'BUY'"
+            (click)="setFilter('BUY')"
+          >
+            BUY <span class="tab-count">{{ buyCount() }}</span>
+          </button>
+          <button
+            type="button"
+            class="tab-btn sell-tab"
+            [class.active]="filterAction() === 'SELL'"
+            (click)="setFilter('SELL')"
+          >
+            SELL <span class="tab-count">{{ sellCount() }}</span>
+          </button>
+          <button
+            type="button"
+            class="tab-btn hold-tab"
+            [class.active]="filterAction() === 'HOLD'"
+            (click)="setFilter('HOLD')"
+          >
+            HOLD <span class="tab-count">{{ holdCount() }}</span>
+          </button>
+        </div>
+
+        <div class="toolbar-right">
+          <!-- Search Box -->
+          <div class="search-wrap">
+            <svg class="search-ico" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Filter ticker or rationale…"
+              [value]="searchQuery()"
+              (input)="onSearch($event)"
+              aria-label="Filter signals"
+            />
+          </div>
+
+          <!-- Quick On-Demand Symbol Analyzer -->
+          <div class="analyzer-wrap">
+            <input
+              type="text"
+              placeholder="e.g. AAPL, TSLA"
+              [value]="analyzeInput()"
+              (input)="analyzeInput.set($any($event.target).value)"
+              (keydown.enter)="analyzeSymbol()"
+              aria-label="Symbol to analyze"
+              [disabled]="isAnalyzing()"
+            />
+            <button
+              type="button"
+              class="btn-analyze"
+              (click)="analyzeSymbol()"
+              [disabled]="!analyzeInput().trim() || isAnalyzing()"
+              title="Run AI technical analysis on symbol"
+            >
+              <span *ngIf="!isAnalyzing()">Analyze</span>
+              <span *ngIf="isAnalyzing()">Analyzing…</span>
+            </button>
+          </div>
+
+          <!-- View Mode Toggle -->
+          <div class="view-toggle" role="group" aria-label="View layout">
+            <button
+              type="button"
+              class="toggle-btn"
+              [class.active]="viewMode() === 'table'"
+              (click)="setViewMode('table')"
+              title="Table view"
+              aria-label="Table view"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <path d="M3 9h18M3 15h18M9 3v18"/>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="toggle-btn"
+              [class.active]="viewMode() === 'card'"
+              (click)="setViewMode('card')"
+              title="Card view"
+              aria-label="Card view"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredSignals().length === 0" class="empty-state">
+        <div class="empty-art" aria-hidden="true"><span></span><span></span><span></span></div>
+        <h3 *ngIf="signals().length === 0">No Trade Signals Yet</h3>
+        <h3 *ngIf="signals().length > 0">No signals match your filter</h3>
+        <p *ngIf="signals().length === 0">
+          AI signals are dynamically projected when you place an order for any stock. Place a trade or analyze a ticker above to view quantitative insights tailored to your portfolio scenario and market conditions.
+        </p>
+        <p *ngIf="signals().length > 0">
+          No active recommendations match the selected criteria. Try adjusting your search query or action filter.
+        </p>
+        <button *ngIf="signals().length === 0" type="button" class="btn-primary" (click)="refreshAllSignals()">
+          Check Active Signals
+        </button>
+        <button *ngIf="signals().length > 0" type="button" class="btn-primary" (click)="resetFilters()">
+          Clear Filters
+        </button>
+      </div>
+
+      <!-- TABLE VIEW -->
+      <div *ngIf="filteredSignals().length > 0 && viewMode() === 'table'" class="table-container">
+        <table class="signals-table" aria-label="AI Trading Signals Table">
+          <thead>
+            <tr>
+              <th scope="col" class="th-symbol">Instrument</th>
+              <th scope="col" class="th-action">Signal</th>
+              <th scope="col" class="th-conviction">Confidence</th>
+              <th scope="col" class="th-rationale">Institutional Rationale</th>
+              <th scope="col" class="th-time">Generated</th>
+              <th scope="col" class="th-actions text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let s of filteredSignals(); trackBy: trackBySymbol"
+              class="signal-row"
+              [class.row-buy]="s.action === 'BUY'"
+              [class.row-sell]="s.action === 'SELL'"
+            >
+              <!-- Instrument -->
+              <td class="td-symbol">
+                <div class="instrument-meta">
+                  <span class="avatar" [style.--hue]="symbolHue(s.symbol)" aria-hidden="true">
+                    {{ s.symbol.slice(0, 2) }}
+                  </span>
+                  <div class="symbol-info">
+                    <strong class="symbol-name">{{ s.symbol }}</strong>
+                    <span class="symbol-sub">Equity</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Action Badge -->
+              <td class="td-action">
+                <span
+                  class="action-pill"
+                  [class.action-buy]="s.action === 'BUY'"
+                  [class.action-sell]="s.action === 'SELL'"
+                  [class.action-hold]="s.action === 'HOLD'"
+                >
+                  <span class="dot" aria-hidden="true"></span>
+                  {{ s.action }}
+                </span>
+              </td>
+
+              <!-- Confidence -->
+              <td class="td-conviction">
+                <div class="confidence-box">
+                  <div class="confidence-bar-wrap">
+                    <div
+                      class="confidence-bar"
+                      [style.width.%]="formatConfidence(s.confidence)"
+                      [class.bar-buy]="s.action === 'BUY'"
+                      [class.bar-sell]="s.action === 'SELL'"
+                      [class.bar-hold]="s.action === 'HOLD'"
+                    ></div>
+                  </div>
+                  <span class="confidence-val">{{ formatConfidence(s.confidence) }}%</span>
+                </div>
+              </td>
+
+              <!-- Rationale & Numbers Behind It -->
+              <td class="td-rationale">
+                <p class="rationale-text" [title]="s.reasoning">{{ s.reasoning }}</p>
+                <div class="metrics-row" *ngIf="s.rsi != null || s.ema9 != null">
+                  <span class="metric-chip" *ngIf="s.rsi != null">RSI(14): <strong>{{ s.rsi | number:'1.1-1' }}</strong></span>
+                  <span class="metric-chip" *ngIf="s.ema9 != null">EMA(9): <strong>${{ s.ema9 | number:'1.2-2' }}</strong></span>
+                  <span class="metric-chip" *ngIf="s.ema21 != null">EMA(21): <strong>${{ s.ema21 | number:'1.2-2' }}</strong></span>
+                </div>
+              </td>
+
+              <!-- Generated -->
+              <td class="td-time">
+                <span class="time-stamp">{{ s.generatedAt | date:'shortTime' }}</span>
+              </td>
+
+              <!-- Actions -->
+              <td class="td-actions text-right">
+                <div class="row-actions">
+                  <button
+                    type="button"
+                    class="btn-trade"
+                    [class.btn-trade-buy]="s.action === 'BUY'"
+                    [class.btn-trade-sell]="s.action === 'SELL'"
+                    (click)="tradeSymbol(s.symbol, s.action)"
+                  >
+                    <span>Trade {{ s.action === 'SELL' ? 'Sell' : 'Buy' }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-icon"
+                    (click)="analyzeSymbol(s.symbol)"
+                    title="Re-run AI model for {{ s.symbol }}"
+                    aria-label="Re-analyze {{ s.symbol }}"
+                  >
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 12a9 9 0 1 1-3-6.7"/>
+                      <path d="M21 4v5h-5"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- CARD VIEW -->
+      <div *ngIf="filteredSignals().length > 0 && viewMode() === 'card'" class="signals-grid">
+        <article
+          *ngFor="let s of filteredSignals(); trackBy: trackBySymbol"
+          class="signal-card"
+          [class.card-buy]="s.action === 'BUY'"
+          [class.card-sell]="s.action === 'SELL'"
+          [class.card-hold]="s.action === 'HOLD'"
+        >
+          <!-- Card Header -->
+          <div class="card-header">
+            <div class="instrument-meta">
+              <span class="avatar" [style.--hue]="symbolHue(s.symbol)" aria-hidden="true">
+                {{ s.symbol.slice(0, 2) }}
+              </span>
+              <div class="symbol-info">
+                <strong class="symbol-name">{{ s.symbol }}</strong>
+                <span class="time-stamp">{{ s.generatedAt | date:'shortTime' }}</span>
+              </div>
+            </div>
+
+            <span
+              class="action-pill"
+              [class.action-buy]="s.action === 'BUY'"
+              [class.action-sell]="s.action === 'SELL'"
+              [class.action-hold]="s.action === 'HOLD'"
+            >
+              <span class="dot" aria-hidden="true"></span>
+              {{ s.action }}
+            </span>
+          </div>
+
+          <!-- Confidence Meter -->
+          <div class="card-meter">
+            <div class="meter-head">
+              <span class="meter-label">Model Conviction</span>
+              <strong class="meter-val">{{ formatConfidence(s.confidence) }}%</strong>
+            </div>
+            <div class="confidence-bar-wrap">
+              <div
+                class="confidence-bar"
+                [style.width.%]="formatConfidence(s.confidence)"
+                [class.bar-buy]="s.action === 'BUY'"
+                [class.bar-sell]="s.action === 'SELL'"
+                [class.bar-hold]="s.action === 'HOLD'"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Technical Indicator Numbers -->
+          <div class="card-indicators" *ngIf="s.rsi != null || s.ema9 != null">
+            <span class="ind-badge" *ngIf="s.rsi != null">RSI(14): <strong>{{ s.rsi | number:'1.1-1' }}</strong></span>
+            <span class="ind-badge" *ngIf="s.ema9 != null">EMA(9): <strong>${{ s.ema9 | number:'1.2-2' }}</strong></span>
+            <span class="ind-badge" *ngIf="s.ema21 != null">EMA(21): <strong>${{ s.ema21 | number:'1.2-2' }}</strong></span>
+          </div>
+
+          <!-- Rationale Quote -->
+          <blockquote class="card-rationale">
+            "{{ s.reasoning }}"
+          </blockquote>
+
+          <!-- Card Actions -->
+          <div class="card-footer">
+            <button
+              type="button"
+              class="btn-icon"
+              (click)="analyzeSymbol(s.symbol)"
+              title="Re-run AI model"
+              aria-label="Re-analyze {{ s.symbol }}"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 1 1-3-6.7"/>
+                <path d="M21 4v5h-5"/>
+              </svg>
+              <span>Refresh</span>
+            </button>
+
+            <button
+              type="button"
+              class="btn-trade"
+              [class.btn-trade-buy]="s.action === 'BUY'"
+              [class.btn-trade-sell]="s.action === 'SELL'"
+              (click)="tradeSymbol(s.symbol, s.action)"
+            >
+              <span>Place {{ s.action === 'SELL' ? 'Sell' : 'Buy' }} Order</span>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </button>
+          </div>
+        </article>
+      </div>
+
+    </section>
+
+  </div>
+</section>

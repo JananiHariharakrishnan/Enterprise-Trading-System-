@@ -273,4 +273,10 @@
         WHERE id = #{orderId}
     </select>
 
+    <select id="findDistinctOrderedSymbolsByAccountId" resultType="string">
+        SELECT DISTINCT symbol
+        FROM orders
+        WHERE account_id = #{accountId}
+    </select>
+
 </mapper>

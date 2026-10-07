@@ -60,54 +60,41 @@ CREATE TABLE IF NOT EXISTS tradingsystem.watchlist_entries(
 
 -- -----------------------------------------------------------------------------
 -- PRICE ALERTS
--- Alerts are account-scoped and tied to a symbol already present in a watchlist.
--- The composite FKs enforce both account ownership and watchlist membership.
+-- Alerts are account-scoped and independent of watchlists.
+-- One-shot alerts: triggered once when threshold is met, then marked TRIGGERED.
+-- Can be manually CANCELLED by the customer.
+-- No watchlist_id dependency: customers can create alerts for any supported instrument.
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS tradingsystem.price_alerts(
-    id                      BIGINT GENERATED ALWAYS AS IDENTITY,
-    account_id              BIGINT         NOT NULL,
-    watchlist_id            BIGINT         NOT NULL,
-    symbol                  VARCHAR(20)    NOT NULL,
-    direction               VARCHAR(20)    NOT NULL,
-    threshold               NUMERIC(18,2)  NOT NULL,
-    status                  VARCHAR(20)    NOT NULL DEFAULT 'ACTIVE',
-    last_condition_met      BOOLEAN        NOT NULL DEFAULT FALSE,
-    last_evaluated_price    NUMERIC(18,2),
-    last_quote_as_of        TIMESTAMPTZ,
-    triggered_on            TIMESTAMPTZ,
-    notification_status     VARCHAR(20)    NOT NULL DEFAULT 'PENDING',
-    notification_attempts   INT            NOT NULL DEFAULT 0,
-    last_notification_error VARCHAR(200),
-    created_on              TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
-    updated_on              TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+    id              BIGINT GENERATED ALWAYS AS IDENTITY,
+    account_id      BIGINT         NOT NULL,
+    symbol          VARCHAR(20)    NOT NULL,
+    direction       VARCHAR(20)    NOT NULL,
+    threshold       NUMERIC(18,2)  NOT NULL,
+    status          VARCHAR(20)    NOT NULL DEFAULT 'ACTIVE',
+    triggered_on    TIMESTAMPTZ,
+    created_on      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+    updated_on      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
 
     CONSTRAINT pk_price_alerts PRIMARY KEY (id),
 
-    CONSTRAINT fk_price_alerts_watchlist_owner
-        FOREIGN KEY (watchlist_id, account_id)
-        REFERENCES tradingsystem.watchlists (id, account_id)
-        ON DELETE CASCADE,
+    CONSTRAINT fk_price_alerts_account
+        FOREIGN KEY (account_id)
+        REFERENCES tradingsystem.accounts (id),
 
-    CONSTRAINT fk_price_alerts_watchlist_entry
-        FOREIGN KEY (watchlist_id, symbol)
-        REFERENCES tradingsystem.watchlist_entries (watchlist_id, symbol)
-        ON DELETE CASCADE,
+    CONSTRAINT fk_price_alerts_instrument
+        FOREIGN KEY (symbol)
+        REFERENCES tradingsystem.instruments (symbol),
 
     CONSTRAINT ck_price_alerts_direction
-        CHECK (direction IN ('ABOVE_OR_EQUAL', 'BELOW_OR_EQUAL')),
+        CHECK (direction IN ('ABOVE', 'BELOW')),
 
     CONSTRAINT ck_price_alerts_status
-        CHECK (status IN ('ACTIVE', 'TRIGGERED', 'DISABLED')),
-
-    CONSTRAINT ck_price_alerts_notification_status
-        CHECK (notification_status IN ('PENDING', 'SENT', 'FAILED')),
+        CHECK (status IN ('ACTIVE', 'TRIGGERED', 'CANCELLED')),
 
     CONSTRAINT ck_price_alerts_threshold_positive
-        CHECK (threshold > 0),
-
-    CONSTRAINT ck_price_alerts_notification_attempts_non_negative
-        CHECK (notification_attempts >= 0)
+        CHECK (threshold > 0)
 );
 
 
@@ -148,14 +135,15 @@ CREATE INDEX IF NOT EXISTS ix_watchlists_account_created
 CREATE INDEX IF NOT EXISTS ix_watchlist_entries_symbol
     ON tradingsystem.watchlist_entries (symbol);
 
-CREATE INDEX IF NOT EXISTS ix_price_alerts_account_status
-    ON tradingsystem.price_alerts (account_id, status);
+-- Indexes for efficient alert querying:
+-- Symbol + Status: hot path for market-data evaluator finding ACTIVE alerts by symbol
+-- Account + Status: customer queries for their alert portfolio
 
 CREATE INDEX IF NOT EXISTS ix_price_alerts_symbol_status
     ON tradingsystem.price_alerts (symbol, status);
 
-CREATE INDEX IF NOT EXISTS ix_price_alerts_watchlist_id
-    ON tradingsystem.price_alerts (watchlist_id);
+CREATE INDEX IF NOT EXISTS ix_price_alerts_account_status
+    ON tradingsystem.price_alerts (account_id, status);
 
 COMMIT;
 

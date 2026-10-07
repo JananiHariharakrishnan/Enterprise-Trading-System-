@@ -119,6 +119,58 @@ public class GlobalExceptionHandler {
     }
 
     // =========================================================
+    // PRICE ALERT EXCEPTIONS
+    // =========================================================
+
+    @ExceptionHandler(AlertNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleAlertNotFound(
+            AlertNotFoundException ex) {
+
+        log.warn(
+                "Alert lookup failed: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.NOT_FOUND,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(AlertStateException.class)
+    public ResponseEntity<ErrorResponse> handleAlertStateException(
+            AlertStateException ex) {
+
+        log.warn(
+                "Alert state error: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.CONFLICT,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(AlertLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleAlertLimitExceeded(
+            AlertLimitExceededException ex) {
+
+        log.warn(
+                "Alert limit exceeded: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.BAD_REQUEST,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    // =========================================================
     // ORDER BUSINESS EXCEPTIONS
     // =========================================================
 

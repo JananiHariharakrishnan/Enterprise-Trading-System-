@@ -1,0 +1,180 @@
+<section class="orders-page" style="display: block; padding: 24px; max-width: 1200px; margin: 0 auto;">
+  <header class="page-head" style="margin-bottom: 32px;">
+    <h2>Price Alerts</h2>
+    <p>Set up one-shot alerts and get notified when symbols cross your target prices.</p>
+  </header>
+
+  <div class="watchlists-container" style="display: flex; gap: 32px; flex-wrap: wrap;">
+    <!-- Create form -->
+    <aside class="ticket" style="flex: 1; min-width: 320px; max-width: 400px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px;">
+      <form [formGroup]="createAlertForm" (ngSubmit)="createAlert()" class="ticket-form" novalidate>
+        <div class="ticket-head" style="margin-bottom: 24px;">
+          <h3 style="margin: 0; font-size: 1.25rem;">Create Alert</h3>
+        </div>
+
+        <div class="field" style="margin-bottom: 24px;">
+          <label class="field-label" style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 8px;">Symbol</label>
+          <app-instrument-search
+            placeholder="Search by ticker or company name"
+            actionLabel="Select"
+            [closeOnSelect]="true"
+            [selectedSymbol]="selectedInstrument()?.symbol ?? null"
+            [disabled]="isSaving()"
+            (instrumentAdded)="onInstrumentSelected($event)"
+          ></app-instrument-search>
+
+          <div class="selected-card" *ngIf="selectedInstrument() as instrument">
+            <div class="selected-head">
+              <span class="avatar" [style.--hue]="symbolHue(instrument.symbol)" aria-hidden="true">
+                {{ instrument.symbol.slice(0, 2) }}
+              </span>
+              <div class="selected-title">
+                <h3>{{ instrument.symbol }}</h3>
+                <p>{{ instrument.name }}</p>
+              </div>
+              <button type="button" class="link-btn" (click)="clearInstrument()">Clear</button>
+            </div>
+
+            <dl class="facts">
+              <div>
+                <dt>Asset class</dt>
+                <dd>{{ formatAssetClass(instrument.assetClass) }}</dd>
+              </div>
+              <div>
+                <dt>Currency</dt>
+                <dd>{{ instrument.currency || 'USD' }}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom: 20px;">
+          <span class="field-label" id="direction-label" style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 8px;">Direction</span>
+          <div class="seg seg-slider" style="display: flex; background: var(--surface-2); padding: 4px; border-radius: 10px; position: relative;">
+            <label style="flex: 1; text-align: center; position: relative; z-index: 1;">
+              <input type="radio" formControlName="direction" value="ABOVE" style="opacity: 0; position: absolute;" />
+              <span style="display: block; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.9375rem; font-weight: 600; color: var(--ink-soft);" [style.background]="createAlertForm.get('direction')?.value === 'ABOVE' ? 'var(--surface)' : 'transparent'" [style.color]="createAlertForm.get('direction')?.value === 'ABOVE' ? 'var(--ink)' : 'var(--ink-soft)'" [style.boxShadow]="createAlertForm.get('direction')?.value === 'ABOVE' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'">Above</span>
+            </label>
+            <label style="flex: 1; text-align: center; position: relative; z-index: 1;">
+              <input type="radio" formControlName="direction" value="BELOW" style="opacity: 0; position: absolute;" />
+              <span style="display: block; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.9375rem; font-weight: 600; color: var(--ink-soft);" [style.background]="createAlertForm.get('direction')?.value === 'BELOW' ? 'var(--surface)' : 'transparent'" [style.color]="createAlertForm.get('direction')?.value === 'BELOW' ? 'var(--ink)' : 'var(--ink-soft)'" [style.boxShadow]="createAlertForm.get('direction')?.value === 'BELOW' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'">Below</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom: 24px;">
+          <label class="field-label" for="threshold-input" style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 8px;">Threshold Price</label>
+          <div class="input-wrap" [class.invalid]="createAlertForm.get('threshold')?.invalid && createAlertForm.get('threshold')?.touched">
+            <input
+              id="threshold-input"
+              class="input"
+              style="width: 100%; height: 42px; padding: 0 14px; font: inherit; font-size: 1rem; border: 1.5px solid var(--line); border-radius: 10px; background: var(--field-bg);"
+              type="number"
+              inputmode="decimal"
+              step="0.01"
+              min="0.01"
+              formControlName="threshold"
+              placeholder="0.00"
+            />
+          </div>
+          <p class="field-error" *ngIf="createAlertForm.get('threshold')?.invalid && createAlertForm.get('threshold')?.touched" style="color: var(--down); font-size: 0.8125rem; margin-top: 6px;">Threshold must be greater than 0.</p>
+        </div>
+
+        <button
+          type="submit"
+          class="submit"
+          style="width: 100%; height: 48px; border-radius: 12px; font-weight: 600; font-size: 1.0625rem; color: #fff; background: var(--up-solid); border: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;"
+          [disabled]="createAlertForm.invalid || isSaving()"
+        >
+          {{ isSaving() ? 'Creating...' : 'Create Alert' }}
+        </button>
+      </form>
+    </aside>
+
+    <!-- Alert List -->
+    <main class="watchlist-main" style="flex: 2; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;">
+      
+      <div *ngIf="isLoading()" class="status" style="padding: 32px; text-align: center; color: var(--ink-soft);">
+        Loading alerts...
+      </div>
+
+      <div *ngIf="loadError()" class="status" style="padding: 32px; text-align: center; color: var(--down);">
+        {{ loadError() }}
+      </div>
+
+      <div class="table-wrap" *ngIf="!isLoading() && !loadError() && alerts().length > 0" style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--line);">
+              <th style="padding: 16px; font-size: 0.875rem; font-weight: 600; color: var(--ink-soft);">Symbol</th>
+              <th style="padding: 16px; font-size: 0.875rem; font-weight: 600; color: var(--ink-soft);">Condition</th>
+              <th style="padding: 16px; font-size: 0.875rem; font-weight: 600; color: var(--ink-soft);">Threshold</th>
+              <th style="padding: 16px; font-size: 0.875rem; font-weight: 600; color: var(--ink-soft);">Status</th>
+              <th style="padding: 16px; font-size: 0.875rem; font-weight: 600; color: var(--ink-soft);">Created On</th>
+              <th style="padding: 16px; font-size: 0.875rem; font-weight: 600; color: var(--ink-soft);">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let alert of alerts(); trackBy: trackById" style="border-bottom: 1px solid var(--line);">
+              <td style="padding: 16px; font-weight: 600;">{{ alert.symbol }}</td>
+              <td style="padding: 16px;">
+                <span style="text-transform: capitalize;">{{ alert.direction | lowercase }}</span>
+                {{ alert.threshold | currency: 'USD' }}
+              </td>
+              <td style="padding: 16px;">{{ alert.threshold | currency: 'USD' }}</td>
+              <td style="padding: 16px;">
+                <span class="status-badge" 
+                  style="display: inline-block; padding: 4px 10px; font-size: 0.8125rem; font-weight: 600; border-radius: 999px;"
+                  [style.background]="alert.status === 'ACTIVE' ? 'var(--up-bg)' : alert.status === 'TRIGGERED' ? 'var(--amber-bg)' : 'var(--surface-2)'"
+                  [style.color]="alert.status === 'ACTIVE' ? 'var(--up)' : alert.status === 'TRIGGERED' ? 'var(--amber)' : 'var(--ink-soft)'"
+                >
+                  {{ alert.status }}
+                </span>
+              </td>
+              <td style="padding: 16px; color: var(--ink-soft);">{{ alert.createdOn | date:'dd MMM yyyy' }}</td>
+              <td style="padding: 16px;">
+                <button
+                  *ngIf="alert.status === 'ACTIVE'"
+                  type="button"
+                  class="btn-danger-outline"
+                  (click)="cancelAlert(alert.id)"
+                  [disabled]="isSaving()"
+                >
+                  Cancel
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="!isLoading() && !loadError() && alerts().length === 0" style="padding: 56px 24px; text-align: center;">
+        <strong style="display: block; font-size: 1.125rem; margin-bottom: 8px;">No alerts found</strong>
+        <span style="color: var(--ink-soft);">Create an alert to get notified when prices move.</span>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- Toasts -->
+<div class="toast-stack">
+  <div
+    *ngFor="let toast of toasts()"
+    class="toast"
+    [ngClass]="'toast-' + toast.type"
+    [attr.role]="toast.type === 'error' ? 'alert' : 'status'"
+  >
+    <span class="toast-icon" aria-hidden="true">
+      <svg *ngIf="toast.type === 'success'" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+      <ng-container *ngIf="toast.type === 'error'">!</ng-container>
+    </span>
+    <span class="toast-text">{{ toast.text }}</span>
+    <button type="button" class="toast-close" aria-label="Dismiss message" (click)="dismissToast(toast.id)">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
+  </div>
+</div>
