@@ -138,4 +138,17 @@
           AND id = #{alertId}
     </update>
 
+    <!-- UPDATE: Atomic transition ACTIVE → TRIGGERED (safe for at-least-once Kafka delivery) -->
+    <!-- Returns 1 if update succeeded, 0 if alert was already triggered or no longer active -->
+    <update id="transitionAlertToTriggered" parameterType="map">
+        UPDATE tradingsystem.price_alerts
+        SET
+            status = 'TRIGGERED',
+            triggered_on = #{triggeredOn},
+            updated_on = CURRENT_TIMESTAMP
+        WHERE account_id = #{accountId}
+          AND id = #{alertId}
+          AND status = 'ACTIVE'
+    </update>
+
 </mapper>

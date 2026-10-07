@@ -65,5 +65,19 @@ public interface PriceAlertDataMapper {
             @Param("status") String status,
             @Param("triggeredOn") java.time.OffsetDateTime triggeredOn
     );
+
+    /**
+     * Atomic transition: ACTIVE → TRIGGERED.
+     * 
+     * Safe for at-least-once Kafka delivery.
+     * Only succeeds if alert is still ACTIVE; returns 0 if already triggered.
+     * 
+     * @return 1 if alert was transitioned to TRIGGERED, 0 if already in another state
+     */
+    int transitionAlertToTriggered(
+            @Param("accountId") Long accountId,
+            @Param("alertId") Long alertId,
+            @Param("triggeredOn") java.time.OffsetDateTime triggeredOn
+    );
 }
 

@@ -78,6 +78,9 @@ public class PriceAlertEvaluationServiceImpl implements PriceAlertEvaluationServ
      * ABOVE: triggers when previousPrice < threshold AND currentPrice >= threshold
      * BELOW: triggers when previousPrice > threshold AND currentPrice <= threshold
      *
+     * Uses atomic database update to ensure alerts trigger exactly once,
+     * even with duplicate market-data events from Kafka.
+     *
      * @param alert the alert to evaluate
      * @param previousPrice the previous price
      * @param currentPrice the current price
@@ -120,13 +123,30 @@ public class PriceAlertEvaluationServiceImpl implements PriceAlertEvaluationServ
         }
 
         // Update alert status if trigger condition met
+        // Uses atomic transition to ensure at-most-once triggering
         if (shouldTrigger) {
-            priceAlertDataMapper.updateAlertStatus(
+            OffsetDateTime triggeredOn = OffsetDateTime.now();
+            
+            int rowsUpdated = priceAlertDataMapper.transitionAlertToTriggered(
                     alert.getAccountId(),
                     alert.getId(),
-                    AlertStatus.TRIGGERED.name(),
-                    OffsetDateTime.now()
+                    triggeredOn
             );
+
+            if (rowsUpdated > 0) {
+                // Alert was successfully transitioned to TRIGGERED
+                logger.debug(
+                        "Alert {} state transitioned to TRIGGERED at {}",
+                        alert.getId(),
+                        triggeredOn
+                );
+            } else {
+                // Alert was already triggered (or cancelled/etc) - idempotency
+                logger.debug(
+                        "Alert {} was not in ACTIVE state, skipping transition (likely duplicate event)",
+                        alert.getId()
+                );
+            }
         }
     }
 }

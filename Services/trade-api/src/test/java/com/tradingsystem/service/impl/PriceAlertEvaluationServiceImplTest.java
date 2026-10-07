@@ -18,6 +18,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -61,6 +62,8 @@ class PriceAlertEvaluationServiceImplTest {
         PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
         when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
                 .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);  // 1 row updated (success)
 
         evaluationService.evaluateAlertsForSymbol(
                 "AAPL",
@@ -68,10 +71,9 @@ class PriceAlertEvaluationServiceImplTest {
                 new BigDecimal("331")
         );
 
-        verify(priceAlertDataMapper).updateAlertStatus(
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
                 eq(1001L),
                 eq(1L),
-                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -99,6 +101,8 @@ class PriceAlertEvaluationServiceImplTest {
         PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
         when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
                 .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);  // 1 row updated (success)
 
         evaluationService.evaluateAlertsForSymbol(
                 "AAPL",
@@ -106,10 +110,9 @@ class PriceAlertEvaluationServiceImplTest {
                 new BigDecimal("330")
         );
 
-        verify(priceAlertDataMapper).updateAlertStatus(
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
                 eq(1001L),
                 eq(1L),
-                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -120,6 +123,8 @@ class PriceAlertEvaluationServiceImplTest {
         PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
         when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
                 .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);  // 1 row updated (success)
 
         evaluationService.evaluateAlertsForSymbol(
                 "AAPL",
@@ -127,10 +132,9 @@ class PriceAlertEvaluationServiceImplTest {
                 new BigDecimal("500")
         );
 
-        verify(priceAlertDataMapper).updateAlertStatus(
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
                 eq(1001L),
                 eq(1L),
-                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -162,6 +166,8 @@ class PriceAlertEvaluationServiceImplTest {
         PriceAlert alert = createBelowAlert(1001L, 2L, "AAPL", 330);
         when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
                 .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(2L), any()))
+                .thenReturn(1);  // 1 row updated (success)
 
         evaluationService.evaluateAlertsForSymbol(
                 "AAPL",
@@ -169,10 +175,9 @@ class PriceAlertEvaluationServiceImplTest {
                 new BigDecimal("329")
         );
 
-        verify(priceAlertDataMapper).updateAlertStatus(
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
                 eq(1001L),
                 eq(2L),
-                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -200,6 +205,8 @@ class PriceAlertEvaluationServiceImplTest {
         PriceAlert alert = createBelowAlert(1001L, 2L, "AAPL", 330);
         when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
                 .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(2L), any()))
+                .thenReturn(1);  // 1 row updated (success)
 
         evaluationService.evaluateAlertsForSymbol(
                 "AAPL",
@@ -207,10 +214,9 @@ class PriceAlertEvaluationServiceImplTest {
                 new BigDecimal("330")
         );
 
-        verify(priceAlertDataMapper).updateAlertStatus(
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
                 eq(1001L),
                 eq(2L),
-                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -221,6 +227,8 @@ class PriceAlertEvaluationServiceImplTest {
         PriceAlert alert = createBelowAlert(1001L, 2L, "AAPL", 330);
         when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
                 .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(2L), any()))
+                .thenReturn(1);  // 1 row updated (success)
 
         evaluationService.evaluateAlertsForSymbol(
                 "AAPL",
@@ -228,10 +236,9 @@ class PriceAlertEvaluationServiceImplTest {
                 new BigDecimal("10")
         );
 
-        verify(priceAlertDataMapper).updateAlertStatus(
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
                 eq(1001L),
                 eq(2L),
-                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -249,21 +256,23 @@ class PriceAlertEvaluationServiceImplTest {
         when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
                 .thenReturn(List.of(aboveAlert, belowAlert));
 
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);  // 1 row updated (success)
+
         evaluationService.evaluateAlertsForSymbol(
                 "AAPL",
                 new BigDecimal("325"),
                 new BigDecimal("331")
         );
 
-        verify(priceAlertDataMapper).updateAlertStatus(
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
                 eq(1001L),
                 eq(1L),
-                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
 
         verify(priceAlertDataMapper, never())
-                .updateAlertStatus(eq(1001L), eq(2L), any(), any());
+                .transitionAlertToTriggered(eq(1001L), eq(2L), any());
     }
 
     @Test
@@ -276,6 +285,9 @@ class PriceAlertEvaluationServiceImplTest {
         when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
                 .thenReturn(List.of(aboveAlert, belowAlert));
 
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);  // 1 row updated (success)
+
         // Price crosses above 150
         evaluationService.evaluateAlertsForSymbol(
                 "AAPL",
@@ -283,10 +295,9 @@ class PriceAlertEvaluationServiceImplTest {
                 new BigDecimal("155")
         );
 
-        verify(priceAlertDataMapper).updateAlertStatus(
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
                 eq(1001L),
                 eq(1L),
-                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
     }
@@ -363,6 +374,9 @@ class PriceAlertEvaluationServiceImplTest {
         when(priceAlertDataMapper.findActiveAlertsBySymbol("MSFT"))
                 .thenReturn(List.of(msft));
 
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);
+
         // Evaluate AAPL
         evaluationService.evaluateAlertsForSymbol(
                 "AAPL",
@@ -370,12 +384,14 @@ class PriceAlertEvaluationServiceImplTest {
                 new BigDecimal("331")
         );
 
-        verify(priceAlertDataMapper).updateAlertStatus(
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
                 eq(1001L),
                 eq(1L),
-                eq("TRIGGERED"),
                 any(OffsetDateTime.class)
         );
+
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(2L), any()))
+                .thenReturn(1);
 
         // Evaluate MSFT
         evaluationService.evaluateAlertsForSymbol(
@@ -384,10 +400,213 @@ class PriceAlertEvaluationServiceImplTest {
                 new BigDecimal("399")
         );
 
-        verify(priceAlertDataMapper).updateAlertStatus(
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
                 eq(1001L),
                 eq(2L),
-                eq("TRIGGERED"),
+                any(OffsetDateTime.class)
+        );
+    }
+
+    // =========================================================
+    // SAFE STATE TRANSITION & IDEMPOTENCY TESTS
+    // =========================================================
+
+    @Test
+    void evaluateAlerts_atomicTransition_successfulTrigger() {
+        // Atomic transition succeeds (alert is ACTIVE)
+        PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);  // 1 row updated = success
+
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
+                eq(1001L),
+                eq(1L),
+                any(OffsetDateTime.class)
+        );
+    }
+
+    @Test
+    void evaluateAlerts_duplicateEvent_idempotent() {
+        // Same alert evaluated twice (duplicate market-data event)
+        // First evaluation: succeeds (1 row updated)
+        // Second evaluation: fails (0 rows updated - alert no longer ACTIVE)
+        PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);  // First call succeeds
+        
+        // First evaluation
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
+                eq(1001L),
+                eq(1L),
+                any(OffsetDateTime.class)
+        );
+
+        // Reset mocks for second call
+        reset(priceAlertDataMapper);
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of());  // No ACTIVE alerts (already triggered)
+        
+        // Second evaluation with same alert (duplicate event)
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        // No transition attempt because alert is no longer ACTIVE
+        verify(priceAlertDataMapper, never()).transitionAlertToTriggered(any(), any(), any());
+    }
+
+    @Test
+    void evaluateAlerts_alreadyTriggered_preventReTriggering() {
+        // Alert triggers crossing, then price falls back, price crosses again
+        // Should not re-trigger because alert is now TRIGGERED (not ACTIVE)
+        PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
+
+        // First crossing: 329 -> 331
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);  // Success
+
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
+                eq(1001L),
+                eq(1L),
+                any(OffsetDateTime.class)
+        );
+
+        // Price falls back: 331 -> 329 (would trigger again if alert was still ACTIVE)
+        reset(priceAlertDataMapper);
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of());  // Alert no longer ACTIVE
+
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("331"),
+                new BigDecimal("329")
+        );
+
+        // No transition because alert is not in active list
+        verify(priceAlertDataMapper, never()).transitionAlertToTriggered(any(), any(), any());
+    }
+
+    @Test
+    void evaluateAlerts_multipleCancelledAlerts_skipsNonActive() {
+        // Two alerts on same symbol: one ACTIVE, one CANCELLED
+        // Only ACTIVE should be evaluated
+        PriceAlert activeAlert = createAboveAlert(1001L, 1L, "AAPL", 330);
+        // Cancelled alert would not appear in findActiveAlertsBySymbol results
+        
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(activeAlert));  // Only ACTIVE alerts
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);
+
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        // Only active alert is transitioned
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
+                eq(1001L),
+                eq(1L),
+                any(OffsetDateTime.class)
+        );
+    }
+
+    @Test
+    void evaluateAlerts_multipleAccountsSameSymbol_scoped() {
+        // Two accounts with alerts on same symbol
+        PriceAlert acct1Alert = createAboveAlert(1001L, 1L, "AAPL", 330);
+        PriceAlert acct2Alert = createAboveAlert(2001L, 2L, "AAPL", 330);
+        
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(acct1Alert, acct2Alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(2001L), eq(2L), any()))
+                .thenReturn(1);
+
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        // Both accounts' alerts are transitioned
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
+                eq(1001L),
+                eq(1L),
+                any(OffsetDateTime.class)
+        );
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
+                eq(2001L),
+                eq(2L),
+                any(OffsetDateTime.class)
+        );
+    }
+
+    @Test
+    void evaluateAlerts_concurrentDuplicateEvents_onlyOneTriggers() {
+        // Simulates race condition: two threads evaluate same crossing
+        // Both attempt transition, but database ensures only one succeeds
+        PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
+        
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(alert));
+        
+        // First thread: succeeds
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);
+
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        // Update mock for second thread: fails
+        reset(priceAlertDataMapper);
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(0);  // 0 rows updated = already triggered
+
+        // Second thread attempts same evaluation
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        // Attempted transition, but failed (idempotent)
+        verify(priceAlertDataMapper).transitionAlertToTriggered(
+                eq(1001L),
+                eq(1L),
                 any(OffsetDateTime.class)
         );
     }
