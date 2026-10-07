@@ -4,7 +4,10 @@ import com.tradingsystem.enums.AlertDirection;
 import com.tradingsystem.enums.AlertStatus;
 import com.tradingsystem.mapper.PriceAlertDataMapper;
 import com.tradingsystem.model.PriceAlert;
+import com.tradingsystem.model.User;
+import com.tradingsystem.service.NotificationService;
 import com.tradingsystem.service.PriceAlertEvaluationService;
+import com.tradingsystem.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,9 +34,17 @@ public class PriceAlertEvaluationServiceImpl implements PriceAlertEvaluationServ
             LoggerFactory.getLogger(PriceAlertEvaluationServiceImpl.class);
 
     private final PriceAlertDataMapper priceAlertDataMapper;
+    private final NotificationService notificationService;
+    private final UserService userService;
 
-    public PriceAlertEvaluationServiceImpl(PriceAlertDataMapper priceAlertDataMapper) {
+    public PriceAlertEvaluationServiceImpl(
+            PriceAlertDataMapper priceAlertDataMapper,
+            NotificationService notificationService,
+            UserService userService
+    ) {
         this.priceAlertDataMapper = priceAlertDataMapper;
+        this.notificationService = notificationService;
+        this.userService = userService;
     }
 
     @Override
@@ -140,6 +151,9 @@ public class PriceAlertEvaluationServiceImpl implements PriceAlertEvaluationServ
                         alert.getId(),
                         triggeredOn
                 );
+                
+                // Send notification to customer after successful state transition
+                notifyCustomerAlertTriggered(alert, currentPrice, triggeredOn);
             } else {
                 // Alert was already triggered (or cancelled/etc) - idempotency
                 logger.debug(
@@ -147,6 +161,62 @@ public class PriceAlertEvaluationServiceImpl implements PriceAlertEvaluationServ
                         alert.getId()
                 );
             }
+        }
+    }
+
+    /**
+     * Notifies customer that their price alert was triggered.
+     *
+     * Handles notification delivery independently from alert state changes.
+     * Notification failure does not crash the market-data consumer.
+     *
+     * @param alert the triggered alert
+     * @param currentPrice the price that triggered the alert
+     * @param triggeredOn the timestamp when triggered
+     */
+    private void notifyCustomerAlertTriggered(
+            PriceAlert alert,
+            BigDecimal currentPrice,
+            OffsetDateTime triggeredOn
+    ) {
+        try {
+            // Fetch user/customer details
+            User user = userService.getUserByAccountId(alert.getAccountId());
+
+            if (user == null) {
+                logger.warn(
+                        "Cannot notify for alert {}: user not found for accountId {}",
+                        alert.getId(),
+                        alert.getAccountId()
+                );
+                return;
+            }
+
+            // Call notification service (handles email/channel internally)
+            notificationService.sendPriceAlertTriggeredNotification(
+                    user,
+                    alert.getSymbol(),
+                    alert.getDirection().name(),
+                    alert.getThreshold(),
+                    currentPrice,
+                    triggeredOn
+            );
+
+            logger.info(
+                    "Price alert notification sent for alert {} to user {}",
+                    alert.getId(),
+                    user.getUsername()
+            );
+
+        } catch (Exception ex) {
+            // Log notification failure but don't re-throw
+            // Prevents notification issues from crashing market-data consumer
+            logger.error(
+                    "Failed to send price alert notification for alert {}: {}",
+                    alert.getId(),
+                    ex.getMessage(),
+                    ex
+            );
         }
     }
 }

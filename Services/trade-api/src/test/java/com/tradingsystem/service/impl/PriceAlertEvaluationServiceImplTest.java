@@ -4,7 +4,10 @@ import com.tradingsystem.enums.AlertDirection;
 import com.tradingsystem.enums.AlertStatus;
 import com.tradingsystem.mapper.PriceAlertDataMapper;
 import com.tradingsystem.model.PriceAlert;
+import com.tradingsystem.model.User;
 import com.tradingsystem.service.Impl.PriceAlertEvaluationServiceImpl;
+import com.tradingsystem.service.NotificationService;
+import com.tradingsystem.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,11 +17,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,11 +34,21 @@ class PriceAlertEvaluationServiceImplTest {
     @Mock
     private PriceAlertDataMapper priceAlertDataMapper;
 
+    @Mock
+    private NotificationService notificationService;
+
+    @Mock
+    private UserService userService;
+
     private PriceAlertEvaluationServiceImpl evaluationService;
 
     @BeforeEach
     void setUp() {
-        evaluationService = new PriceAlertEvaluationServiceImpl(priceAlertDataMapper);
+        evaluationService = new PriceAlertEvaluationServiceImpl(
+                priceAlertDataMapper,
+                notificationService,
+                userService
+        );
     }
 
     // =========================================================
@@ -612,6 +628,174 @@ class PriceAlertEvaluationServiceImplTest {
     }
 
     // =========================================================
+    // NOTIFICATION TESTS
+    // =========================================================
+
+    @Test
+    void evaluateAlerts_notifiesCustomerAfterSuccessfulCrossing() {
+        // Alert crosses threshold and is successfully transitioned
+        PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
+        User user = createTestUser(1001L, "trader1", "alice@example.com");
+
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);  // Success
+        when(userService.getUserByAccountId(1001L))
+                .thenReturn(user);
+
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        // Verify notification was called with correct parameters
+        verify(notificationService).sendPriceAlertTriggeredNotification(
+                eq(user),
+                eq("AAPL"),
+                eq("ABOVE"),
+                eq(new BigDecimal("330")),
+                eq(new BigDecimal("331")),
+                any(OffsetDateTime.class)
+        );
+    }
+
+    @Test
+    void evaluateAlerts_noNotificationBeforeCrossing() {
+        // No crossing (price stays below threshold) - no evaluation, no notification
+        PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(alert));
+
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("328"),
+                new BigDecimal("329")
+        );
+
+        // No notification sent because alert didn't trigger
+        verify(notificationService, never()).sendPriceAlertTriggeredNotification(
+                any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    @Test
+    void evaluateAlerts_noNotificationWhenNoPreviousPrice() {
+        // First quote for symbol (no previous price) - no evaluation, no notification
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                null,
+                new BigDecimal("330")
+        );
+
+        // No notification sent
+        verify(notificationService, never()).sendPriceAlertTriggeredNotification(
+                any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    @Test
+    void evaluateAlerts_noDuplicateNotificationOnIdempotentTransition() {
+        // Same alert crosses threshold twice (duplicate Kafka event)
+        // First evaluation succeeds, second returns 0 (already triggered)
+        PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
+        User user = createTestUser(1001L, "trader1", "alice@example.com");
+
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);  // First call succeeds
+        when(userService.getUserByAccountId(1001L))
+                .thenReturn(user);
+
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        // First notification sent
+        verify(notificationService, times(1)).sendPriceAlertTriggeredNotification(
+                any(), any(), any(), any(), any(), any()
+        );
+
+        // Second evaluation (duplicate event)
+        reset(priceAlertDataMapper, notificationService);
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(0);  // Already triggered
+
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        // No second notification (transition returned 0)
+        verify(notificationService, never()).sendPriceAlertTriggeredNotification(
+                any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    @Test
+    void evaluateAlerts_notificationFailureDoesNotCrash() {
+        // Notification service throws exception - should be caught
+        PriceAlert alert = createAboveAlert(1001L, 1L, "AAPL", 330);
+        User user = createTestUser(1001L, "trader1", "alice@example.com");
+
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(1001L), eq(1L), any()))
+                .thenReturn(1);  // Success
+        when(userService.getUserByAccountId(1001L))
+                .thenReturn(user);
+        
+        // Notification service throws exception
+        doThrow(new RuntimeException("Email service unavailable"))
+                .when(notificationService).sendPriceAlertTriggeredNotification(
+                        any(), any(), any(), any(), any(), any()
+                );
+
+        // Should not throw - exception is caught and logged
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        // Notification was attempted
+        verify(notificationService).sendPriceAlertTriggeredNotification(
+                any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    @Test
+    void evaluateAlerts_notificationSkippedWhenUserNotFound() {
+        // User lookup fails (account exists but user doesn't in user table)
+        PriceAlert alert = createAboveAlert(9999L, 1L, "AAPL", 330);
+
+        when(priceAlertDataMapper.findActiveAlertsBySymbol("AAPL"))
+                .thenReturn(List.of(alert));
+        when(priceAlertDataMapper.transitionAlertToTriggered(eq(9999L), eq(1L), any()))
+                .thenReturn(1);  // Alert state changed
+        when(userService.getUserByAccountId(9999L))
+                .thenReturn(null);  // User not found
+
+        evaluationService.evaluateAlertsForSymbol(
+                "AAPL",
+                new BigDecimal("329"),
+                new BigDecimal("331")
+        );
+
+        // No notification sent (user not found)
+        verify(notificationService, never()).sendPriceAlertTriggeredNotification(
+                any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    // =========================================================
     // HELPER METHODS
     // =========================================================
 
@@ -639,5 +823,15 @@ class PriceAlertEvaluationServiceImplTest {
         alert.setCreatedOn(OffsetDateTime.now());
         alert.setUpdatedOn(OffsetDateTime.now());
         return alert;
+    }
+
+    private User createTestUser(Long accountId, String username, String email) {
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setAccountId(accountId);
+        user.setUsername(username);
+        user.setFirstName("Test");
+        user.setEmail(email);
+        return user;
     }
 }
