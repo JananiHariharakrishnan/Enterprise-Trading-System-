@@ -314,6 +314,30 @@
       </div>
     </dl>
 
+    <!-- AI Signal Section -->
+    <div class="ai-signal-card">
+      <div class="ai-signal-head">
+        <span class="ai-signal-title">⚡ AI Quant Signal</span>
+        <span *ngIf="isSignalLoading()" class="ai-signal-loading">Analyzing indicators...</span>
+      </div>
+
+      <div *ngIf="instrumentSignal() as sig" class="ai-signal-body">
+        <div class="ai-signal-pill-row">
+          <span class="signal-badge" [ngClass]="'badge-' + (sig.action | lowercase)">
+            {{ sig.action }}
+          </span>
+          <span class="signal-conf">
+            Confidence: <strong>{{ (sig.confidence * 100) | number:'1.0-0' }}%</strong>
+          </span>
+        </div>
+        <p class="ai-signal-reasoning">{{ sig.reasoning }}</p>
+      </div>
+
+      <div *ngIf="!isSignalLoading() && !instrumentSignal()" class="ai-signal-empty">
+        {{ signalError() || 'No signal yet' }}
+      </div>
+    </div>
+
     <div class="detail-actions">
       <button type="button" class="btn-trade buy" (click)="trade(instrument, 'buy')">Buy</button>
       <button type="button" class="btn-trade sell" (click)="trade(instrument, 'sell')">Sell</button>

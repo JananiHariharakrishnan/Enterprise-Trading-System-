@@ -46,6 +46,9 @@ public class OrderServiceImpl implements OrderService {
     private final CurrentUser currentUser;
     private final OrderEventPublisher orderEventPublisher;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.tradingsystem.ai.signal.SignalEngine signalEngine;
+
     public OrderServiceImpl(
             OrderLogic orderLogic,
             OrderDataMapper orderDataMapper,
@@ -191,7 +194,7 @@ public class OrderServiceImpl implements OrderService {
         /*
          * Kafka publishing occurs only after successful database commit.
          */
-        publishAfterCommit(order);
+        publishAfterCommit(order, account, position);
 
         OrderResponse response = new OrderResponse();
 
@@ -286,7 +289,7 @@ public class OrderServiceImpl implements OrderService {
 
         return response;
     }
-    private void publishAfterCommit(Order order) {
+    private void publishAfterCommit(Order order, Account account, Position position) {
 
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             throw new IllegalStateException(
@@ -318,6 +321,35 @@ public class OrderServiceImpl implements OrderService {
                         );
 
                         orderEventPublisher.publishOrderPlaced(event);
+
+                        if (signalEngine != null && order.getSymbol() != null) {
+                            BigDecimal p = order.getExecutorPrice() != null ? order.getExecutorPrice() : order.getPrice();
+                            Double priceVal = p != null ? p.doubleValue() : null;
+                            try {
+                                com.tradingsystem.ai.signal.PortfolioContext portfolioContext = new com.tradingsystem.ai.signal.PortfolioContext();
+                                if (account != null) {
+                                    portfolioContext.setAccountId(account.getAccountId());
+                                    portfolioContext.setCashBalance(account.getCashBalance());
+                                    portfolioContext.setBuyingPower(account.getBuyingPower());
+                                }
+                                if (position != null) {
+                                    portfolioContext.setCurrentHoldingQuantity(position.getQuantity());
+                                    portfolioContext.setCurrentAverageCost(position.getAverageCost());
+                                } else {
+                                    portfolioContext.setCurrentHoldingQuantity(0);
+                                    portfolioContext.setCurrentAverageCost(BigDecimal.ZERO);
+                                }
+                                if (order.getSide() != null) {
+                                    portfolioContext.setOrderSide(order.getSide().name());
+                                }
+                                portfolioContext.setOrderQuantity(order.getQuantity());
+                                portfolioContext.setOrderPrice(p);
+
+                                signalEngine.generateSignalForSymbol(order.getSymbol(), priceVal, portfolioContext, true);
+                            } catch (Exception ex) {
+                                // Background signal generation failure must not affect order flow
+                            }
+                        }
                     }
                 }
         );

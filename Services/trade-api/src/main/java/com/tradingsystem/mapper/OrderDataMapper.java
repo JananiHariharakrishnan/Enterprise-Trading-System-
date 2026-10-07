@@ -92,4 +92,6 @@ public interface OrderDataMapper {
     );
 
     boolean existsExecutionByEventId(@Param("eventId") UUID eventId);
+
+    List<String> findDistinctOrderedSymbolsByAccountId(@Param("accountId") Long accountId);
 }

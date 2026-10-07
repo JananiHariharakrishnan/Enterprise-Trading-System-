@@ -34,6 +34,9 @@ public class ExecutionProcessingService {
     private final OrderDataMapper orderDataMapper;
     private final TradeEventPublisher tradeEventPublisher;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.tradingsystem.ai.signal.SignalEngine signalEngine;
+
     public ExecutionProcessingService(
             OrderDataMapper orderDataMapper,
             TradeEventPublisher tradeEventPublisher
@@ -257,10 +260,35 @@ public class ExecutionProcessingService {
             payload.setAverageCostAfter(newAverageCost);
             payload.setExecutedOn(java.time.OffsetDateTime.now(ZoneId.of("UTC")).toString());
 
+            final int finalHoldingQty = newQuantity;
+            final java.math.BigDecimal finalAvgCost = newAverageCost;
+
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
                     tradeEventPublisher.publishTradeEvent(payload, "ORDER_FILLED");
+
+                    if (signalEngine != null && payload.getSymbol() != null && executedPrice != null) {
+                        try {
+                            com.tradingsystem.ai.signal.PortfolioContext portfolioContext = new com.tradingsystem.ai.signal.PortfolioContext();
+                            portfolioContext.setAccountId(order.getAccountId());
+                            if (account != null) {
+                                portfolioContext.setCashBalance(account.getCashBalance());
+                                portfolioContext.setBuyingPower(account.getBuyingPower());
+                            }
+                            portfolioContext.setCurrentHoldingQuantity(finalHoldingQty);
+                            portfolioContext.setCurrentAverageCost(finalAvgCost);
+                            if (order.getSide() != null) {
+                                portfolioContext.setOrderSide(order.getSide().name());
+                            }
+                            portfolioContext.setOrderQuantity(order.getQuantity());
+                            portfolioContext.setOrderPrice(executedPrice);
+
+                            signalEngine.generateSignalForSymbol(payload.getSymbol(), executedPrice.doubleValue(), portfolioContext, true);
+                        } catch (Exception ex) {
+                            // Non-blocking background signal calculation
+                        }
+                    }
                 }
             });
 
