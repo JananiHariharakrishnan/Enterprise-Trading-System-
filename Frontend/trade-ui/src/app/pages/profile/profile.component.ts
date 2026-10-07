@@ -218,7 +218,12 @@ async onSubmit(): Promise<void> {
       return;
     }
 
-    const accountId = Number(this.profileForm.getRawValue().accountId);
+    const formAccountId = Number(this.profileForm.getRawValue().accountId);
+    const userAccountId = Number(this.currentUser()?.accountId);
+    const accountId = Number.isFinite(formAccountId) && formAccountId > 0
+      ? formAccountId
+      : (Number.isFinite(userAccountId) && userAccountId > 0 ? userAccountId : NaN);
+
     if (!Number.isFinite(accountId) || accountId < 1) {
       this.errorMessage.set('Unable to determine account for preferences.');
       return;
