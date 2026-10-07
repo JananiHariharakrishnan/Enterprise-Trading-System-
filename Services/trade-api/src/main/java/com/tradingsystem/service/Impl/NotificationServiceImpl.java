@@ -87,13 +87,17 @@ public class NotificationServiceImpl implements NotificationService {
 
         Long accountId = user.getAccountId() != null ? user.getAccountId() : (payload != null ? payload.getAccountId() : null);
         if (customerPreferencesDataMapper != null && accountId != null) {
-            CustomerPreferences prefs = customerPreferencesDataMapper.findByAccountId(accountId);
-            if (prefs != null) {
-                List<String> channels = prefs.getNotificationsTradeFills();
-                if (channels != null && !isEmailEnabled(channels)) {
-                    log.info("Order filled email notification skipped: notifications disabled in preferences for accountId={}", accountId);
-                    return;
+            try {
+                CustomerPreferences prefs = customerPreferencesDataMapper.findByAccountId(accountId);
+                if (prefs != null) {
+                    List<String> channels = prefs.getNotificationsTradeFills();
+                    if (!isEmailEnabled(channels)) {
+                        log.info("Order filled email notification skipped: notifications disabled in preferences for accountId={}", accountId);
+                        return;
+                    }
                 }
+            } catch (Exception ex) {
+                log.error("Failed to check customer preferences for accountId={}: {}", accountId, ex.getMessage(), ex);
             }
         }
 
@@ -141,13 +145,17 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         if (customerPreferencesDataMapper != null && user.getAccountId() != null) {
-            CustomerPreferences prefs = customerPreferencesDataMapper.findByAccountId(user.getAccountId());
-            if (prefs != null) {
-                List<String> channels = prefs.getNotificationsPriceAlerts();
-                if (channels != null && !isEmailEnabled(channels)) {
-                    log.info("Price alert email notification skipped: alerts disabled in preferences for accountId={}", user.getAccountId());
-                    return;
+            try {
+                CustomerPreferences prefs = customerPreferencesDataMapper.findByAccountId(user.getAccountId());
+                if (prefs != null) {
+                    List<String> channels = prefs.getNotificationsPriceAlerts();
+                    if (!isEmailEnabled(channels)) {
+                        log.info("Price alert email notification skipped: alerts disabled in preferences for accountId={}", user.getAccountId());
+                        return;
+                    }
                 }
+            } catch (Exception ex) {
+                log.error("Failed to check customer preferences for accountId={}: {}", user.getAccountId(), ex.getMessage(), ex);
             }
         }
 

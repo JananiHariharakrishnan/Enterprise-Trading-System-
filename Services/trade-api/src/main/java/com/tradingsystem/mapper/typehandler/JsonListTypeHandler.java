@@ -12,7 +12,7 @@ import java.sql.*;
 import java.util.List;
 
 @MappedTypes(List.class)
-@MappedJdbcTypes(JdbcType.OTHER)
+@MappedJdbcTypes(value = JdbcType.OTHER, includeNullJdbcType = true)
 public class JsonListTypeHandler extends BaseTypeHandler<List<String>> {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

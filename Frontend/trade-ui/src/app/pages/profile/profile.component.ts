@@ -81,6 +81,10 @@ export class ProfileComponent implements OnInit {
         tradeFills: isYes ? ['IN_APP', 'EMAIL'] : ['NO NOTIFICATION'],
         priceAlerts: isYes ? ['IN_APP', 'EMAIL'] : ['NO NOTIFICATION'],
       }, { emitEvent: false });
+
+      if (!this.isLoading() && this.currentUser()) {
+        void this.onSavePreferences();
+      }
     });
   }
 

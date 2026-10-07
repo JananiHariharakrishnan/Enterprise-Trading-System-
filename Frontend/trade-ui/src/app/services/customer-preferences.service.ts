@@ -101,8 +101,9 @@ export class CustomerPreferencesService {
     try {
       const payloadRaw = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
       const payload = JSON.parse(payloadRaw) as { accountId?: unknown };
-      if (typeof payload.accountId === 'number' && Number.isFinite(payload.accountId)) {
-        return payload.accountId;
+      const parsed = Number(payload.accountId);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
       }
     } catch {
       // Fallback to provided value when token payload is not parseable.

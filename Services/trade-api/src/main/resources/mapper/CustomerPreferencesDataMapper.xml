@@ -10,8 +10,8 @@
         <result property="tradingDefaultOrderType" column="trading_default_order_type"/>
         <result property="tradingSkipOrderConfirmation" column="trading_skip_order_confirmation"/>
         <result property="tradingDefaultTradeQuantity" column="trading_default_trade_quantity"/>
-        <result property="notificationsTradeFills" column="notifications_trade_fills" javaType="java.util.List"/>
-        <result property="notificationsPriceAlerts" column="notifications_price_alerts" javaType="java.util.List"/>
+        <result property="notificationsTradeFills" column="notifications_trade_fills" javaType="java.util.List" jdbcType="OTHER" typeHandler="com.tradingsystem.mapper.typehandler.JsonListTypeHandler"/>
+        <result property="notificationsPriceAlerts" column="notifications_price_alerts" javaType="java.util.List" jdbcType="OTHER" typeHandler="com.tradingsystem.mapper.typehandler.JsonListTypeHandler"/>
         <result property="displayTheme" column="display_theme"/>
         <result property="displayBaseCurrency" column="display_base_currency"/>
         <result property="updatedAt" column="updated_at"/>
@@ -52,8 +52,8 @@
             #{tradingDefaultOrderType},
             #{tradingSkipOrderConfirmation},
             #{tradingDefaultTradeQuantity},
-            #{notificationsTradeFills, jdbcType=OTHER},
-            #{notificationsPriceAlerts, jdbcType=OTHER},
+            #{notificationsTradeFills, jdbcType=OTHER, typeHandler=com.tradingsystem.mapper.typehandler.JsonListTypeHandler},
+            #{notificationsPriceAlerts, jdbcType=OTHER, typeHandler=com.tradingsystem.mapper.typehandler.JsonListTypeHandler},
             #{displayTheme},
             #{displayBaseCurrency},
             NOW()
