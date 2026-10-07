@@ -1,6 +1,7 @@
 import { Injectable, signal, effect } from '@angular/core';
 
 export type Theme = 'dark' | 'light';
+export type ThemePreference = 'LIGHT' | 'DARK' | 'SYSTEM';
 
 @Injectable({
   providedIn: 'root'
@@ -54,5 +55,26 @@ export class ThemeService {
 
   setTheme(theme: Theme): void {
     this.currentTheme.set(theme);
+  }
+
+  applyThemePreference(preference: ThemePreference): void {
+    if (preference === 'LIGHT') {
+      this.setTheme('light');
+      return;
+    }
+
+    if (preference === 'DARK') {
+      this.setTheme('dark');
+      return;
+    }
+
+    this.setTheme(this.getSystemPreferredTheme());
+  }
+
+  private getSystemPreferredTheme(): Theme {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      return 'light';
+    }
+    return 'dark';
   }
 }

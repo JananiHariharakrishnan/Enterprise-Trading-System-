@@ -49,6 +49,27 @@ docker exec kafka /opt/kafka/bin/kafka-topics.sh \
   --replication-factor 1 \
   --config retention.ms=2592000000
 
+echo "Creating trade-signals..."
+
+docker exec kafka /opt/kafka/bin/kafka-topics.sh \
+  --bootstrap-server $BOOTSTRAP_SERVER \
+  --create \
+  --if-not-exists \
+  --topic trade-signals \
+  --partitions 3 \
+  --replication-factor 1 \
+  --config retention.ms=604800000
+
+echo "Creating trade-signals.DLT..."
+
+docker exec kafka /opt/kafka/bin/kafka-topics.sh \
+  --bootstrap-server $BOOTSTRAP_SERVER \
+  --create \
+  --if-not-exists \
+  --topic trade-signals.DLT \
+  --partitions 3 \
+  --replication-factor 1 \
+  --config retention.ms=604800000
 
 echo "Creating market-data..."
 docker exec kafka /opt/kafka/bin/kafka-topics.sh \

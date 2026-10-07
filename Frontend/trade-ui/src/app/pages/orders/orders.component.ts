@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { AuthSessionService } from '../../services/auth-session.service';
+import { CustomerPreferencesService, type BaseCurrency, type CustomerPreferences } from '../../services/customer-preferences.service';
 import { TradeApiClientService } from '../../services/trade-api-client.service';
 import type { PlaceOrderRequest, OrderHistoryEntry, AccountResponse, OrderResponse } from '../../generated/trade';
 import { InstrumentSearchComponent, type InstrumentListItem } from '../../components/instrument-search/instrument-search.component';
@@ -19,6 +20,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   private fb = inject(FormBuilder);
   private auth = inject(AuthSessionService);
   private api = inject(TradeApiClientService);
+  private preferencesApi = inject(CustomerPreferencesService, { optional: true });
   private route = inject(ActivatedRoute);
 
   @ViewChild(InstrumentSearchComponent) instrumentSearchComponent?: InstrumentSearchComponent;
@@ -32,7 +34,9 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   readonly lastOrderResponse = signal<OrderResponse | null>(null);
   readonly selectedInstrument = signal<InstrumentListItem | null>(null);
   readonly latestPrice = signal<number | null>(null);
-  
+  readonly skipOrderConfirmation = signal(false);
+  readonly baseCurrency = signal<BaseCurrency>('USD');
+
   private currentIdempotencyKey: string | null = null;
 
   readonly form = this.fb.group({
@@ -48,9 +52,15 @@ export class OrdersComponent implements OnInit, AfterViewInit {
 
   readonly side = computed<'BUY' | 'SELL'>(() => (this.formValue().side === 'SELL' ? 'SELL' : 'BUY'));
   readonly orderType = computed(() => (this.formValue().orderType === 'LIMIT' ? 'LIMIT' : 'MARKET'));
-  
-  readonly currencySymbol = computed(() => this.selectedInstrument()?.symbol?.endsWith('.NS') ? '₹' : '$');
-  readonly currencyCode = computed(() => this.selectedInstrument()?.symbol?.endsWith('.NS') ? 'INR' : 'USD');
+  readonly currencySymbol = computed(() => {
+    if (this.baseCurrency() === 'INR') return '₹';
+    return this.selectedInstrument()?.symbol?.endsWith('.NS') ? '₹' : '$';
+  });
+
+  readonly currencyCode = computed(() => {
+    if (this.baseCurrency() === 'INR') return 'INR';
+    return this.selectedInstrument()?.symbol?.endsWith('.NS') ? 'INR' : 'USD';
+  });
 
   /**
    * Dynamically update price field validation based on order type.
@@ -74,14 +84,36 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     });
   }
 
-  readonly estimatedTotal = computed<number | null>(() => {
-    const v = this.formValue();
-    const quantity = Number(v.quantity);
-    const price = v.orderType === 'MARKET' ? this.latestPrice() : Number(v.price);
-    return Number.isFinite(quantity) && price !== null && Number.isFinite(price) && quantity > 0 && price > 0
-      ? quantity * price
-      : null;
-  });
+    readonly estimatedTotal = computed<number | null>(() => {
+      const v = this.formValue();
+      const quantity = Number(v.quantity);
+      const price = v.orderType === 'MARKET' ? this.latestPrice() : Number(v.price);
+      return Number.isFinite(quantity) && price !== null && Number.isFinite(price) && quantity > 0 && price > 0
+        ? quantity * price
+        : null;
+    });
+
+    /** Price per share: the market quote for MARKET orders, or the typed price for LIMIT orders. */
+    readonly unitPrice = computed<number | null>(() => {
+      const total = this.estimatedTotal();
+      const quantity = Number(this.formValue().quantity);
+      return total !== null && quantity > 0 ? total / quantity : null;
+    });
+
+    /** Currency symbol for the account balance (follows the user's base currency). */
+    readonly balanceSymbol = computed(() => (this.baseCurrency() === 'INR' ? '₹' : '$'));
+
+    /**
+     * Can the user afford this order? Only checked for BUY orders priced in the
+     * same currency as the account, so we never compare mismatched currencies.
+     */
+    readonly balanceCheck = computed<'ok' | 'short' | null>(() => {
+      const acct = this.account();
+      const total = this.estimatedTotal();
+      if (!acct || total === null || this.side() !== 'BUY') return null;
+      if (this.currencyCode() !== this.baseCurrency()) return null;
+      return total <= Number(acct.buyingPower) ? 'ok' : 'short';
+    });
 
   readonly submitLabel = computed(() => {
     if (this.submitting()) return 'Placing order...';
@@ -90,16 +122,10 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     this.formValue(); // re-evaluate when the form changes
     if (this.form.invalid) return 'Fix the highlighted fields';
     const verb = this.side() === 'BUY' ? 'Buy' : 'Sell';
-    let label = `${verb} ${Number(1)} ${instrument.symbol}`;
-
-    const price = this.orderType() === 'LIMIT' ? Number(this.form.value.price) : this.latestPrice();
-    if (price && price > 0) {
-      const formattedPrice = this.currencySymbol() + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      label += ` @ ${this.orderType() === 'MARKET' ? '~' : ''}${formattedPrice}`;
-    }
-
-    return label;
+    return `${verb} ${Number(this.form.value.quantity)} ${instrument.symbol}`;
   });
+
+
 
   /** Exchange rate actually applied, derived from the response instead of being hard-coded. */
   readonly conversionRate = computed<number | null>(() => {
@@ -120,6 +146,8 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     // load account info for read-only display
     const user = await this.auth.loadCurrentUser();
     if (user) {
+      await this.loadAndApplyPreferences(user.accountId);
+
       try {
         const acct = await this.api.accounts.getAccount({ id: user.accountId });
         this.account.set(acct);
@@ -233,14 +261,15 @@ export class OrdersComponent implements OnInit, AfterViewInit {
       if (!user) throw new Error('Not authenticated');
 
       const selectedOrderType = this.form.value.orderType as 'MARKET' | 'LIMIT';
+      const normalizedOrderType: 'MARKET' | 'LIMIT' = selectedOrderType === 'LIMIT' ? 'LIMIT' : 'MARKET';
       const payload: PlaceOrderRequest = {
         accountId: user.accountId,
         symbol: this.form.value.symbol ?? '',
         side: this.form.value.side as 'BUY' | 'SELL',
         quantity: Number(this.form.value.quantity),
-        orderType: selectedOrderType,
+        orderType: normalizedOrderType,
         // For MARKET orders, price is null. For LIMIT orders, price is required.
-        price: selectedOrderType === 'MARKET' ? null : Number(this.form.value.price),
+        price: normalizedOrderType === 'MARKET' ? null : Number(this.form.value.price),
         // Use cached idempotency key to prevent duplicates on retry
         idempotencyKey: this.currentIdempotencyKey,
       } as PlaceOrderRequest;
@@ -254,16 +283,16 @@ export class OrdersComponent implements OnInit, AfterViewInit {
 
       // reset form (keep side and order type so repeat orders are quick)
       const { side, orderType: prevOrderType } = this.form.value;
-      this.form.reset({ 
-        symbol: '', 
-        side: side ?? 'BUY', 
-        quantity: 1, 
+      this.form.reset({
+        symbol: '',
+        side: side ?? 'BUY',
+        quantity: 1,
         price: null,
-        orderType: prevOrderType ?? 'MARKET' 
+        orderType: prevOrderType ?? 'MARKET'
       });
       this.selectedInstrument.set(null);
       this.instrumentSearchComponent?.resetSearch();
-      
+
       // Clear idempotency key for next order
       this.currentIdempotencyKey = null;
     } catch (err: unknown) {
@@ -272,7 +301,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
       const mapped = err && typeof err === 'object' && 'message' in (err as any) ? (err as any).message : 'Failed to place order';
       this.errorMessage.set(String(mapped));
       this.successMessage.set(null);
-      
+
       // Keep idempotency key on error - user can retry and backend will deduplicate
       // Only clear if it's a duplicate key error (which means order was already placed)
       const errorMessage = String(mapped).toLowerCase();
@@ -282,5 +311,32 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  private async loadAndApplyPreferences(accountId: number): Promise<void> {
+    if (!this.preferencesApi) {
+      return;
+    }
+
+    try {
+      const preferences = await this.preferencesApi.getPreferences(accountId)
+        ?? this.preferencesApi.defaultPreferences(accountId);
+      this.applyPreferences(preferences);
+    } catch {
+      // Preference application is best effort and should not block order placement.
+    }
+  }
+
+  private applyPreferences(preferences: CustomerPreferences): void {
+    this.skipOrderConfirmation.set(Boolean(preferences.trading.skipOrderConfirmation));
+    this.baseCurrency.set(preferences.display.baseCurrency);
+
+    const preferredOrderType = preferences.trading.defaultOrderType === 'LIMIT' ? 'LIMIT' : 'MARKET';
+    const preferredQuantity = Number(preferences.trading.defaultTradeQuantity);
+
+    this.form.patchValue({
+      orderType: preferredOrderType,
+      quantity: Number.isFinite(preferredQuantity) && preferredQuantity > 0 ? Math.floor(preferredQuantity) : 1,
+    });
   }
 }

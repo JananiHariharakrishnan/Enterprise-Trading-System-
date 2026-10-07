@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tradingsystem.mapper.CustomerPreferencesDataMapper">
+
+    <resultMap id="prefsResultMap" type="com.tradingsystem.model.CustomerPreferences">
+        <id property="accountId" column="account_id"/>
+        <result property="defaultAccountId" column="default_account_id"/>
+        <result property="tradingDefaultOrderType" column="trading_default_order_type"/>
+        <result property="tradingSkipOrderConfirmation" column="trading_skip_order_confirmation"/>
+        <result property="tradingDefaultTradeQuantity" column="trading_default_trade_quantity"/>
+        <result property="notificationsTradeFills" column="notifications_trade_fills" javaType="java.util.List"/>
+        <result property="notificationsPriceAlerts" column="notifications_price_alerts" javaType="java.util.List"/>
+        <result property="displayTheme" column="display_theme"/>
+        <result property="displayBaseCurrency" column="display_base_currency"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findByAccountId" resultMap="prefsResultMap" parameterType="long">
+        SELECT
+            account_id,
+            default_account_id,
+            trading_default_order_type,
+            trading_skip_order_confirmation,
+            trading_default_trade_quantity,
+            notifications_trade_fills,
+            notifications_price_alerts,
+            display_theme,
+            display_base_currency,
+            updated_at
+        FROM tradingsystem.customer_preferences
+        WHERE account_id = #{accountId}
+        LIMIT 1
+    </select>
+
+    <insert id="upsertCustomerPreferences" parameterType="com.tradingsystem.model.CustomerPreferences">
+        INSERT INTO tradingsystem.customer_preferences (
+            account_id,
+            default_account_id,
+            trading_default_order_type,
+            trading_skip_order_confirmation,
+            trading_default_trade_quantity,
+            notifications_trade_fills,
+            notifications_price_alerts,
+            display_theme,
+            display_base_currency,
+            updated_at
+        ) VALUES (
+            #{accountId},
+            #{defaultAccountId},
+            #{tradingDefaultOrderType},
+            #{tradingSkipOrderConfirmation},
+            #{tradingDefaultTradeQuantity},
+            #{notificationsTradeFills, jdbcType=OTHER},
+            #{notificationsPriceAlerts, jdbcType=OTHER},
+            #{displayTheme},
+            #{displayBaseCurrency},
+            NOW()
+        ) ON CONFLICT (account_id)
+        DO UPDATE SET
+            default_account_id = EXCLUDED.default_account_id,
+            trading_default_order_type = EXCLUDED.trading_default_order_type,
+            trading_skip_order_confirmation = EXCLUDED.trading_skip_order_confirmation,
+            trading_default_trade_quantity = EXCLUDED.trading_default_trade_quantity,
+            notifications_trade_fills = EXCLUDED.notifications_trade_fills,
+            notifications_price_alerts = EXCLUDED.notifications_price_alerts,
+            display_theme = EXCLUDED.display_theme,
+            display_base_currency = EXCLUDED.display_base_currency,
+            updated_at = NOW();
+    </insert>
+
+</mapper>
