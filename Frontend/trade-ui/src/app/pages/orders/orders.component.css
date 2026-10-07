@@ -9,61 +9,7 @@
    ========================================================== */
 
 /* ---------- Tokens: light (default) ---------- */
-/* ---------- Sliding Buy / Sell toggle ---------- */
 
-.seg-side {
-  position: relative;
-}
-
-/* The moving thumb */
-.seg-side .seg-thumb {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 4px;
-  z-index: 0;
-  width: calc(50% - 6px);
-  background: var(--up-solid);
-  border-radius: 9px;
-  box-shadow: 0 4px 10px var(--up-ring);
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    background-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.seg-side.is-sell .seg-thumb {
-  background: var(--down-solid);
-  box-shadow: 0 4px 10px var(--down-ring);
-  transform: translateX(calc(100% + 4px));
-}
-
-/* Options sit above the thumb; the thumb provides the colour now */
-.seg-side .seg-option {
-  z-index: 1;
-  padding: 12px;
-  font-size: 1rem;
-  background: transparent;
-}
-
-.seg-side .seg-option.buy:has(input:checked),
-.seg-side .seg-option.sell:has(input:checked) {
-  background: transparent;
-  box-shadow: none;
-  color: #fff;
-}
-
-/* Unselected side hints at its own colour on hover */
-.seg-side .seg-option.buy:hover:not(:has(input:checked)) {
-  color: var(--up);
-}
-
-.seg-side .seg-option.sell:hover:not(:has(input:checked)) {
-  color: var(--down);
-}
-
-.seg-side .seg-thumb {
-    transition: none;
-  }
-  
 :host {
   display: block;
   min-width: 0;
@@ -340,7 +286,126 @@
   font-weight: 600;
 }
 
-/* ---------- Selected instrument ---------- */
+/* ---------- Account bar ---------- */
+
+.account-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  padding: 16px 20px;
+}
+
+.account-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.account-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, var(--up-solid), var(--up));
+  border-radius: 14px;
+  box-shadow: 0 6px 14px var(--up-ring);
+}
+
+.account-who {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  min-width: 0;
+}
+
+.account-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  border-radius: 999px;
+}
+
+.account-balance {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  min-width: 0;
+  text-align: right;
+}
+
+.balance-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.balance-value {
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--up);
+}
+
+.account-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--up);
+  background: var(--up-bg);
+  border-radius: 999px;
+}
+
+.account-check svg {
+  flex: none;
+}
+
+.account-check.short {
+  color: var(--down);
+  background: var(--down-bg);
+}
+
+.account-loading {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+/* ---------- Selected instrument (lives inside the Instrument panel) ---------- */
+
+.selected-card {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
 
 .selected-head {
   display: flex;
@@ -428,6 +493,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  margin-top: 16px;
   padding: 32px 20px;
   text-align: center;
   color: var(--ink-soft);
@@ -451,7 +517,8 @@
   --side-ring: var(--up-ring);
 
   overflow: hidden;
-  background: var(--surface);
+  /* Soft wash of the side colour at the top fades into the surface */
+  background: var(--surface) linear-gradient(180deg, var(--side-bg) 0, var(--surface) 110px) no-repeat;
   border: 1px solid var(--card-border);
   border-top: 4px solid var(--side);
   border-radius: 16px;
@@ -469,8 +536,8 @@
 
 .ticket-form {
   display: grid;
-  gap: 18px;
-  padding: 20px;
+  gap: 20px;
+  padding: 22px 20px 20px;
 }
 
 .ticket-head {
@@ -482,16 +549,19 @@
 
 .ticket-head h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.0625rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .ticket-symbol {
-  padding: 3px 10px;
+  padding: 4px 12px;
   font-size: 0.8125rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--side);
-  background: var(--side-bg);
+  background: var(--surface);
+  border: 1px solid var(--side);
   border-radius: 999px;
 }
 
@@ -566,16 +636,88 @@
   outline-offset: 1px;
 }
 
+/* ---------- Sliding toggles (Buy/Sell and Market/Limit) ---------- */
+
+.seg-slider {
+  position: relative;
+}
+
+/* The moving thumb: one half wide, glides to the right half when active */
+.seg-slider .seg-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  z-index: 0;
+  width: calc(50% - 6px);
+  border-radius: 9px;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Options sit above the thumb; the thumb provides the fill */
+.seg-slider .seg-option {
+  z-index: 1;
+  padding: 12px;
+  font-size: 1rem;
+  background: transparent;
+}
+
+/* Buy / Sell: thumb is coloured by side */
+.seg-side .seg-thumb {
+  background: var(--up-solid);
+  box-shadow: 0 4px 10px var(--up-ring);
+}
+
+.seg-side.is-sell .seg-thumb {
+  background: var(--down-solid);
+  box-shadow: 0 4px 10px var(--down-ring);
+  transform: translateX(calc(100% + 4px));
+}
+
+.seg-side .seg-option.buy:has(input:checked),
+.seg-side .seg-option.sell:has(input:checked) {
+  background: transparent;
+  box-shadow: none;
+  color: #fff;
+}
+
+.seg-side .seg-option.buy:hover:not(:has(input:checked)) {
+  color: var(--up);
+}
+
+.seg-side .seg-option.sell:hover:not(:has(input:checked)) {
+  color: var(--down);
+}
+
+/* Market / Limit: thumb follows the ticket's side colour */
+.seg-type .seg-thumb {
+  background: var(--side-solid);
+  box-shadow: 0 4px 10px var(--side-ring);
+}
+
+.seg-type.is-limit .seg-thumb {
+  transform: translateX(calc(100% + 4px));
+}
+
+.seg-type .seg-option.neutral:has(input:checked) {
+  background: transparent;
+  box-shadow: none;
+  color: #fff;
+}
+
 /* ---------- Fields ---------- */
 
 .field {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .field-label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
 }
 
 .field-label-row {
@@ -610,11 +752,27 @@
   border-radius: 8px;
 }
 
+/* Limit price field eases in when switching to Limit */
+.field-enter {
+  animation: field-in 0.22s ease both;
+}
+
+@keyframes field-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* The wrapper draws the border and focus ring; the input inside is stripped bare. */
 .input-wrap {
   display: flex;
   align-items: center;
-  min-height: 48px;
+  min-height: 50px;
   padding: 0 14px;
   gap: 8px;
   background: var(--field-bg);
@@ -647,6 +805,7 @@
   min-width: 0;
   padding: 12px 0;
   font: inherit;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
   -moz-appearance: textfield;
@@ -655,6 +814,7 @@
 
 .input-wrap .input.center {
   text-align: center;
+  font-size: 1.0625rem;
 }
 
 .input-wrap .input::-webkit-outer-spin-button,
@@ -695,8 +855,8 @@
   flex: none;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   font: inherit;
   font-size: 1.25rem;
@@ -704,14 +864,18 @@
   color: var(--ink-soft);
   background: var(--surface-2);
   border: 0;
-  border-radius: 8px;
+  border-radius: 9px;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
 }
 
 .step:hover {
   color: var(--ink);
   background: var(--surface-3);
+}
+
+.step:active {
+  transform: scale(0.94);
 }
 
 .step:focus-visible {
@@ -731,13 +895,43 @@
   filter: brightness(1.12);
 }
 
-/* ---------- Summary ---------- */
+/* ---------- Summary (receipt style) ---------- */
 
 .summary {
-  padding: 14px 16px;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
   background: var(--tint);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
+}
+
+.summary-lines {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--dashed);
+}
+
+.summary-lines > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9375rem;
+}
+
+.summary-lines dt {
+  color: var(--ink-soft);
+}
+
+.summary-lines dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  text-align: right;
 }
 
 .summary-row {
@@ -757,7 +951,7 @@
 }
 
 .summary-note {
-  margin: 2px 0 0;
+  margin: -6px 0 0;
   font-size: 0.8125rem;
   color: var(--ink-soft);
 }
@@ -951,7 +1145,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 15px 20px;
+  padding: 16px 20px;
   font: inherit;
   font-size: 1.0625rem;
   font-weight: 600;
@@ -1007,6 +1201,14 @@
 
 /* ---------- Responsive ---------- */
 
+/* Keep the ticket in view while the left column scrolls (desktop only) */
+@media (min-width: 961px) {
+  .ticket {
+    position: sticky;
+    top: 16px;
+  }
+}
+
 @media (max-width: 960px) {
   .order-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -1023,19 +1225,37 @@
     padding: 16px;
   }
 
+  .account-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .account-balance {
+    justify-items: start;
+    padding-top: 12px;
+    text-align: left;
+    border-top: 1px dashed var(--dashed);
+  }
+
   .facts {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spinner {
+  .spinner,
+  .field-enter {
     animation: none;
   }
 
   .submit,
   .seg-option,
-  .ticket {
+  .ticket,
+  .step {
+    transition: none;
+  }
+
+  .seg-slider .seg-thumb {
     transition: none;
   }
 

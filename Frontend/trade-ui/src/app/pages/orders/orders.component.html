@@ -4,8 +4,38 @@
     <p>Choose an instrument, select order type (Market or Limit), set the quantity, then confirm. For limit orders, specify your price.</p>
   </header>
 
+  <!-- Account bar -->
+  <section class="panel account-bar" data-testid="order-account-card">
+    <ng-container *ngIf="account() as acct; else accountLoading">
+      <div class="account-head">
+        <span class="account-avatar" aria-hidden="true">{{ (acct.holderName || '?').charAt(0) }}</span>
+        <div class="account-who">
+          <strong class="account-name">{{ acct.holderName }}</strong>
+          <span class="account-id">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h4M7 14h2"/></svg>
+            {{ acct.accountId }}
+          </span>
+        </div>
+      </div>
+
+      <div class="account-balance">
+        <span class="balance-label">Current balance</span>
+        <strong class="balance-value">{{ balanceSymbol() }}{{ acct.cashBalance | number: '1.2-2' }}</strong>
+        <p class="account-check" *ngIf="balanceCheck() as check" [class.short]="check === 'short'" data-testid="order-balance-check">
+          <svg *ngIf="check === 'ok'" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
+          <svg *ngIf="check === 'short'" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+          {{ check === 'ok' ? 'Enough to place this order' : 'More than your balance' }}
+        </p>
+      </div>
+    </ng-container>
+
+    <ng-template #accountLoading>
+      <p class="account-loading">Loading account...</p>
+    </ng-template>
+  </section>
+
   <div class="order-layout">
-    <!-- Left: pick the instrument -->
+    <!-- Left: instrument -->
     <div class="instrument-column">
       <section class="panel">
         <h3 class="panel-title">Instrument</h3>
@@ -17,38 +47,38 @@
           [disabled]="submitting()"
           (instrumentAdded)="onInstrumentSelected($event)"
         ></app-instrument-search>
-      </section>
 
-      <section class="panel selected-card" *ngIf="selectedInstrument() as instrument; else noInstrument">
-        <div class="selected-head">
-          <span class="avatar" [style.--hue]="symbolHue(instrument.symbol)" aria-hidden="true">
-            {{ instrument.symbol.slice(0, 2) }}
-          </span>
-          <div class="selected-title">
-            <h3>{{ instrument.symbol }}</h3>
-            <p>{{ instrument.name }}</p>
+        <div class="selected-card" *ngIf="selectedInstrument() as instrument; else noInstrument">
+          <div class="selected-head">
+            <span class="avatar" [style.--hue]="symbolHue(instrument.symbol)" aria-hidden="true">
+              {{ instrument.symbol.slice(0, 2) }}
+            </span>
+            <div class="selected-title">
+              <h3>{{ instrument.symbol }}</h3>
+              <p>{{ instrument.name }}</p>
+            </div>
+            <button type="button" class="link-btn" (click)="clearInstrument()">Clear</button>
           </div>
-          <button type="button" class="link-btn" (click)="clearInstrument()">Clear</button>
+
+          <dl class="facts">
+            <div>
+              <dt>Asset class</dt>
+              <dd>{{ formatAssetClass(instrument.assetClass) }}</dd>
+            </div>
+            <div>
+              <dt>Currency</dt>
+              <dd>{{ instrument.currency || currencyCode() }}</dd>
+            </div>
+          </dl>
         </div>
 
-        <dl class="facts">
-          <div>
-            <dt>Asset class</dt>
-            <dd>{{ formatAssetClass(instrument.assetClass) }}</dd>
+        <ng-template #noInstrument>
+          <div class="empty-state">
+            <strong>{{ prefilling() ? 'Loading instrument...' : 'No instrument selected' }}</strong>
+            <span>Search above to choose what you want to trade.</span>
           </div>
-          <div>
-            <dt>Currency</dt>
-            <dd>{{ instrument.currency || currencyCode() }}</dd>
-          </div>
-        </dl>
+        </ng-template>
       </section>
-
-      <ng-template #noInstrument>
-        <div class="empty-state">
-          <strong>{{ prefilling() ? 'Loading instrument...' : 'No instrument selected' }}</strong>
-          <span>Search above to choose what you want to trade.</span>
-        </div>
-      </ng-template>
     </div>
 
     <!-- Right: order ticket -->
@@ -63,7 +93,7 @@
         <div class="field">
           <span class="field-label" id="side-label">Order side</span>
           <div
-            class="seg seg-side"
+            class="seg seg-slider seg-side"
             [class.is-sell]="side() === 'SELL'"
             role="radiogroup"
             aria-labelledby="side-label"
@@ -94,6 +124,44 @@
           </div>
         </div>
 
+        <!-- Order type: sliding Market / Limit toggle -->
+        <div class="field">
+          <span class="field-label" id="type-label">Order type</span>
+          <div
+            class="seg seg-slider seg-type"
+            [class.is-limit]="orderType() === 'LIMIT'"
+            role="radiogroup"
+            aria-labelledby="type-label"
+          >
+            <span class="seg-thumb" aria-hidden="true"></span>
+
+            <label class="seg-option neutral">
+              <input
+                type="radio"
+                name="orderType"
+                value="MARKET"
+                formControlName="orderType"
+                data-testid="order-type-market"
+              />
+              <span>Market</span>
+            </label>
+
+            <label class="seg-option neutral">
+              <input
+                type="radio"
+                name="orderType"
+                value="LIMIT"
+                formControlName="orderType"
+                data-testid="order-type-limit"
+              />
+              <span>Limit</span>
+            </label>
+          </div>
+          <p class="field-hint">
+            {{ orderType() === 'LIMIT' ? 'Fills only at your price or better.' : 'Executes immediately at current market price.' }}
+          </p>
+        </div>
+
         <!-- Quantity -->
         <div class="field">
           <label class="field-label" for="quantity-input">Quantity</label>
@@ -113,48 +181,46 @@
           </div>
           <p class="field-error" *ngIf="quantityError() as message" role="alert">{{ message }}</p>
           <p class="field-hint" *ngIf="!quantityError()">Number of shares</p>
-         </div>
+        </div>
 
-         <!-- Order type -->
-         <div class="field">
-           <label class="field-label" for="order-type-select">Order type</label>
-           <select
-             id="order-type-select"
-             class="select"
-             formControlName="orderType"
-             data-testid="order-type-select"
-           >
-             <option value="MARKET">Market</option>
-             <option value="LIMIT">Limit</option>
-           </select>
-           <p class="field-hint">
-             {{ orderType() === 'LIMIT' ? 'Fills only at your price or better.' : 'Executes immediately at current market price.' }}
-           </p>
-         </div>
+        <!-- Price (only for LIMIT orders) -->
+        <div class="field field-enter" *ngIf="orderType() === 'LIMIT'">
+          <label class="field-label" for="price-input">Limit price per share</label>
+          <div class="input-wrap" [class.invalid]="priceError()">
+            <span class="prefix" aria-hidden="true">{{ currencySymbol() }}</span>
+            <input
+              id="price-input"
+              class="input"
+              type="number"
+              inputmode="decimal"
+              step="0.01"
+              min="0.01"
+              placeholder="0.00"
+              formControlName="price"
+              data-testid="order-price-input"
+            />
+            <span class="suffix" aria-hidden="true">{{ currencyCode() }}</span>
+          </div>
+          <p class="field-error" *ngIf="priceError() as message" role="alert">{{ message }}</p>
+        </div>
 
-         <!-- Price (only for LIMIT orders) -->
-         <div class="field" *ngIf="orderType() === 'LIMIT'">
-           <label class="field-label" for="price-input">Price per share</label>
-           <div class="input-wrap" [class.invalid]="priceError()">
-             <span class="prefix" aria-hidden="true">{{ currencySymbol() }}</span>
-             <input
-               id="price-input"
-               class="input"
-               type="number"
-               inputmode="decimal"
-               step="0.01"
-               min="0.01"
-               placeholder="0.00"
-               formControlName="price"
-               data-testid="order-price-input"
-             />
-             <span class="suffix" aria-hidden="true">{{ currencyCode() }}</span>
-           </div>
-           <p class="field-error" *ngIf="priceError() as message" role="alert">{{ message }}</p>
-         </div>
-
-        <!-- Summary -->
+        <!-- Summary (receipt style) -->
         <div class="summary">
+          <dl class="summary-lines">
+            <div>
+              <dt>{{ orderType() === 'LIMIT' ? 'Limit price' : 'Market price' }} / share</dt>
+              <dd data-testid="order-unit-price">
+                {{ unitPrice() === null
+                ? (orderType() === 'MARKET' ? 'At market' : '–')
+                : (orderType() === 'MARKET' ? '~' : '') + currencySymbol() + (unitPrice() | number: '1.2-2') }}
+              </dd>
+            </div>
+            <div>
+              <dt>Quantity</dt>
+              <dd>&times; {{ form.get('quantity')?.value || 0 }}</dd>
+            </div>
+          </dl>
+
           <div class="summary-row">
             <span>{{ orderType() === 'MARKET' && estimatedTotal() === null ? 'Order type' : 'Estimated total' }}</span>
             <strong class="summary-total">

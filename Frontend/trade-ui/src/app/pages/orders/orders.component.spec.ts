@@ -197,7 +197,7 @@ describe('OrdersComponent', () => {
 
     expect(component.form.valid).toBe(true);
     expect(submitButton.disabled).toBe(false);
-    expect(submitButton.textContent).toContain('Buy 1 AAPL @ $100.50');
+    expect(submitButton.textContent).toContain('Buy 2 AAPL');
   });
 
   it('submits through DOM and renders success status', async () => {

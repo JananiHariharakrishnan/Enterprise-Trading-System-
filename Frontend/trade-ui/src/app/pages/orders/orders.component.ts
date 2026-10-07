@@ -36,7 +36,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
   readonly latestPrice = signal<number | null>(null);
   readonly skipOrderConfirmation = signal(false);
   readonly baseCurrency = signal<BaseCurrency>('USD');
-  
+
   private currentIdempotencyKey: string | null = null;
 
   readonly form = this.fb.group({
@@ -84,14 +84,36 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     });
   }
 
-  readonly estimatedTotal = computed<number | null>(() => {
-    const v = this.formValue();
-    const quantity = Number(v.quantity);
-    const price = v.orderType === 'MARKET' ? this.latestPrice() : Number(v.price);
-    return Number.isFinite(quantity) && price !== null && Number.isFinite(price) && quantity > 0 && price > 0
-      ? quantity * price
-      : null;
-  });
+    readonly estimatedTotal = computed<number | null>(() => {
+      const v = this.formValue();
+      const quantity = Number(v.quantity);
+      const price = v.orderType === 'MARKET' ? this.latestPrice() : Number(v.price);
+      return Number.isFinite(quantity) && price !== null && Number.isFinite(price) && quantity > 0 && price > 0
+        ? quantity * price
+        : null;
+    });
+
+    /** Price per share: the market quote for MARKET orders, or the typed price for LIMIT orders. */
+    readonly unitPrice = computed<number | null>(() => {
+      const total = this.estimatedTotal();
+      const quantity = Number(this.formValue().quantity);
+      return total !== null && quantity > 0 ? total / quantity : null;
+    });
+
+    /** Currency symbol for the account balance (follows the user's base currency). */
+    readonly balanceSymbol = computed(() => (this.baseCurrency() === 'INR' ? '₹' : '$'));
+
+    /**
+     * Can the user afford this order? Only checked for BUY orders priced in the
+     * same currency as the account, so we never compare mismatched currencies.
+     */
+    readonly balanceCheck = computed<'ok' | 'short' | null>(() => {
+      const acct = this.account();
+      const total = this.estimatedTotal();
+      if (!acct || total === null || this.side() !== 'BUY') return null;
+      if (this.currencyCode() !== this.baseCurrency()) return null;
+      return total <= Number(acct.buyingPower) ? 'ok' : 'short';
+    });
 
   readonly submitLabel = computed(() => {
     if (this.submitting()) return 'Placing order...';
@@ -103,7 +125,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     return `${verb} ${Number(this.form.value.quantity)} ${instrument.symbol}`;
   });
 
-  
+
 
   /** Exchange rate actually applied, derived from the response instead of being hard-coded. */
   readonly conversionRate = computed<number | null>(() => {
@@ -229,23 +251,6 @@ export class OrdersComponent implements OnInit, AfterViewInit {
     }
 
     // Prevent duplicate submissions by generating idempotency key only once
-    if (!this.skipOrderConfirmation()) {
-      const confirmationMessage = this.buildConfirmationMessage();
-      let isConfirmed = true;
-      try {
-        isConfirmed = typeof window !== 'undefined' && typeof window.confirm === 'function'
-          ? window.confirm(confirmationMessage)
-          : true;
-      } catch {
-        isConfirmed = true;
-      }
-
-      if (!isConfirmed) {
-        return;
-      }
-    }
-
-    // Prevent duplicate submissions by generating idempotency key only once
     if (!this.currentIdempotencyKey) {
       this.currentIdempotencyKey = crypto.randomUUID();
     }
@@ -278,16 +283,16 @@ export class OrdersComponent implements OnInit, AfterViewInit {
 
       // reset form (keep side and order type so repeat orders are quick)
       const { side, orderType: prevOrderType } = this.form.value;
-      this.form.reset({ 
-        symbol: '', 
-        side: side ?? 'BUY', 
-        quantity: 1, 
+      this.form.reset({
+        symbol: '',
+        side: side ?? 'BUY',
+        quantity: 1,
         price: null,
-        orderType: prevOrderType ?? 'MARKET' 
+        orderType: prevOrderType ?? 'MARKET'
       });
       this.selectedInstrument.set(null);
       this.instrumentSearchComponent?.resetSearch();
-      
+
       // Clear idempotency key for next order
       this.currentIdempotencyKey = null;
     } catch (err: unknown) {
@@ -296,7 +301,7 @@ export class OrdersComponent implements OnInit, AfterViewInit {
       const mapped = err && typeof err === 'object' && 'message' in (err as any) ? (err as any).message : 'Failed to place order';
       this.errorMessage.set(String(mapped));
       this.successMessage.set(null);
-      
+
       // Keep idempotency key on error - user can retry and backend will deduplicate
       // Only clear if it's a duplicate key error (which means order was already placed)
       const errorMessage = String(mapped).toLowerCase();
@@ -333,20 +338,5 @@ export class OrdersComponent implements OnInit, AfterViewInit {
       orderType: preferredOrderType,
       quantity: Number.isFinite(preferredQuantity) && preferredQuantity > 0 ? Math.floor(preferredQuantity) : 1,
     });
-  }
-
-  private buildConfirmationMessage(): string {
-    const instrument = this.selectedInstrument();
-    const symbol = instrument?.symbol ?? String(this.form.value.symbol ?? '').toUpperCase();
-    const side = this.form.value.side ?? 'BUY';
-    const quantity = Number(this.form.value.quantity);
-    const type = this.form.value.orderType === 'LIMIT' ? 'LIMIT' : 'MARKET';
-
-    if (type === 'LIMIT') {
-      const price = Number(this.form.value.price);
-      return `Confirm ${side} ${quantity} ${symbol} at ${this.currencySymbol()}${price.toFixed(2)} (${type})?`;
-    }
-
-    return `Confirm ${side} ${quantity} ${symbol} at market price?`;
   }
 }
