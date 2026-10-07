@@ -2,6 +2,7 @@ package com.tradingsystem.controller;
 
 import com.tradingsystem.advice.GlobalExceptionHandler;
 import com.tradingsystem.dto.response.AlertResponse;
+import com.tradingsystem.exception.AlertLimitExceededException;
 import com.tradingsystem.exception.AlertNotFoundException;
 import com.tradingsystem.exception.AlertStateException;
 import com.tradingsystem.exception.InstrumentNotFoundException;
@@ -22,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -214,5 +216,18 @@ class AlertControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("ALT-409"))
                 .andExpect(jsonPath("$.message").value("Alert is already cancelled"));
+    }
+
+    @Test
+    void createAlert_limitExceeded_returns400() throws Exception {
+        when(alertService.createAlert(eq(1001L), any()))
+                .thenThrow(new AlertLimitExceededException(50));
+
+        mockMvc.perform(post("/api/v1/alerts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"symbol\":\"AAPL\",\"direction\":\"BELOW\",\"threshold\":150.00}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("ALT-400"))
+                .andExpect(jsonPath("$.message").value(containsString("Maximum active alerts limit")));
     }
 }

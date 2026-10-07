@@ -7,6 +7,7 @@ import com.tradingsystem.enums.AlertDirection;
 import com.tradingsystem.enums.AlertStatus;
 import com.tradingsystem.exception.AccountNotActiveException;
 import com.tradingsystem.exception.AccountNotFoundException;
+import com.tradingsystem.exception.AlertLimitExceededException;
 import com.tradingsystem.exception.AlertNotFoundException;
 import com.tradingsystem.exception.AlertStateException;
 import com.tradingsystem.exception.InstrumentNotFoundException;
@@ -20,7 +21,6 @@ import com.tradingsystem.service.Impl.AlertServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -47,7 +47,6 @@ class AlertServiceImplTest {
     @Mock
     private InstrumentDataMapper instrumentDataMapper;
 
-    @InjectMocks
     private AlertServiceImpl alertService;
 
     private Account testAccount;
@@ -56,6 +55,14 @@ class AlertServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        // Create service with a limit of 5 for testing
+        alertService = new AlertServiceImpl(
+                priceAlertDataMapper,
+                accountDataMapper,
+                instrumentDataMapper,
+                5  // maxActiveAlertsPerAccount for testing
+        );
+
         testAccount = new Account();
         testAccount.setAccountId(1001L);
         testAccount.setAccountReference("ACC-001");
@@ -84,6 +91,7 @@ class AlertServiceImplTest {
         request.setThreshold(new BigDecimal("150.00"));
 
         when(accountDataMapper.findAccountById(1001L)).thenReturn(testAccount);
+        when(priceAlertDataMapper.countActiveAlertsByAccountId(1001L)).thenReturn(0);
         when(instrumentDataMapper.findInstrumentBySymbol("AAPL")).thenReturn(testInstrument);
         when(priceAlertDataMapper.insertPriceAlert(any())).thenReturn(1);
         when(priceAlertDataMapper.findAlertByAccountIdAndId(1001L, any()))
@@ -105,6 +113,7 @@ class AlertServiceImplTest {
         request.setThreshold(new BigDecimal("150.00"));
 
         when(accountDataMapper.findAccountById(1001L)).thenReturn(testAccount);
+        when(priceAlertDataMapper.countActiveAlertsByAccountId(1001L)).thenReturn(0);
         when(instrumentDataMapper.findInstrumentBySymbol("INVALID")).thenReturn(null);
 
         assertThrows(
@@ -161,6 +170,107 @@ class AlertServiceImplTest {
                 AlertStateException.class,
                 () -> alertService.createAlert(1001L, request)
         );
+    }
+
+    @Test
+    void createAlert_limitNotExceeded_success() {
+        CreateAlertRequest request = new CreateAlertRequest();
+        request.setSymbol("AAPL");
+        request.setDirection("BELOW");
+        request.setThreshold(new BigDecimal("150.00"));
+
+        when(accountDataMapper.findAccountById(1001L)).thenReturn(testAccount);
+        when(priceAlertDataMapper.countActiveAlertsByAccountId(1001L)).thenReturn(2);
+        when(instrumentDataMapper.findInstrumentBySymbol("AAPL")).thenReturn(testInstrument);
+        when(priceAlertDataMapper.insertPriceAlert(any())).thenReturn(1);
+        when(priceAlertDataMapper.findAlertByAccountIdAndId(1001L, any()))
+                .thenReturn(testAlert);
+
+        AlertResponse response = alertService.createAlert(1001L, request);
+
+        assertEquals("AAPL", response.getSymbol());
+    }
+
+    @Test
+    void createAlert_limitExceeded_throwsException() {
+        CreateAlertRequest request = new CreateAlertRequest();
+        request.setSymbol("AAPL");
+        request.setDirection("BELOW");
+        request.setThreshold(new BigDecimal("150.00"));
+
+        when(accountDataMapper.findAccountById(1001L)).thenReturn(testAccount);
+        when(priceAlertDataMapper.countActiveAlertsByAccountId(1001L)).thenReturn(5);
+
+        assertThrows(
+                AlertLimitExceededException.class,
+                () -> alertService.createAlert(1001L, request)
+        );
+    }
+
+    @Test
+    void createAlert_atLimitBoundary_throwsException() {
+        // When exactly at the limit (5), should not allow more
+        CreateAlertRequest request = new CreateAlertRequest();
+        request.setSymbol("AAPL");
+        request.setDirection("BELOW");
+        request.setThreshold(new BigDecimal("150.00"));
+
+        when(accountDataMapper.findAccountById(1001L)).thenReturn(testAccount);
+        when(priceAlertDataMapper.countActiveAlertsByAccountId(1001L)).thenReturn(5);
+
+        assertThrows(
+                AlertLimitExceededException.class,
+                () -> alertService.createAlert(1001L, request)
+        );
+    }
+
+    @Test
+    void createAlert_justBelowLimit_success() {
+        // When at 4 active alerts (limit is 5), should allow one more
+        CreateAlertRequest request = new CreateAlertRequest();
+        request.setSymbol("AAPL");
+        request.setDirection("BELOW");
+        request.setThreshold(new BigDecimal("150.00"));
+
+        when(accountDataMapper.findAccountById(1001L)).thenReturn(testAccount);
+        when(priceAlertDataMapper.countActiveAlertsByAccountId(1001L)).thenReturn(4);
+        when(instrumentDataMapper.findInstrumentBySymbol("AAPL")).thenReturn(testInstrument);
+        when(priceAlertDataMapper.insertPriceAlert(any())).thenReturn(1);
+        when(priceAlertDataMapper.findAlertByAccountIdAndId(1001L, any()))
+                .thenReturn(testAlert);
+
+        AlertResponse response = alertService.createAlert(1001L, request);
+
+        assertEquals("AAPL", response.getSymbol());
+    }
+
+    @Test
+    void createAlert_cancelledAlertsNotCountedAgainstLimit() {
+        // Create a service with low limit to test this scenario
+        AlertServiceImpl limitedService = new AlertServiceImpl(
+                priceAlertDataMapper,
+                accountDataMapper,
+                instrumentDataMapper,
+                2  // Very low limit for this test
+        );
+
+        CreateAlertRequest request = new CreateAlertRequest();
+        request.setSymbol("AAPL");
+        request.setDirection("BELOW");
+        request.setThreshold(new BigDecimal("150.00"));
+
+        // Account has 2 active alerts, but also has cancelled ones
+        // Only active alerts should count
+        when(accountDataMapper.findAccountById(1001L)).thenReturn(testAccount);
+        when(priceAlertDataMapper.countActiveAlertsByAccountId(1001L)).thenReturn(1);  // Only 1 ACTIVE
+        when(instrumentDataMapper.findInstrumentBySymbol("AAPL")).thenReturn(testInstrument);
+        when(priceAlertDataMapper.insertPriceAlert(any())).thenReturn(1);
+        when(priceAlertDataMapper.findAlertByAccountIdAndId(1001L, any()))
+                .thenReturn(testAlert);
+
+        AlertResponse response = limitedService.createAlert(1001L, request);
+
+        assertEquals("AAPL", response.getSymbol());
     }
 
     @Test

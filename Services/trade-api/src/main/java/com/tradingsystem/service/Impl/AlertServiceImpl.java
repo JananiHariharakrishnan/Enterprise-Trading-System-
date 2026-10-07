@@ -6,6 +6,7 @@ import com.tradingsystem.enums.AlertDirection;
 import com.tradingsystem.enums.AlertStatus;
 import com.tradingsystem.exception.AccountNotActiveException;
 import com.tradingsystem.exception.AccountNotFoundException;
+import com.tradingsystem.exception.AlertLimitExceededException;
 import com.tradingsystem.exception.AlertNotFoundException;
 import com.tradingsystem.exception.AlertStateException;
 import com.tradingsystem.exception.InstrumentNotFoundException;
@@ -17,6 +18,7 @@ import com.tradingsystem.model.Account;
 import com.tradingsystem.model.Instrument;
 import com.tradingsystem.model.PriceAlert;
 import com.tradingsystem.service.AlertService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,15 +32,18 @@ public class AlertServiceImpl implements AlertService {
     private final PriceAlertDataMapper priceAlertDataMapper;
     private final AccountDataMapper accountDataMapper;
     private final InstrumentDataMapper instrumentDataMapper;
+    private final int maxActiveAlertsPerAccount;
 
     public AlertServiceImpl(
             PriceAlertDataMapper priceAlertDataMapper,
             AccountDataMapper accountDataMapper,
-            InstrumentDataMapper instrumentDataMapper
+            InstrumentDataMapper instrumentDataMapper,
+            @Value("${app.alerts.max-active-per-account:50}") int maxActiveAlertsPerAccount
     ) {
         this.priceAlertDataMapper = priceAlertDataMapper;
         this.accountDataMapper = accountDataMapper;
         this.instrumentDataMapper = instrumentDataMapper;
+        this.maxActiveAlertsPerAccount = maxActiveAlertsPerAccount;
     }
 
     @Override
@@ -48,6 +53,12 @@ public class AlertServiceImpl implements AlertService {
             CreateAlertRequest request
     ) {
         Account account = getAuthorizedAccount(accountId);
+
+        // Check active alert limit
+        int activeAlertCount = priceAlertDataMapper.countActiveAlertsByAccountId(account.getAccountId());
+        if (activeAlertCount >= maxActiveAlertsPerAccount) {
+            throw new AlertLimitExceededException(maxActiveAlertsPerAccount);
+        }
 
         // Validate instrument exists
         Instrument instrument = instrumentDataMapper.findInstrumentBySymbol(request.getSymbol());

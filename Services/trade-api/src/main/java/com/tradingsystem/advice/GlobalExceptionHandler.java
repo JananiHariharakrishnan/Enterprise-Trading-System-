@@ -154,6 +154,22 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(AlertLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleAlertLimitExceeded(
+            AlertLimitExceededException ex) {
+
+        log.warn(
+                "Alert limit exceeded: {}",
+                ex.getMessage()
+        );
+
+        return error(
+                HttpStatus.BAD_REQUEST,
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
     // =========================================================
     // ORDER BUSINESS EXCEPTIONS
     // =========================================================
