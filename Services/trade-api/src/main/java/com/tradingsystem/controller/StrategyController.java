@@ -109,12 +109,13 @@ public class StrategyController {
         quote.setStale(false);
         quote.setQuoteAsOf(java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).toString());
 
-        strategyAutomationService.onQuote(quote);
+        List<String> results = strategyAutomationService.onQuote(quote);
 
         return ResponseEntity.ok(Map.of(
                 "status", "TICK_PROCESSED",
                 "symbol", request.getSymbol().toUpperCase(),
-                "price", request.getPrice()
+                "price", request.getPrice(),
+                "results", results
         ));
     }
 }

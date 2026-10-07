@@ -23,10 +23,10 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    @Value("${JWT_SECRET:${auth.jwt.secret:}}")
+    @Value("${JWT_SECRET:${auth.jwt.secret:development-only-shared-secret-change-me}}")
     private String jwtSecret;
 
-    @Value("${JWT_ISSUER:trade-api}")
+    @Value("${JWT_ISSUER:auth-service}")
     private String jwtIssuer;
 
     /**

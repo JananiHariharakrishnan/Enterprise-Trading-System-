@@ -105,9 +105,12 @@ export class StrategiesComponent implements OnInit {
     }
 
     this.strategyService.simulateTick(this.simSymbol.trim().toUpperCase(), this.simPrice).subscribe({
-      next: () => {
-        this.simStatus.set(`Tick pushed: ${this.simSymbol} @ $${this.simPrice}. Checked strategies.`);
-        setTimeout(() => this.simStatus.set(null), 4000);
+      next: (res: any) => {
+        const detail = res?.results && res.results.length > 0
+          ? res.results.join(' | ')
+          : `No active strategy found registered for ${this.simSymbol}`;
+        this.simStatus.set(`Tick pushed: ${this.simSymbol} @ $${this.simPrice} ➔ ${detail}`);
+        setTimeout(() => this.simStatus.set(null), 8000);
         this.loadStrategies();
       },
       error: (err) => {

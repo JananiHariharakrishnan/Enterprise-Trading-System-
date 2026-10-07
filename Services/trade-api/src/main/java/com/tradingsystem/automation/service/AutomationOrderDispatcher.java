@@ -39,14 +39,14 @@ public class AutomationOrderDispatcher {
     private final String jwtIssuer;
 
     public AutomationOrderDispatcher() {
-        this("http://localhost:8081", "trade-system-dev-jwt-secret-key-32bytes-long", "trade-api");
+        this("http://localhost:8081", "development-only-shared-secret-change-me", "auth-service");
     }
 
     @Autowired
     public AutomationOrderDispatcher(
-            @Value("${trade.api.url:${TRADE_API_URL:http://localhost:8081}}") String tradeApiUrl,
-            @Value("${JWT_SECRET:${auth.jwt.secret:trade-system-dev-jwt-secret-key-32bytes-long}}") String jwtSecret,
-            @Value("${JWT_ISSUER:trade-api}") String jwtIssuer
+            @Value("${trade.api.url:${TRADE_API_URL:http://localhost:${server.port:8081}}}") String tradeApiUrl,
+            @Value("${JWT_SECRET:${auth.jwt.secret:development-only-shared-secret-change-me}}") String jwtSecret,
+            @Value("${JWT_ISSUER:auth-service}") String jwtIssuer
     ) {
         this(new RestTemplate(), tradeApiUrl, jwtSecret, jwtIssuer);
     }
@@ -106,13 +106,22 @@ public class AutomationOrderDispatcher {
                 accountId, symbol, side, quantity, request.getIdempotencyKey()
         );
 
-        ResponseEntity<OrderResponse> response = restTemplate.postForEntity(
-                targetUrl,
-                entity,
-                OrderResponse.class
-        );
+        try {
+            ResponseEntity<OrderResponse> response = restTemplate.postForEntity(
+                    targetUrl,
+                    entity,
+                    OrderResponse.class
+            );
 
-        return response.getBody();
+            return response.getBody();
+        } catch (org.springframework.web.client.HttpStatusCodeException ex) {
+            logger.error("Trade API rejected automated order: status={}, body={}",
+                    ex.getStatusCode(), ex.getResponseBodyAsString());
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Failed to connect to Trade API at {}: {}", targetUrl, ex.getMessage());
+            throw ex;
+        }
     }
 
     /**

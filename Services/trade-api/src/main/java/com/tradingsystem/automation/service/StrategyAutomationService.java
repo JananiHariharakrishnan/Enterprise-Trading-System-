@@ -6,8 +6,10 @@ import com.tradingsystem.automation.model.StrategyType;
 import com.tradingsystem.automation.strategy.StrategyEvaluator;
 import com.tradingsystem.enums.OrderSide;
 import com.tradingsystem.messaging.QuotePayload;
+import com.tradingsystem.ai.signal.MarketContextStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -24,6 +26,7 @@ public class StrategyAutomationService {
 
     private final StrategyEvaluator strategyEvaluator;
     private final AutomationOrderDispatcher orderDispatcher;
+    private final MarketContextStore marketContextStore;
 
     // Rolling price history per symbol: combines historical lookback candles and live quotes
     private final Map<String, List<Double>> priceHistory = new ConcurrentHashMap<>();
@@ -35,8 +38,18 @@ public class StrategyAutomationService {
             StrategyEvaluator strategyEvaluator,
             AutomationOrderDispatcher orderDispatcher
     ) {
+        this(strategyEvaluator, orderDispatcher, null);
+    }
+
+    @Autowired
+    public StrategyAutomationService(
+            StrategyEvaluator strategyEvaluator,
+            AutomationOrderDispatcher orderDispatcher,
+            @Autowired(required = false) MarketContextStore marketContextStore
+    ) {
         this.strategyEvaluator = strategyEvaluator;
         this.orderDispatcher = orderDispatcher;
+        this.marketContextStore = marketContextStore;
     }
 
     public void registerStrategy(StrategyInstance strategy) {
@@ -101,30 +114,44 @@ public class StrategyAutomationService {
 
     /**
      * Processes an incoming real-time quote from the S7 price stream.
+     * Returns a summary list of actions/signals evaluated for active strategies.
      */
-    public void onQuote(QuotePayload quote) {
+    public List<String> onQuote(QuotePayload quote) {
         if (quote == null || quote.getSymbol() == null || quote.getPrice() == null) {
-            return;
+            return Collections.emptyList();
         }
 
         String symbol = quote.getSymbol().toUpperCase();
         double currentPrice = quote.getPrice().doubleValue();
 
-        // 1. Append real-time price tick to sliding lookback window
-        List<Double> list = priceHistory.computeIfAbsent(
-                symbol,
-                s -> Collections.synchronizedList(new ArrayList<>())
-        );
-
         List<Double> snapshot;
-        synchronized (list) {
-            list.add(currentPrice);
-            // Cap history to keep memory bounded (e.g. max 500 recent prices)
-            if (list.size() > 500) {
-                list.remove(0);
+
+        // If a test/manual caller explicitly seeded priceHistory, honor it
+        if (priceHistory.containsKey(symbol) && !priceHistory.get(symbol).isEmpty()) {
+            List<Double> list = priceHistory.get(symbol);
+            synchronized (list) {
+                list.add(currentPrice);
+                snapshot = new ArrayList<>(list);
             }
-            snapshot = new ArrayList<>(list);
+        } else if (marketContextStore != null) {
+            // Pick up the real 200+ day historical candles from Fauxnance (or resilient fallback)
+            marketContextStore.append(symbol, currentPrice);
+            snapshot = marketContextStore.getCloses(symbol);
+        } else {
+            List<Double> list = priceHistory.computeIfAbsent(
+                    symbol,
+                    s -> Collections.synchronizedList(new ArrayList<>())
+            );
+            synchronized (list) {
+                list.add(currentPrice);
+                if (list.size() > 500) {
+                    list.remove(0);
+                }
+                snapshot = new ArrayList<>(list);
+            }
         }
+
+        List<String> outcomes = new ArrayList<>();
 
         // 2. Evaluate all active strategies registered for this symbol
         for (StrategyInstance strategy : activeStrategies.values()) {
@@ -132,14 +159,19 @@ public class StrategyAutomationService {
                 continue;
             }
 
-            evaluateAndExecute(strategy, quote, snapshot);
+            String outcome = evaluateAndExecute(strategy, quote, snapshot);
+            if (outcome != null) {
+                outcomes.add(outcome);
+            }
         }
+
+        return outcomes;
     }
 
-    private void evaluateAndExecute(StrategyInstance strategy, QuotePayload quote, List<Double> history) {
+    private String evaluateAndExecute(StrategyInstance strategy, QuotePayload quote, List<Double> history) {
         // Early check before evaluation begins
         if (!strategy.isEnabled()) {
-            return;
+            return String.format("[%s] Skipped: strategy is disabled", strategy.getStrategyId());
         }
 
         StrategySignal signal = StrategySignal.HOLD;
@@ -158,15 +190,20 @@ public class StrategyAutomationService {
             );
         }
 
+        logger.info("Strategy {} [{}] evaluated on {} @ {} ({} historical prices) -> signal: {}",
+                strategy.getStrategyId(), strategy.getType(), strategy.getSymbol(), quote.getPrice(),
+                history != null ? history.size() : 0, signal);
+
         if (signal == StrategySignal.HOLD) {
-            return;
+            return String.format("[%s] Signal: HOLD (no crossover or band breach at $%.2f)",
+                    strategy.getStrategyId(), quote.getPrice().doubleValue());
         }
 
         // CRITICAL REQUIREMENT: Check if strategy was disabled during evaluation cycle
         if (!strategy.isEnabled()) {
             logger.warn("Strategy {} was disabled mid-cycle. Aborting order execution immediately.",
                     strategy.getStrategyId());
-            return;
+            return String.format("[%s] Aborted: disabled mid-cycle", strategy.getStrategyId());
         }
 
         // Risk controls: Max spend and position limits
@@ -174,7 +211,7 @@ public class StrategyAutomationService {
         int currentPosition = 0; // Baseline check against max position limit
         if (!strategy.canExecute(estimatedCost, currentPosition)) {
             logger.warn("Risk bounds exceeded for strategy {}: order blocked.", strategy.getStrategyId());
-            return;
+            return String.format("[%s] Order blocked: risk bounds exceeded", strategy.getStrategyId());
         }
 
         OrderSide side = (signal == StrategySignal.BUY) ? OrderSide.BUY : OrderSide.SELL;
@@ -182,7 +219,7 @@ public class StrategyAutomationService {
         // Final atomic check right before dispatching HTTP call to S6 Trade REST API
         if (!strategy.isEnabled()) {
             logger.warn("Strategy {} cancelled at execution boundary.", strategy.getStrategyId());
-            return;
+            return String.format("[%s] Cancelled at execution boundary", strategy.getStrategyId());
         }
 
         try {
@@ -196,9 +233,13 @@ public class StrategyAutomationService {
             strategy.recordSuccess(estimatedCost);
             logger.info("Executed automated strategy order: strategyId={}, side={}, symbol={}, qty={}",
                     strategy.getStrategyId(), side, strategy.getSymbol(), strategy.getQuantity());
+            return String.format("[%s] SUCCESS: %s %d %s placed at market price!",
+                    strategy.getStrategyId(), side, strategy.getQuantity(), strategy.getSymbol());
         } catch (Exception ex) {
             logger.error("Failed to place order for strategy {}: {}", strategy.getStrategyId(), ex.getMessage());
             strategy.recordFailure();
+            return String.format("[%s] FAILED to place %s order: %s",
+                    strategy.getStrategyId(), side, ex.getMessage());
         }
     }
 
