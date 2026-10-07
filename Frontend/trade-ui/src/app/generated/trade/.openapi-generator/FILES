@@ -2,13 +2,16 @@
 apis/AccountsApi.ts
 apis/MarketDataApi.ts
 apis/OrdersApi.ts
+apis/PriceAlertsApi.ts
 apis/WatchlistsApi.ts
 apis/index.ts
 index.ts
 models/AccountResponse.ts
 models/AccountStatus.ts
 models/AddWatchlistInstrumentRequest.ts
+models/AlertResponse.ts
 models/BalanceResponse.ts
+models/CreateAlertRequest.ts
 models/CreateWatchlistRequest.ts
 models/ErrorResponse.ts
 models/LatestPriceResponse.ts

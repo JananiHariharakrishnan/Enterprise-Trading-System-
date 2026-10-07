@@ -13,4 +13,6 @@ public interface InstrumentDataMapper {
             @Param("query") String query,
             @Param("limit") int limit
     );
+
+    Instrument findInstrumentBySymbol(@Param("symbol") String symbol);
 }

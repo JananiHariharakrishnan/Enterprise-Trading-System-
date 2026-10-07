@@ -11,6 +11,13 @@ class SignalCadenceManagerTest {
     @DisplayName("SignalCadenceManager suppresses recompute when called within cadence interval")
     void testCadenceThrottling() {
         SignalCadenceManager manager = new SignalCadenceManager();
+        try {
+            java.lang.reflect.Field field = SignalCadenceManager.class.getDeclaredField("cadenceIntervalSeconds");
+            field.setAccessible(true);
+            field.set(manager, 60L);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
         // Fresh symbol -> should recompute
         assertTrue(manager.shouldRecompute("INFY.NS"));

@@ -11,6 +11,9 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+
 @Service
 public class NotificationServiceImpl implements NotificationService {
 
@@ -64,6 +67,49 @@ public class NotificationServiceImpl implements NotificationService {
         String side = payload != null && payload.getSide() != null ? payload.getSide() : "TRADE";
         String subject = String.format("Order Filled: %s %s - Trade Confirmation", side, symbol);
         String body = buildEmailBody(recipientName, payload);
+
+        sendEmail(recipientEmail, subject, body);
+    }
+
+    @Override
+    public void sendPriceAlertTriggeredNotification(
+            User user,
+            String symbol,
+            String direction,
+            BigDecimal threshold,
+            BigDecimal currentPrice,
+            OffsetDateTime triggeredOn
+    ) {
+        if (!mailEnabled) {
+            log.info("Email notifications are disabled (app.notification.mail.enabled=false).");
+            return;
+        }
+
+        if (user == null) {
+            log.warn("Cannot send email: user is null for price alert on symbol={}", symbol != null ? symbol : "unknown");
+            return;
+        }
+
+        String recipientEmail = user.getEmail();
+        if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
+            log.warn("Cannot send notification: User (username={}, accountId={}) has no email address configured.",
+                    user.getUsername(), user.getAccountId());
+            return;
+        }
+
+        recipientEmail = recipientEmail.trim();
+
+        String recipientName = user.getFirstName();
+        if (recipientName == null || recipientName.isBlank()) {
+            recipientName = user.getUsername() != null && !user.getUsername().isBlank()
+                    ? user.getUsername()
+                    : "Customer";
+        }
+
+        String safeSymbol = symbol != null ? symbol : "N/A";
+        String safeDirection = direction != null ? direction : "UNKNOWN";
+        String subject = String.format("Price Alert Triggered: %s %s", safeSymbol, safeDirection);
+        String body = buildPriceAlertEmailBody(recipientName, safeSymbol, safeDirection, threshold, currentPrice, triggeredOn);
 
         sendEmail(recipientEmail, subject, body);
     }
@@ -149,6 +195,43 @@ public class NotificationServiceImpl implements NotificationService {
                 executedPrice,
                 limitPrice,
                 executedOn
+        );
+    }
+
+    private String buildPriceAlertEmailBody(
+            String recipientName,
+            String symbol,
+            String direction,
+            BigDecimal threshold,
+            BigDecimal currentPrice,
+            OffsetDateTime triggeredOn
+    ) {
+        String thresholdStr = threshold != null ? "$" + threshold.toPlainString() : "N/A";
+        String currentPriceStr = currentPrice != null ? "$" + currentPrice.toPlainString() : "N/A";
+        String triggeredOnStr = triggeredOn != null ? triggeredOn.toString() : "N/A";
+
+        return String.format(
+                "Hello %s,\n\n" +
+                "Your price alert has been triggered!\n\n" +
+                "========================================\n" +
+                "           PRICE ALERT SUMMARY          \n" +
+                "========================================\n" +
+                "Symbol:          %s\n" +
+                "Alert Type:      %s\n" +
+                "Alert Price:     %s\n" +
+                "Current Price:   %s\n" +
+                "Status:          TRIGGERED\n" +
+                "Triggered At:    %s\n" +
+                "========================================\n\n" +
+                "You can manage your price alerts in your account dashboard.\n\n" +
+                "Best regards,\n" +
+                "Trading System Team\n",
+                recipientName,
+                symbol,
+                direction,
+                thresholdStr,
+                currentPriceStr,
+                triggeredOnStr
         );
     }
 }

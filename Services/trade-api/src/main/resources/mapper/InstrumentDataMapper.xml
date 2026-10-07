@@ -31,4 +31,15 @@
         LIMIT #{limit}
     </select>
 
+    <select id="findInstrumentBySymbol" resultMap="instrumentResultMap">
+        SELECT
+            symbol,
+            name,
+            asset_class,
+            currency,
+            tradable
+        FROM instruments
+        WHERE symbol = #{symbol}
+    </select>
+
 </mapper>
