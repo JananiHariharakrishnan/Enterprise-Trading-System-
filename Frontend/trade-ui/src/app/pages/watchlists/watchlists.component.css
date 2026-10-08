@@ -713,12 +713,13 @@
   color: var(--ink-soft);
 }
 
-/* ---------- Analysis ---------- */
+/* ---------- Analysis (stat cards) ----------
+   Compact cards that fill the row evenly and wrap onto a new line
+   when the panel is narrow, so nothing spills out of its box. */
 
 .stats {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
   gap: 8px;
 }
 
@@ -726,28 +727,47 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 10px 12px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 8px 10px;
   background: var(--tint);
   border: 1px solid var(--line);
   border-radius: 10px;
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  overflow: hidden;
+  font-size: 0.6875rem;
   line-height: 1.25;
   color: var(--ink-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stat-value {
-  font-size: 1.0625rem;
+  min-width: 0;
+  font-size: 1rem;
   font-weight: 600;
   line-height: 1.25;
   font-variant-numeric: tabular-nums;
 }
 
+/* Symbol cards: name on one line (ellipsis if too long), % underneath */
+.stat-symbol {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-symbol .sym {
+  overflow: hidden;
+  font-size: 0.9375rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .stat-value small {
   display: block;
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -1410,21 +1430,6 @@ td {
   }
 }
 
-/* ---------- Analysis row: stays on one line, wraps only in narrow cards ---------- */
-
-@container (max-width: 700px) {
-  .stats {
-    grid-auto-flow: row;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@container (max-width: 420px) {
-  .stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 /* ---------- AI Signal section in instrument details modal ---------- */
 
 .ai-signal-card {
@@ -1513,4 +1518,3 @@ td {
   color: var(--ink-soft, #94a3b8);
   font-style: italic;
 }
-

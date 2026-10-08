@@ -1,0 +1,204 @@
+<div class="strategies-page">
+  <header class="page-header">
+    <div class="page-title">
+      <h2>Automated Trading Strategies</h2>
+      <p class="subtitle">Real-time S7 price stream execution via S6 Trade REST API</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/orders" class="btn btn-secondary">Go to Orders Blotter</a>
+    </div>
+  </header>
+
+  <div *ngIf="actionMessage()" class="alert alert-success" role="status">
+    {{ actionMessage() }}
+  </div>
+
+  <div *ngIf="errorMessage()" class="alert alert-error" role="alert">
+    {{ errorMessage() }}
+  </div>
+
+  <div class="grid-layout">
+    <!-- Column 1: Configure New Strategy -->
+    <section class="card form-card">
+      <div class="card-head">
+        <h3>Deploy Strategy</h3>
+        <p class="card-desc">Configure a continuous rule that automatically executes trades when indicator conditions are met.</p>
+      </div>
+
+      <form (ngSubmit)="createStrategy()">
+        <div class="form-group">
+          <label for="symbol">Symbol</label>
+          <input id="symbol" type="text" [(ngModel)]="symbol" name="symbol" placeholder="e.g. AAPL" required />
+        </div>
+
+        <fieldset class="form-group type-group">
+          <legend>Strategy type</legend>
+          <div class="type-options">
+            <label class="type-option" [class.selected]="type === 'MA_CROSSOVER'">
+              <input type="radio" [(ngModel)]="type" name="type" value="MA_CROSSOVER" />
+              <span class="type-name">Moving Average Crossover</span>
+              <span class="type-sub">Fast vs Slow SMA</span>
+            </label>
+            <label class="type-option" [class.selected]="type === 'BOLLINGER_BANDS'">
+              <input type="radio" [(ngModel)]="type" name="type" value="BOLLINGER_BANDS" />
+              <span class="type-name">Bollinger Bands</span>
+              <span class="type-sub">Mean reversion</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="form-row">
+          <div class="form-group col">
+            <label for="quantity">Order Quantity</label>
+            <input id="quantity" type="number" [(ngModel)]="quantity" name="quantity" min="1" required />
+          </div>
+          <div class="form-group col">
+            <label for="maxPositionSize">Max Position</label>
+            <input id="maxPositionSize" type="number" [(ngModel)]="maxPositionSize" name="maxPositionSize" min="1" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="maxSpend">Max Total Spend</label>
+          <div class="input-prefix">
+            <span aria-hidden="true">$</span>
+            <input id="maxSpend" type="number" [(ngModel)]="maxSpend" name="maxSpend" min="100" required />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Deploy Strategy</button>
+      </form>
+    </section>
+
+    <!-- Column 2: Live Price Tick Simulator -->
+    <section class="card test-card">
+      <div class="card-head">
+        <h3>Interactive Market Simulator</h3>
+        <p class="card-desc">Inject simulated price ticks to test signal conditions and watch orders trigger in real time without waiting for Kafka.</p>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group col">
+          <label for="simSymbol">Instrument</label>
+          <input id="simSymbol" type="text" [(ngModel)]="simSymbol" name="simSymbol" placeholder="AAPL" />
+        </div>
+        <div class="form-group col">
+          <label for="simPrice">Simulated Quote Price</label>
+          <div class="input-prefix">
+            <span aria-hidden="true">$</span>
+            <input id="simPrice" type="number" step="0.5" [(ngModel)]="simPrice" name="simPrice" />
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-accent btn-block" (click)="sendSimulatedTick()">Push Simulated Price Tick</button>
+
+      <div *ngIf="simStatus()" class="sim-feedback" role="status">
+        {{ simStatus() }}
+      </div>
+
+      <div class="hints-box">
+        <h4>Testing Tips</h4>
+        <ul>
+          <li>
+            <span class="tag tag-buy">Buy</span>
+            <span class="hint-text"><strong>MA Golden Cross:</strong> Push a jump in price (e.g. from 100 to 160) to cross Fast SMA over Slow SMA.</span>
+          </li>
+          <li>
+            <span class="tag tag-sell">Sell</span>
+            <span class="hint-text"><strong>MA Death Cross:</strong> Push a drop in price (e.g. from 100 to 40).</span>
+          </li>
+          <li>
+            <span class="tag tag-risk">Risk</span>
+            <span class="hint-text"><strong>Kill Switch:</strong> Disable a strategy below and verify that pushing breakout ticks generates <em>zero</em> orders!</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <!-- Active Strategies Table -->
+  <section class="card table-card">
+    <div class="table-header">
+      <div>
+        <h3>Active Strategies &amp; Risk Guardrails</h3>
+        <p class="card-desc" *ngIf="!loading() && strategies().length > 0">{{ strategies().length }} deployed</p>
+      </div>
+      <button class="btn btn-sm btn-secondary" (click)="loadStrategies()">Refresh</button>
+    </div>
+
+    <div *ngIf="loading()" class="loading-state">Loading active strategies...</div>
+
+    <div *ngIf="!loading() && strategies().length === 0" class="empty-state">
+      No automated strategies active yet. Deploy one above to get started!
+    </div>
+
+    <div class="table-scroll" *ngIf="!loading() && strategies().length > 0">
+      <table class="strategy-table">
+        <thead>
+        <tr>
+          <th>Strategy</th>
+          <th class="th-num">Trade Qty</th>
+          <th>Spend / Limit</th>
+          <th class="th-num">Max Position</th>
+          <th class="th-num">Failures</th>
+          <th>Status</th>
+          <th class="col-action">Kill Switch</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let strat of strategies()">
+          <td>
+            <div class="strat-cell">
+              <div class="strat-top">
+                <span class="badge badge-symbol">{{ strat.symbol }}</span>
+                <span class="strat-type">{{ strat.type === 'MA_CROSSOVER' ? 'MA Crossover' : 'Bollinger Bands' }}</span>
+              </div>
+              <span class="strat-id font-mono" [attr.title]="strat.strategyId">{{ strat.strategyId }}</span>
+            </div>
+          </td>
+          <td class="num">{{ strat.quantity }} <span class="unit">shares</span></td>
+          <td>
+            <div class="spend">
+              <div class="spend-text num">
+                ${{ strat.currentSpend | number:'1.2-2' }}
+                <span>/ ${{ strat.maxSpend | number:'1.0-0' }}</span>
+              </div>
+              <div class="spend-bar">
+                <span [style.width.%]="strat.maxSpend ? ((strat.currentSpend / strat.maxSpend) * 100 > 100 ? 100 : (strat.currentSpend / strat.maxSpend) * 100) : 0"></span>
+              </div>
+            </div>
+          </td>
+          <td class="num">{{ strat.maxPositionSize }}</td>
+          <td class="num">
+            <span [class.text-error]="strat.consecutiveFailures > 0">
+              {{ strat.consecutiveFailures }}/{{ strat.maxConsecutiveFailures }}
+            </span>
+          </td>
+          <td>
+            <span class="badge" [ngClass]="strat.enabled ? 'badge-success' : 'badge-disabled'">
+              <span class="badge-dot"></span>{{ strat.enabled ? 'ACTIVE' : 'DISABLED' }}
+            </span>
+          </td>
+          <td class="col-action">
+            <button
+              class="btn btn-sm"
+              [ngClass]="strat.enabled ? 'btn-danger' : 'btn-success'"
+              (click)="toggleStrategy(strat)"
+            >
+              {{ strat.enabled ? 'Disable' : 'Enable' }}
+            </button>
+            <button
+              class="btn btn-sm btn-outline-danger"
+              style="margin-left:8px"
+              (click)="removeStrategy(strat)"
+            >
+              Cancel
+            </button>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

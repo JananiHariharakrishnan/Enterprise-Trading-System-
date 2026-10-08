@@ -75,4 +75,46 @@ describe('AuthService additional behavior', () => {
     const svc2 = new AuthService();
     await expect(svc2.login({ username: 'u', password: 'p' })).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('login rejects an unknown username', async () => {
+    (repo.findCredentialByUsername as any).mockResolvedValue(null);
+    (repo.verifyPassword as any).mockResolvedValue(false);
+
+    await expect(svc.login({ username: 'missing', password: 'p' })).rejects.toThrow('User not found');
+  });
+
+  it('refresh rejects when the consumed token has no user', async () => {
+    (repo.consumeRefreshToken as any).mockResolvedValue({ id: 't1', userId: 'gone', sessionId: 's1' });
+    (repo.findUserById as any).mockResolvedValue(null);
+
+    await expect(svc.refresh({ refreshToken: 'r' })).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('register rolls back and gives up when user insert keeps conflicting', async () => {
+    (repo.findUserByUsername as any).mockResolvedValue(null);
+    (repo.findCredentialByUsername as any).mockResolvedValue(null);
+    (repo.deleteOrphanCredentials as any).mockResolvedValue(0);
+    (repo.findAvailableAccountId as any).mockResolvedValue(1);
+    (repo.createCredential as any).mockResolvedValue({});
+    (repo.createUser as any).mockRejectedValue(new Error('duplicate key value violates unique constraint uq_users_account_id'));
+    (repo.deleteCredentialByUsername as any).mockResolvedValue(undefined);
+
+    await expect(svc.register({ username: 'u', password: 'p' })).rejects.toBeInstanceOf(ConflictException);
+    expect(repo.deleteCredentialByUsername).toHaveBeenCalledTimes(3);
+  });
+
+  it('register retries when the allocation conflict is nested on the error cause', async () => {
+    (repo.findUserByUsername as any).mockResolvedValue(null);
+    (repo.findCredentialByUsername as any).mockResolvedValue(null);
+    (repo.deleteOrphanCredentials as any).mockResolvedValue(0);
+    (repo.findAvailableAccountId as any).mockResolvedValueOnce(1).mockResolvedValueOnce(2);
+    const nested: any = new Error('wrapped');
+    nested.cause = { code: '23505', constraint: 'uq_credentials_account_id' };
+    (repo.createCredential as any).mockRejectedValueOnce(nested).mockResolvedValueOnce({});
+    (repo.createUser as any).mockResolvedValue({ id: 'uZ', username: 'uZ', accountId: 2, roles: ['CUSTOMER'], createdOn: new Date().toISOString() });
+
+    const out = await svc.register({ username: 'uZ', password: 'p' });
+    expect(out.accountId).toBe(2);
+    expect(repo.createCredential).toHaveBeenCalledTimes(2);
+  });
 });

@@ -23,4 +23,11 @@ describe('logger', () => {
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
   });
+
+  it('writes a message when no metadata is supplied', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    logger.warn('plain');
+    expect(spy).toHaveBeenCalledWith('plain');
+    spy.mockRestore();
+  });
 });

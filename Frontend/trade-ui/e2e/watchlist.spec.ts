@@ -34,8 +34,8 @@ test.describe.serial('Watchlist Journey', () => {
     await signInToWatchlists(page);
 
     // Find the create watchlist form
-    const nameInput = page.locator('input[placeholder*="watchlist" i]').first();
-    const createButton = page.locator('button').filter({ hasText: /create|add/i }).first();
+    const nameInput = page.getByLabel('New watchlist name');
+    const createButton = page.getByRole('button', { name: 'Create Watchlist' });
 
     // Fill in the watchlist name
     await nameInput.fill(watchlistName);

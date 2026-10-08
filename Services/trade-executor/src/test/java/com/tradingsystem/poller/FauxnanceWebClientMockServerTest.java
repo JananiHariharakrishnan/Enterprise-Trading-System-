@@ -2,6 +2,7 @@ package com.tradingsystem.poller;
 
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.SocketPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -86,6 +87,40 @@ class FauxnanceWebClientMockServerTest {
 
             FauxnanceWebClient client = new FauxnanceWebClient(server.url("/").toString(), "/quotes", "k");
             assertNull(client.getQuote("AAPL"));
+        }
+    }
+
+    @Test
+    void missingApiKey_isRejected() {
+        assertThrows(IllegalStateException.class,
+                () -> new FauxnanceWebClient("http://localhost", "/quotes", " "));
+    }
+
+    @Test
+    void getQuote_returnsFirstMappedQuote() throws Exception {
+        String body = "{\"data\":{\"quotes\":[{\"stale\":false,\"quote\":{\"symbol\":\"INFY.NS\",\"price\":100,\"currency\":\"INR\",\"change\":1,\"changePercent\":1,\"previousClose\":99,\"marketState\":\"OPEN\",\"asOf\":\"2026-01-01T00:00:00Z\"}}]}}";
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody(body).setHeader("Content-Type", "application/json"));
+            server.start();
+            FauxnanceWebClient client = new FauxnanceWebClient(server.url("/").toString(), "/quotes", "key");
+            Quote quote = client.getQuote("INFY.NS");
+            assertNotNull(quote);
+            assertEquals("INFY.NS", quote.symbol());
+            assertEquals("INR", quote.currency());
+        }
+    }
+
+    @Test
+    void getQuotes_retriesDroppedConnections() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START));
+            server.enqueue(new MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START));
+            server.enqueue(new MockResponse()
+                    .setBody("{\"data\":{\"quotes\":[]}}")
+                    .setHeader("Content-Type", "application/json"));
+            server.start();
+            FauxnanceWebClient client = new FauxnanceWebClient(server.url("/").toString(), "/quotes", "key");
+            assertTrue(client.getQuotes(List.of("AAPL")).isEmpty());
         }
     }
 }

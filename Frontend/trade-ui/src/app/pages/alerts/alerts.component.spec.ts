@@ -73,6 +73,17 @@ describe('AlertsComponent', () => {
     expect(component.selectedInstrument()).toBeNull();
   });
 
+  it('refreshes the alert list from the refresh button', async () => {
+    await fixture.whenStable();
+    mockApiClient.priceAlerts.listAlerts.mockClear();
+
+    await component.refresh();
+
+    expect(mockApiClient.priceAlerts.listAlerts).toHaveBeenCalledTimes(1);
+    expect(component.alerts().length).toBe(3);
+    expect(component.isRefreshing()).toBe(false);
+  });
+
   it('should call Cancel API for ACTIVE alert', async () => {
     await component.cancelAlert(1);
     expect(mockApiClient.priceAlerts.cancelAlert).toHaveBeenCalledWith({ alertId: 1 });
@@ -105,5 +116,40 @@ describe('AlertsComponent', () => {
     
     // Form should remain usable (not cleared)
     expect(component.selectedInstrument()?.symbol).toBe('AAPL');
+  });
+
+  it('renders the selected symbol, empty list, load error, and toasts', () => {
+    component.selectedInstrument.set({
+      symbol: 'AAPL',
+      name: 'Apple',
+      assetClass: 'EQUITY',
+      currency: ''
+    });
+    component.createAlertForm.patchValue({ direction: 'BELOW' });
+    component.isRefreshing.set(true);
+    component.isSaving.set(true);
+    component.alerts.set([]);
+    component.isLoading.set(false);
+    component.loadError.set('Alerts are unavailable');
+    component.toasts.set([
+      { id: 1, type: 'success', text: 'Alert saved' },
+      { id: 2, type: 'error', text: 'Alert failed' }
+    ]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('AAPL');
+    expect(fixture.nativeElement.textContent).toContain('Refreshing');
+    expect(fixture.nativeElement.textContent).toContain('Creating...');
+    expect(fixture.nativeElement.textContent).toContain('Alerts are unavailable');
+    expect(fixture.nativeElement.textContent).toContain('Alert saved');
+    expect(fixture.nativeElement.textContent).toContain('Alert failed');
+
+    component.loadError.set(null);
+    component.isLoading.set(false);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No alerts found');
+
+    component.dismissToast(1);
+    expect(component.toasts().map((toast) => toast.id)).toEqual([2]);
   });
 });

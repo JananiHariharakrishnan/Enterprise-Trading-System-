@@ -4,11 +4,15 @@ import com.tradingsystem.event.payload.OrderPlacedPayload;
 import com.tradingsystem.poller.Quote;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -90,5 +94,74 @@ class ExecutionServiceTest {
 
         // Should call trade-api with REJECTED status
         verify(restTemplate, times(1)).postForEntity(any(), any(), any());
+    }
+
+    @Test
+    void execute_missingOrderId_isRejected() {
+        OrderPlacedPayload order = sampleOrder();
+        order.setOrderId(" ");
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> service.execute(order));
+    }
+
+    @Test
+    void execute_includesEventIdAndPriceOnFilledDecision() {
+        OrderPlacedPayload order = sampleOrder();
+        order.setEventId("evt-9");
+        Quote q = new Quote("AAPL", new BigDecimal("100.00"), "USD", null, null, null, null, false, null);
+        when(fauxnanceClient.getQuotes(anyList())).thenReturn(List.of(q));
+        when(executionRule.decide(anyString(), any(), any())).thenReturn(ExecutionDecision.filled(new BigDecimal("101.25")));
+
+        service.execute(order);
+
+        verify(restTemplate).postForEntity(any(), any(), eq(String.class));
+    }
+
+    @Test
+    void execute_conflictFromTradeApi_isIgnored() {
+        OrderPlacedPayload order = sampleOrder();
+        when(fauxnanceClient.getQuotes(anyList())).thenReturn(List.of());
+        when(restTemplate.postForEntity(any(), any(), any()))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.CONFLICT, "conflict", new HttpHeaders(), new byte[0], StandardCharsets.UTF_8));
+
+        service.execute(order);
+    }
+
+    @Test
+    void execute_httpErrorFromTradeApi_isWrapped() {
+        OrderPlacedPayload order = sampleOrder();
+        when(fauxnanceClient.getQuotes(anyList())).thenReturn(List.of());
+        when(restTemplate.postForEntity(any(), any(), any()))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.BAD_REQUEST, "bad", new HttpHeaders(), new byte[0], StandardCharsets.UTF_8));
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> service.execute(order));
+    }
+
+    @Test
+    void execute_ioErrorFromTradeApi_isWrapped() {
+        OrderPlacedPayload order = sampleOrder();
+        when(fauxnanceClient.getQuotes(anyList())).thenReturn(List.of());
+        when(restTemplate.postForEntity(any(), any(), any()))
+                .thenThrow(new ResourceAccessException("timeout"));
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> service.execute(order));
+    }
+
+    @Test
+    void execute_unexpectedStatus_isWrapped() {
+        OrderPlacedPayload order = sampleOrder();
+        when(fauxnanceClient.getQuotes(anyList())).thenReturn(List.of());
+        when(restTemplate.postForEntity(any(), any(), any()))
+                .thenReturn(new ResponseEntity<>("nope", HttpStatus.INTERNAL_SERVER_ERROR));
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> service.execute(order));
+    }
+
+    @Test
+    void execute_genericFailure_isWrapped() {
+        OrderPlacedPayload order = sampleOrder();
+        when(fauxnanceClient.getQuotes(anyList())).thenReturn(List.of());
+        when(restTemplate.postForEntity(any(), any(), any())).thenThrow(new IllegalStateException("down"));
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> service.execute(order));
     }
 }

@@ -65,13 +65,14 @@ public class JwtAuthenticationFilter implements Filter {
             return;
         }
 
-        Long accountId = tokenVerifier.verifyAndGetAccountId(token);
-        if (accountId == null) {
+        JwtClaims claims = tokenVerifier.verifyToken(token);
+        if (claims == null) {
             writeAuthError(httpResponse);
             return;
         }
 
-        AuthContextHolder.setAccountId(accountId);
+        AuthContextHolder.setAccountId(claims.accountId());
+        AuthContextHolder.setRoles(claims.roles());
         try {
             chain.doFilter(request, response);
         } finally {

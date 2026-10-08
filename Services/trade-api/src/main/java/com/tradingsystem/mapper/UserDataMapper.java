@@ -64,4 +64,9 @@ public interface UserDataMapper {
      * Delete orphan credentials
      */
     int deleteOrphanCredentials();
+
+    /**
+     * Admin query: find all registered users along with their account details
+     */
+    java.util.List<com.tradingsystem.model.AdminUserRecord> findAllUsersWithAccountDetails();
 }

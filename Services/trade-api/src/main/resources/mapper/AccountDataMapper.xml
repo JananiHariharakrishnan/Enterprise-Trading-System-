@@ -53,5 +53,140 @@
         ORDER BY symbol ASC
     </select>
 
+    <select id="findAccountByReference" resultMap="accountResultMap">
+        SELECT
+            id,
+            account_reference,
+            cash_balance,
+            buying_power,
+            status,
+            version,
+            last_updated
+        FROM accounts
+        WHERE account_reference = #{accountReference}
+    </select>
+
+    <resultMap id="dashboardStatsResultMap" type="com.tradingsystem.dto.response.AdminDashboardStats">
+        <result property="totalMoney" column="total_money"/>
+        <result property="totalAccounts" column="total_accounts"/>
+        <result property="openAccounts" column="open_accounts"/>
+        <result property="suspendedAccounts" column="suspended_accounts"/>
+        <result property="closedAccounts" column="closed_accounts"/>
+    </resultMap>
+
+    <select id="getDashboardAccountStats" resultMap="dashboardStatsResultMap">
+        SELECT
+            COALESCE(SUM(cash_balance), 0) AS total_money,
+            COUNT(*) AS total_accounts,
+            COALESCE(SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END), 0) AS open_accounts,
+            COALESCE(SUM(CASE WHEN status = 'SUSPENDED' THEN 1 ELSE 0 END), 0) AS suspended_accounts,
+            COALESCE(SUM(CASE WHEN status = 'CLOSED' THEN 1 ELSE 0 END), 0) AS closed_accounts
+        FROM accounts
+    </select>
+
+    <select id="countTotalUsers" resultType="long">
+        SELECT COUNT(*) FROM users
+    </select>
+
+    <select id="countUnmappedAccounts" resultType="long">
+        SELECT COUNT(*)
+        FROM accounts a
+        WHERE NOT EXISTS (
+            SELECT 1 FROM users u WHERE u.account_id = a.id
+        )
+    </select>
+
+    <resultMap id="unassignedAccountResultMap" type="com.tradingsystem.dto.response.UnassignedAccountSummary">
+        <result property="accountId" column="account_id"/>
+        <result property="accountReference" column="account_reference"/>
+        <result property="cashBalance" column="cash_balance"/>
+        <result property="buyingPower" column="buying_power"/>
+        <result property="status" column="status"/>
+        <result property="unassigned" column="is_unassigned"/>
+        <result property="assignedUsername" column="assigned_username"/>
+        <result property="lastUpdated" column="last_updated"/>
+    </resultMap>
+
+    <select id="findUnassignedAndDormantAccounts" resultMap="unassignedAccountResultMap">
+        SELECT
+            a.id AS account_id,
+            a.account_reference,
+            a.cash_balance,
+            a.buying_power,
+            a.status,
+            a.last_updated,
+            u.username AS assigned_username,
+            CASE WHEN u.id IS NULL THEN TRUE ELSE FALSE END AS is_unassigned
+        FROM accounts a
+        LEFT JOIN users u ON u.account_id = a.id
+        WHERE u.id IS NULL OR a.status IN ('SUSPENDED', 'CLOSED')
+        ORDER BY (CASE WHEN u.id IS NULL THEN 0 ELSE 1 END), a.id DESC
+    </select>
+
+    <update id="updateAccountStatus">
+        UPDATE accounts
+        SET status = #{status},
+            last_updated = CURRENT_TIMESTAMP
+        WHERE id = #{accountId}
+    </update>
+
+    <update id="updateAccountStatusByUserId">
+        UPDATE accounts
+        SET status = #{status},
+            last_updated = CURRENT_TIMESTAMP
+        WHERE id = (
+            SELECT account_id FROM users WHERE id = #{userId}
+        )
+    </update>
+
+    <insert id="insertAccount">
+        INSERT INTO accounts (
+            account_reference,
+            cash_balance,
+            buying_power,
+            status,
+            version,
+            last_updated
+        ) VALUES (
+            #{accountReference},
+            #{cashBalance},
+            #{buyingPower},
+            #{status},
+            0,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="depositFunds">
+        UPDATE accounts
+        SET cash_balance = cash_balance + #{amount},
+            buying_power = buying_power + #{amount},
+            version = version + 1,
+            last_updated = CURRENT_TIMESTAMP
+        WHERE id = #{accountId}
+    </update>
+
+    <insert id="insertBalanceHistory">
+        INSERT INTO balance_history (
+            account_id,
+            type,
+            amount,
+            related_order_id
+        ) VALUES (
+            #{accountId},
+            #{type},
+            #{amount},
+            NULL
+        )
+    </insert>
+
+    <select id="findMaxAccountReference" resultType="string">
+        SELECT account_reference
+        FROM accounts
+        WHERE account_reference LIKE 'ETP-220%'
+        ORDER BY account_reference DESC
+        LIMIT 1
+    </select>
+
 </mapper>
 

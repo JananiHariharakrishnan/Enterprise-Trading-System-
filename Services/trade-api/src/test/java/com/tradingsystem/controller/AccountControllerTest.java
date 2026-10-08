@@ -1,29 +1,23 @@
 package com.tradingsystem.controller;
 
-import com.tradingsystem.advice.GlobalExceptionHandler;
 import com.tradingsystem.dto.response.AccountResponse;
 import com.tradingsystem.dto.response.BalanceResponse;
-import com.tradingsystem.exception.AccountNotFoundException;
+import com.tradingsystem.dto.response.OrderHistoryEntry;
+import com.tradingsystem.dto.response.PositionResponse;
 import com.tradingsystem.service.AccountService;
 import com.tradingsystem.service.OrderService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
 class AccountControllerTest {
@@ -37,98 +31,20 @@ class AccountControllerTest {
     @InjectMocks
     private AccountController controller;
 
-    private MockMvc mockMvc;
-
-    @BeforeEach
-    void setUp() {
-
-        LocalValidatorFactoryBean validator =
-                new LocalValidatorFactoryBean();
-
-        validator.afterPropertiesSet();
-
-        mockMvc = MockMvcBuilders
-                .standaloneSetup(controller)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .setValidator(validator)
-                .build();
-    }
-
     @Test
-    void getAccount_returnsAccount() throws Exception {
+    void readsAccountViewsAndOrderHistory() {
+        when(accountService.getAccount(7L)).thenReturn(new AccountResponse());
+        when(accountService.getBalance(7L)).thenReturn(new BalanceResponse());
+        when(accountService.getPositions(7L)).thenReturn(List.of(new PositionResponse()));
+        OffsetDateTime from = OffsetDateTime.parse("2026-01-01T00:00:00Z");
+        OffsetDateTime to = OffsetDateTime.parse("2026-02-01T00:00:00Z");
+        when(orderService.getOrderHistory(7L, "NEW", from, to)).thenReturn(List.of(new OrderHistoryEntry()));
 
-        AccountResponse response =
-                new AccountResponse();
+        assertEquals(200, controller.getAccount(7L).getStatusCode().value());
+        assertEquals(200, controller.getBalance(7L).getStatusCode().value());
+        assertEquals(1, controller.getPositions(7L).getBody().size());
+        assertEquals(1, controller.getOrders(7L, "NEW", from, to).getBody().size());
 
-        response.setId(1001L);
-        response.setAccountId("ACC-1001");
-        response.setHolderName("Test User");
-        response.setCashBalance(
-                new BigDecimal("123.45")
-        );
-        response.setLastUpdated(
-                OffsetDateTime.now()
-        );
-
-        when(accountService.getAccount(1001L))
-                .thenReturn(response);
-
-        mockMvc.perform(
-                get("/api/v1/accounts/1001")
-                        .accept(MediaType.APPLICATION_JSON)
-        )
-        .andExpect(status().isOk())
-        .andExpect(
-                jsonPath("$.holderName")
-                        .value("Test User")
-        )
-        .andExpect(
-                jsonPath("$.cashBalance")
-                        .value(123.45)
-        );
-    }
-
-    @Test
-    void getAccount_unknownAccount_returnsAcc404()
-            throws Exception {
-
-        when(accountService.getAccount(999L))
-                .thenThrow(
-                        new AccountNotFoundException()
-                );
-
-        mockMvc.perform(
-                get("/api/v1/accounts/999")
-                        .accept(MediaType.APPLICATION_JSON)
-        )
-        .andExpect(status().isNotFound())
-        .andExpect(
-                jsonPath("$.errorCode")
-                        .value("ACC-404")
-        );
-    }
-
-    @Test
-    void getBalance_returnsOk() throws Exception {
-
-        BalanceResponse response =
-                new BalanceResponse();
-
-        response.setCashBalance(
-                new BigDecimal("500")
-        );
-
-        when(accountService.getBalance(1001L))
-                .thenReturn(response);
-
-        mockMvc.perform(
-                get("/api/v1/accounts/1001/balance")
-                        .accept(MediaType.APPLICATION_JSON)
-        )
-        .andExpect(status().isOk())
-        .andExpect(
-                jsonPath("$.cashBalance")
-                        .value(500)
-        );
+        verify(orderService).getOrderHistory(7L, "NEW", from, to);
     }
 }

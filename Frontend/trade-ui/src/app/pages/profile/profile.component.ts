@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserResponse } from '../../generated/auth';
@@ -20,7 +20,7 @@ interface CountryCode {
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
-export class ProfileComponent implements OnInit {
+export class ProfileComponent implements OnInit, OnDestroy {
   readonly authSession = inject(AuthSessionService);
   private readonly authApi = inject(AuthApiClientService);
   private readonly preferencesApi = inject(CustomerPreferencesService, { optional: true });
@@ -31,17 +31,16 @@ export class ProfileComponent implements OnInit {
   readonly isLoading = signal(true);
   readonly isSaving = signal(false);
   readonly isSavingPreferences = signal(false);
+  readonly isSavingEmailPreference = signal(false);
   readonly successMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  readonly emailOptInError = signal<string | null>(null);
+  readonly emailNotificationsEnabled = signal(false);
   readonly currentUser = signal<UserResponse | null>(null);
   readonly isLoadingPreferences = signal(false);
 
-  readonly orderTypes: OrderType[] = ['MARKET', 'LIMIT', 'STOP'];
-  readonly notificationChannels: NotificationChannel[] = [
-    'NO NOTIFICATION',
-    'IN_APP',
-    'EMAIL'
-  ];
+  readonly orderTypes: OrderType[] = ['MARKET', 'LIMIT'];
+  readonly notificationChannels: NotificationChannel[] = ['IN_APP', 'EMAIL'];
   readonly themeChoices: ThemeChoice[] = ['LIGHT', 'DARK', 'SYSTEM'];
   readonly baseCurrencies: BaseCurrency[] = ['USD', 'INR'];
 
@@ -54,6 +53,8 @@ export class ProfileComponent implements OnInit {
 
   // Mobile number regex: accepts exactly 10 digits, no special characters
   private readonly phonePattern = /^[0-9]{10}$/;
+  private emailOptInTimer: ReturnType<typeof setTimeout> | null = null;
+  private errorClearTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.profileForm = this.formBuilder.group({
@@ -67,29 +68,49 @@ export class ProfileComponent implements OnInit {
       defaultAccountId: [1, [Validators.required, Validators.min(1)]],
       defaultOrderType: ['MARKET', Validators.required],
       skipOrderConfirmation: [false],
-      defaultTradeQuantity: [1, [Validators.required, Validators.min(1)]],
-      notificationsAndAlerts: ['YES', Validators.required],
-      tradeFills: [['IN_APP', 'EMAIL'], Validators.required],
-      priceAlerts: [['IN_APP', 'EMAIL'], Validators.required],
+      defaultTradeQuantity: [1, [Validators.required, Validators.min(1), Validators.pattern('^[0-9]+$')]],
+      tradeFills: [['IN_APP'], Validators.required],
+      priceAlerts: [['IN_APP'], Validators.required],
       theme: ['SYSTEM', Validators.required],
-      baseCurrency: ['USD', Validators.required]
-    });
-
-    this.profileForm.get('notificationsAndAlerts')?.valueChanges.subscribe((val) => {
-      const isYes = val === 'YES';
-      this.profileForm.patchValue({
-        tradeFills: isYes ? ['IN_APP', 'EMAIL'] : ['NO NOTIFICATION'],
-        priceAlerts: isYes ? ['IN_APP', 'EMAIL'] : ['NO NOTIFICATION'],
-      }, { emitEvent: false });
-
-      if (!this.isLoading() && this.currentUser()) {
-        void this.onSavePreferences();
-      }
+      baseCurrency: ['INR', Validators.required]
     });
   }
 
   ngOnInit(): void {
-    this.loadProfile();
+    void this.loadProfile();
+  }
+
+  refreshPage(): void {
+    this.scrollToTop();
+    this.successMessage.set(null);
+    this.errorMessage.set(null);
+    void this.loadProfile();
+  }
+
+  roleLabel(): string {
+    const raw = this.currentUser()?.roles ?? [];
+    const roles = (Array.isArray(raw) ? raw : [raw])
+      .map((role) => String(role).replace(/[^A-Za-z_]/g, '').toUpperCase())
+      .filter((role) => role.length > 0);
+
+    if (roles.length === 0) {
+      return 'Customer';
+    }
+
+    return roles
+      .map((role) => role === 'ADMIN' ? 'Admin' : role === 'CUSTOMER' ? 'Customer' : role)
+      .join(', ');
+  }
+
+  ngOnDestroy(): void {
+    if (this.emailOptInTimer) {
+      clearTimeout(this.emailOptInTimer);
+      this.emailOptInTimer = null;
+    }
+    if (this.errorClearTimer) {
+      clearTimeout(this.errorClearTimer);
+      this.errorClearTimer = null;
+    }
   }
 
   private async loadProfile(): Promise<void> {
@@ -99,7 +120,7 @@ export class ProfileComponent implements OnInit {
     try {
       const user = await this.authSession.loadCurrentUser();
       if (!user) {
-        this.errorMessage.set('Unable to load profile. Please sign in again.');
+        this.showTimedError('Unable to load profile. Please sign in again.');
         return;
       }
 
@@ -117,6 +138,7 @@ export class ProfileComponent implements OnInit {
           countryCode = '+1';
           phoneNo = phoneNo.substring(2);
         }
+        phoneNo = phoneNo.replace(/\D/g, '');
       }
 
       this.profileForm.patchValue({
@@ -129,6 +151,11 @@ export class ProfileComponent implements OnInit {
         accountId: user.accountId
       });
 
+      const phoneControl = this.profileForm.get('phoneNo');
+      if (phoneControl?.invalid) {
+        phoneControl.markAsTouched();
+      }
+
       // Mark profile load complete before loading optional preferences to
       // avoid test timing races where `isLoading` remains true while
       // background preference loading occurs.
@@ -136,8 +163,7 @@ export class ProfileComponent implements OnInit {
 
       await this.loadPreferences(user.accountId);
     } catch {
-      // Error loading profile - display user-friendly message without interrupting component lifecycle
-      this.errorMessage.set('Failed to load profile information.');
+      this.showTimedError('Failed to load profile information.');
     } finally {
       this.isLoading.set(false);
     }
@@ -191,16 +217,25 @@ async onSubmit(): Promise<void> {
       );
     }
 
+    const existing = this.currentUser();
+    if (existing) {
+      this.currentUser.set({
+        ...existing,
+        firstName: formValue.firstName,
+        lastName: formValue.lastName,
+        email: formValue.email,
+        phoneNo: fullPhoneNo
+      });
+    }
+
     // Clear cached user so the next profile load gets fresh data
     this.authSession.clearCurrentUserCache();
 
     // Show success only after every requested update has completed
-    this.successMessage.set('Profile updated successfully!');
+    this.successMessage.set('Profile and preferences saved.');
 
   } catch {
-    this.errorMessage.set(
-      'Failed to update profile. Please try again.'
-    );
+    this.showTimedError('Failed to update profile. Please try again.');
     this.successMessage.set(null);
 
   } finally {
@@ -210,6 +245,87 @@ async onSubmit(): Promise<void> {
 
   goBack(): void {
     void this.router.navigate(['/dashboard']);
+  }
+
+  setChoice(controlName: 'defaultOrderType' | 'theme' | 'baseCurrency' | 'countryCode', value: string): void {
+    if (this.isSaving()) {
+      return;
+    }
+    this.profileForm.get(controlName)?.setValue(value);
+  }
+
+  isChoice(controlName: string, value: string): boolean {
+    return this.profileForm.get(controlName)?.value === value;
+  }
+
+  isChannelSelected(controlName: 'tradeFills' | 'priceAlerts', channel: NotificationChannel): boolean {
+    const value = this.profileForm.get(controlName)?.value;
+    const channels = Array.isArray(value) ? value : [];
+    return channels.map((item) => String(item).toUpperCase()).includes(channel);
+  }
+
+  toggleChannel(controlName: 'tradeFills' | 'priceAlerts', channel: NotificationChannel): void {
+    if (this.isSaving()) {
+      return;
+    }
+    const selected = this.normalizeChannels(this.profileForm.get(controlName)?.value);
+    if (selected.includes(channel) && selected.length === 1) {
+      return;
+    }
+    const next = selected.includes(channel)
+      ? selected.filter((item) => item !== channel)
+      : [...selected, channel];
+    this.profileForm.get(controlName)?.setValue(next);
+  }
+
+  channelLabel(channel: NotificationChannel): string {
+    if (channel === 'IN_APP') {
+      return 'In app';
+    }
+    if (channel === 'EMAIL') {
+      return 'Email';
+    }
+    return channel;
+  }
+
+  orderTypeLabel(orderType: OrderType): string {
+    if (orderType === 'MARKET') {
+      return 'Market';
+    }
+    if (orderType === 'LIMIT') {
+      return 'Limit';
+    }
+    return 'Stop';
+  }
+
+  themeLabel(theme: ThemeChoice): string {
+    if (theme === 'LIGHT') {
+      return 'Light';
+    }
+    if (theme === 'DARK') {
+      return 'Dark';
+    }
+    return 'System';
+  }
+
+  async onEmailNotificationToggle(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const enabling = input.checked;
+
+    if (enabling && !this.hasSavedEmail()) {
+      input.checked = false;
+      this.emailNotificationsEnabled.set(false);
+      this.showEmailRequiredNotice();
+      return;
+    }
+
+    this.emailOptInError.set(null);
+    this.emailNotificationsEnabled.set(enabling);
+    const saved = await this.persistEmailPreference();
+    if (!saved) {
+      this.emailNotificationsEnabled.set(!enabling);
+      input.checked = !enabling;
+    }
   }
 
   async onSavePreferences(): Promise<void> {
@@ -234,7 +350,7 @@ async onSubmit(): Promise<void> {
       this.themeService.applyThemePreference(formValue.theme as ThemeChoice);
       this.successMessage.set('Preferences saved successfully!');
     } catch {
-      this.errorMessage.set('Failed to save preferences. Please try again.');
+      this.showTimedError('Failed to save preferences. Please try again.');
     } finally {
       this.isSavingPreferences.set(false);
     }
@@ -250,21 +366,22 @@ async onSubmit(): Promise<void> {
       const preferences = await this.preferencesApi.getPreferences(accountId)
         ?? this.preferencesApi.defaultPreferences(accountId);
 
-      const isTurnedOff = this.isNotificationsTurnedOff(preferences.notifications);
-      const notificationsAndAlertsValue = isTurnedOff ? 'NO' : 'YES';
-
       this.profileForm.patchValue({
         defaultAccountId: preferences.defaultAccountId,
-        defaultOrderType: preferences.trading.defaultOrderType,
+        defaultOrderType: preferences.trading.defaultOrderType === 'STOP'
+          ? 'MARKET'
+          : preferences.trading.defaultOrderType,
         skipOrderConfirmation: preferences.trading.skipOrderConfirmation,
-        defaultTradeQuantity: preferences.trading.defaultTradeQuantity,
-        notificationsAndAlerts: notificationsAndAlertsValue,
-        tradeFills: isTurnedOff ? ['NO NOTIFICATION'] : ['IN_APP', 'EMAIL'],
-        priceAlerts: isTurnedOff ? ['NO NOTIFICATION'] : ['IN_APP', 'EMAIL'],
+        defaultTradeQuantity: Number(preferences.trading.defaultTradeQuantity) > 0
+          ? Math.floor(Number(preferences.trading.defaultTradeQuantity))
+          : 1,
+        tradeFills: this.normalizeChannels(preferences.notifications.tradeFills),
+        priceAlerts: this.normalizeChannels(preferences.notifications.priceAlerts),
         theme: preferences.display.theme,
         baseCurrency: preferences.display.baseCurrency,
       });
 
+      this.emailNotificationsEnabled.set(preferences.notifications?.emailEnabled === true);
       this.themeService.applyThemePreference(preferences.display.theme);
     } catch {
       // Preferences are optional during load; fallback values remain in the form.
@@ -273,28 +390,67 @@ async onSubmit(): Promise<void> {
     }
   }
 
-  private isNotificationsTurnedOff(notifications?: { tradeFills?: unknown; priceAlerts?: unknown }): boolean {
-    if (!notifications) {
+  private hasSavedEmail(): boolean {
+    return (this.currentUser()?.email?.trim() ?? '').length > 0;
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    document.querySelector('.app-main')?.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  private showTimedError(message: string): void {
+    this.errorMessage.set(message);
+    this.scrollToTop();
+    if (this.errorClearTimer) {
+      clearTimeout(this.errorClearTimer);
+    }
+    this.errorClearTimer = setTimeout(() => {
+      this.errorMessage.set(null);
+      this.errorClearTimer = null;
+    }, 5000);
+  }
+
+  private showEmailRequiredNotice(): void {
+    this.emailOptInError.set('Update your email first to enable this');
+    if (this.emailOptInTimer) {
+      clearTimeout(this.emailOptInTimer);
+    }
+    this.emailOptInTimer = setTimeout(() => {
+      this.emailOptInError.set(null);
+      this.emailOptInTimer = null;
+    }, 5000);
+  }
+
+  private async persistEmailPreference(): Promise<boolean> {
+    if (!this.preferencesApi) {
+      this.errorMessage.set('Preferences service is unavailable.');
       return false;
     }
-    const hasNoNotification = (channels: unknown): boolean => {
-      if (!channels) return false;
-      const list = Array.isArray(channels) ? channels : [channels];
-      return list.some((item) => {
-        const str = String(item).trim().toUpperCase();
-        return str === 'NO NOTIFICATION' || str === 'NO_NOTIFICATION';
-      });
-    };
 
-    return hasNoNotification(notifications.tradeFills) || hasNoNotification(notifications.priceAlerts);
+    const accountId = Number(this.profileForm.getRawValue().accountId);
+    if (!Number.isFinite(accountId) || accountId < 1) {
+      this.errorMessage.set('Unable to determine account for preferences.');
+      return false;
+    }
+
+    this.isSavingEmailPreference.set(true);
+    this.errorMessage.set(null);
+    try {
+      await this.preferencesApi.upsertPreferences(accountId, this.toPreferencesPayload(this.profileForm.getRawValue()));
+      return true;
+    } catch {
+      this.showTimedError('Failed to update email notification preference. Please try again.');
+      return false;
+    } finally {
+      this.isSavingEmailPreference.set(false);
+    }
   }
 
   private normalizeChannels(value: unknown): NotificationChannel[] {
-    const allowed = new Set<NotificationChannel>([
-      'NO NOTIFICATION',
-      'IN_APP',
-      'EMAIL'
-    ]);
+    const allowed = new Set<NotificationChannel>(['IN_APP', 'EMAIL']);
     const source = Array.isArray(value)
       ? value
       : typeof value === 'string'
@@ -303,10 +459,10 @@ async onSubmit(): Promise<void> {
 
     const channels = source
       .map((item) => String(item).trim().toUpperCase())
-      .map((item) => (item === 'INAPP' ? 'IN_APP' : item === 'NO_NOTIFICATION' ? 'NO NOTIFICATION' : item))
+      .map((item) => (item === 'INAPP' ? 'IN_APP' : item))
       .filter((item): item is NotificationChannel => allowed.has(item as NotificationChannel));
 
-    return channels.length > 0 ? [...new Set(channels)] : ['IN_APP', 'EMAIL'];
+    return channels.length > 0 ? [...new Set(channels)] : ['IN_APP'];
   }
 
   private toPreferencesPayload(formValue: any): {
@@ -319,31 +475,24 @@ async onSubmit(): Promise<void> {
     notifications: {
       tradeFills: NotificationChannel[];
       priceAlerts: NotificationChannel[];
+      emailEnabled: boolean;
     };
     display: {
       theme: ThemeChoice;
       baseCurrency: BaseCurrency;
     };
   } {
-    const isNotificationsEnabled = formValue.notificationsAndAlerts !== 'NO';
-    const channels: NotificationChannel[] = isNotificationsEnabled
-      ? ['IN_APP', 'EMAIL']
-      : ['NO NOTIFICATION'];
-
     return {
       defaultAccountId: Number(formValue.defaultAccountId),
       trading: {
         defaultOrderType: formValue.defaultOrderType,
         skipOrderConfirmation: Boolean(formValue.skipOrderConfirmation),
-        defaultTradeQuantity: Number(formValue.defaultTradeQuantity),
+        defaultTradeQuantity: Math.max(1, Math.floor(Number(formValue.defaultTradeQuantity) || 1)),
       },
       notifications: {
-        tradeFills: formValue.notificationsAndAlerts !== undefined
-          ? channels
-          : this.normalizeChannels(formValue.tradeFills),
-        priceAlerts: formValue.notificationsAndAlerts !== undefined
-          ? channels
-          : this.normalizeChannels(formValue.priceAlerts),
+        tradeFills: this.normalizeChannels(formValue.tradeFills),
+        priceAlerts: this.normalizeChannels(formValue.priceAlerts),
+        emailEnabled: this.emailNotificationsEnabled(),
       },
       display: {
         theme: formValue.theme,

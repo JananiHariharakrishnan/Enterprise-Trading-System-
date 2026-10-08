@@ -79,4 +79,20 @@ describe('ThemeService', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     expect(document.documentElement.classList.contains('dark-theme')).toBe(true);
   });
+
+  it('applies a saved light, dark, or system preference', () => {
+    const service = TestBed.inject(ThemeService);
+    service.applyThemePreference('LIGHT');
+    expect(service.currentTheme()).toBe('light');
+    service.applyThemePreference('DARK');
+    expect(service.currentTheme()).toBe('dark');
+
+    setMatchMedia(true);
+    service.applyThemePreference('SYSTEM');
+    expect(service.currentTheme()).toBe('light');
+
+    setMatchMedia(false);
+    service.applyThemePreference('SYSTEM');
+    expect(service.currentTheme()).toBe('dark');
+  });
 });

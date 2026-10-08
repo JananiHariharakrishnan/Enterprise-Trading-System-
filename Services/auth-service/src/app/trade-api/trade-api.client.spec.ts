@@ -155,4 +155,44 @@ describe('TradeApiClient', () => {
     const api = new TradeApiClient();
     await expect(api.createUser('x', 1)).rejects.toBe(err);
   });
+
+  it('createUser returns null when trade-api responds without a body', async () => {
+    const { TradeApiClient } = await import('./trade-api.client.js');
+    clientMethods.post.mockResolvedValue({ data: null });
+
+    const api = new TradeApiClient();
+    await expect(api.createUser('a', 1)).resolves.toBeNull();
+  });
+
+  it('getUserById returns the user and rethrows unexpected failures', async () => {
+    const { TradeApiClient } = await import('./trade-api.client.js');
+    clientMethods.get.mockResolvedValueOnce({
+      data: { id: 'u1', username: 'a', accountId: 1, roles: ['ADMIN'], createdOn: '2024-01-01T00:00:00Z' },
+    });
+
+    const api = new TradeApiClient();
+    await expect(api.getUserById('u1')).resolves.toMatchObject({ id: 'u1', roles: ['ADMIN'] });
+
+    clientMethods.get.mockRejectedValueOnce(new Error('timeout'));
+    await expect(api.getUserById('u1')).rejects.toThrow('timeout');
+  });
+
+  it('getUserByUsername and getUserByAccountId rethrow unexpected failures', async () => {
+    const { TradeApiClient } = await import('./trade-api.client.js');
+    const api = new TradeApiClient();
+
+    clientMethods.get.mockRejectedValueOnce(new Error('username down'));
+    await expect(api.getUserByUsername('a')).rejects.toThrow('username down');
+
+    clientMethods.get.mockRejectedValueOnce(new Error('account down'));
+    await expect(api.getUserByAccountId(1)).rejects.toThrow('account down');
+  });
+
+  it('updateUserProfile rethrows trade-api failures', async () => {
+    const { TradeApiClient } = await import('./trade-api.client.js');
+    const api = new TradeApiClient();
+    clientMethods.put.mockRejectedValueOnce(new Error('put failed'));
+
+    await expect(api.updateUserProfile('u', { email: 'a@b.c' })).rejects.toThrow('put failed');
+  });
 });

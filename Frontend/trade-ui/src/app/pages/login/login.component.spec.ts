@@ -7,6 +7,7 @@ import { LoginComponent } from './login.component';
 
 class AuthSessionServiceStub {
   login = vi.fn();
+  isAdmin = vi.fn().mockReturnValue(false);
 }
 
 describe('LoginComponent', () => {
@@ -36,11 +37,19 @@ describe('LoginComponent', () => {
       ]
     }).compileComponents();
 
+    localStorage.clear();
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;
     authSession = TestBed.inject(AuthSessionService) as unknown as AuthSessionServiceStub;
     router = TestBed.inject(Router);
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    localStorage.clear();
+    fixture.destroy();
   });
 
   it('empty fields are blocked by validation', async () => {
@@ -137,5 +146,98 @@ describe('LoginComponent', () => {
 
     const error = fixture.nativeElement.querySelector('[data-testid="auth-error-invalid-credentials"]') as HTMLElement;
     expect(error?.textContent).toContain('Wrong username or password!');
+  });
+
+  it('locks after three wrong passwords and unlocks when the timer ends', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    authSession.login.mockRejectedValue(new Error('Invalid password'));
+    component.form.setValue({ username: 'ada', password: 'wrong-password' });
+
+    await component.onSubmit();
+    await component.onSubmit();
+    expect(component.isLocked()).toBe(false);
+
+    await component.onSubmit();
+    fixture.detectChanges();
+    expect(component.isLocked()).toBe(true);
+    expect(component.progressPercent()).toBeGreaterThan(0);
+    expect(fixture.nativeElement.querySelector('[data-testid="lockout-dialog"]')).toBeTruthy();
+    expect(component.form.disabled).toBe(true);
+
+    const attempts = authSession.login.mock.calls.length;
+    await component.onSubmit();
+    expect(authSession.login).toHaveBeenCalledTimes(attempts);
+
+    vi.advanceTimersByTime(10_000);
+    expect(component.remainingSeconds()).toBe(0);
+    expect(component.form.enabled).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it('does not lock when the account does not exist or the service is down', async () => {
+    component.form.setValue({ username: 'missing', password: 'password123456' });
+    authSession.login.mockRejectedValueOnce(new Error('User not found'));
+    await component.onSubmit();
+    expect(component.submitError()).toContain('User not found');
+    expect(component.isLocked()).toBe(false);
+
+    authSession.login.mockRejectedValueOnce(new Error('Service unavailable'));
+    await component.onSubmit();
+    expect(component.submitError()).toContain('Service unavailable');
+    expect(component.isLocked()).toBe(false);
+
+    authSession.login.mockRejectedValueOnce('offline');
+    await component.onSubmit();
+    expect(component.submitError()).toContain('Unable to sign in');
+  });
+
+  it('sends an administrator to the admin page and clears a previous lockout', async () => {
+    authSession.login.mockRejectedValueOnce(new Error('wrong password'));
+    component.form.setValue({ username: 'admin', password: 'password123456' });
+    await component.onSubmit();
+    expect(localStorage.getItem('login.lockout.v1')).toContain('failedAttempts');
+
+    authSession.isAdmin.mockReturnValue(true);
+    authSession.login.mockResolvedValue(undefined);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    await component.onSubmit();
+    expect(navigateSpy).toHaveBeenCalledWith(['/admin']);
+    expect(localStorage.getItem('login.lockout.v1')).toBeNull();
+  });
+
+  it('restores an active lock, ignores an expired lock, and survives storage failures', async () => {
+    localStorage.setItem('login.lockout.v1', JSON.stringify({
+      failedAttempts: 0,
+      lockCount: 1,
+      lockedUntil: Date.now() + 8_000,
+      lockDuration: 10
+    }));
+    const locked = TestBed.createComponent(LoginComponent);
+    expect(locked.componentInstance.isLocked()).toBe(true);
+    locked.destroy();
+
+    localStorage.setItem('login.lockout.v1', JSON.stringify({
+      failedAttempts: 1,
+      lockCount: 1,
+      lockedUntil: Date.now() - 1_000,
+      lockDuration: 10
+    }));
+    const expired = TestBed.createComponent(LoginComponent);
+    expect(expired.componentInstance.isLocked()).toBe(false);
+    expired.destroy();
+
+    localStorage.setItem('login.lockout.v1', '{');
+    const corrupt = TestBed.createComponent(LoginComponent);
+    expect(corrupt.componentInstance.isLocked()).toBe(false);
+    corrupt.destroy();
+
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('full');
+    });
+    authSession.login.mockRejectedValueOnce(new Error('incorrect password'));
+    component.form.setValue({ username: 'ada', password: 'wrong-password' });
+    await expect(component.onSubmit()).resolves.toBeUndefined();
+    expect(component.submitError()).toContain('Wrong username');
+    vi.mocked(Storage.prototype.setItem).mockRestore();
   });
 });

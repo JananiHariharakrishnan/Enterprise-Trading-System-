@@ -16,6 +16,7 @@ class AuthSessionServiceStub {
   sessionRemainingSeconds = signal(900);
   sessionExpiresIn = signal('15:00');
   isSessionExpiringSoon = signal(false);
+  isAdmin = signal(false);
   logout = vi.fn().mockResolvedValue(undefined);
 }
 
@@ -56,16 +57,10 @@ describe('AppHeaderComponent', () => {
     };
 
     httpGet = vi.fn().mockImplementation((url: string) => {
-      if (url.includes('finance.yahoo.com')) {
+      if (url.includes('/api/v1/market-data')) {
         return of({
-          quoteResponse: {
-            result: [
-              { symbol: '^GSPC', regularMarketPrice: 6230.42, regularMarketChangePercent: 0.34 },
-              { symbol: '^IXIC', regularMarketPrice: 20184.11, regularMarketChangePercent: 0.58 },
-              { symbol: '^DJI', regularMarketPrice: 42932.18, regularMarketChangePercent: 0.21 },
-              { symbol: '^VIX', regularMarketPrice: 14.79, regularMarketChangePercent: -1.52 }
-            ]
-          }
+          'HDFCBANK.NS': { price: 1650.25, changePercent: 0.42, currency: 'INR' },
+          AAPL: { price: 189.1, changePercent: -0.2, currency: 'USD' }
         });
       }
 
@@ -177,8 +172,8 @@ describe('AppHeaderComponent', () => {
 
   it('shows no-result state when instrument search returns empty', async () => {
     httpGet.mockImplementation((url: string) => {
-      if (url.includes('finance.yahoo.com')) {
-        return of({ quoteResponse: { result: [] } });
+      if (url.includes('/api/v1/market-data')) {
+        return of({});
       }
       return of([]);
     });
@@ -191,8 +186,8 @@ describe('AppHeaderComponent', () => {
 
   it('shows instrument error message when lookup fails', async () => {
     httpGet.mockImplementation((url: string) => {
-      if (url.includes('finance.yahoo.com')) {
-        return of({ quoteResponse: { result: [] } });
+      if (url.includes('/api/v1/market-data')) {
+        return of({});
       }
       return throwError(() => new Error('network'));
     });
@@ -238,18 +233,26 @@ describe('AppHeaderComponent', () => {
     expect(fixture.componentInstance.isAssetSearchOpen()).toBe(false);
   });
 
-  it('falls back market feed label when market snapshot response is incomplete', async () => {
+  it('shows cached instrument prices and a waiting state when the cache is empty', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('HDFCBANK.NS');
+    expect(fixture.nativeElement.textContent).toContain('AAPL');
+    expect(fixture.componentInstance.marketFeedLabel()).toBe('POSITIONS & WATCHLIST');
+
     httpGet.mockImplementation((url: string) => {
-      if (url.includes('finance.yahoo.com')) {
-        return of({ quoteResponse: { result: [{ symbol: '^GSPC', regularMarketPrice: 1, regularMarketChangePercent: 2 }] } });
+      if (url.includes('/api/v1/market-data')) {
+        return of({});
       }
       return of([]);
     });
-
-    await fixture.componentInstance.ngOnInit();
+    await (fixture.componentInstance as unknown as { refreshCachedPrices: () => Promise<void> }).refreshCachedPrices();
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.marketFeedLabel()).toBe('FALLBACK SNAPSHOT');
+    expect(fixture.componentInstance.marketItems().length).toBe(0);
+    expect(fixture.componentInstance.marketFeedLabel()).toBe('WAITING FOR CACHE');
+    expect(fixture.nativeElement.textContent).toContain('Waiting for cached prices');
   });
 
   it('returns uppercase initial for instrument symbols', () => {

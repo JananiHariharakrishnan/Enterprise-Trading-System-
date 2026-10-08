@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tradingsystem.mapper.UserNotificationDataMapper">
+
+    <resultMap id="notificationResultMap" type="com.tradingsystem.model.UserNotification">
+        <id property="id" column="id"/>
+        <result property="accountId" column="account_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="category" column="category"/>
+        <result property="title" column="title"/>
+        <result property="body" column="body"/>
+        <result property="symbol" column="symbol"/>
+        <result property="emailSent" column="email_sent"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="readAt" column="read_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.tradingsystem.model.UserNotification">
+        INSERT INTO tradingsystem.notification (
+            account_id,
+            user_id,
+            category,
+            title,
+            body,
+            symbol,
+            email_sent
+        ) VALUES (
+            #{accountId},
+            #{userId, jdbcType=OTHER},
+            #{category},
+            #{title},
+            #{body},
+            #{symbol},
+            #{emailSent}
+        )
+    </insert>
+
+    <select id="findByAccountId" resultMap="notificationResultMap">
+        SELECT
+            id,
+            account_id,
+            user_id,
+            category,
+            title,
+            body,
+            symbol,
+            email_sent,
+            created_at,
+            read_at
+        FROM tradingsystem.notification
+        WHERE account_id = #{accountId}
+        ORDER BY created_at DESC, id DESC
+        LIMIT 100
+    </select>
+
+    <update id="markAllRead">
+        UPDATE tradingsystem.notification
+        SET read_at = NOW()
+        WHERE account_id = #{accountId}
+          AND read_at IS NULL
+    </update>
+
+</mapper>

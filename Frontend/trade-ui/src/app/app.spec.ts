@@ -35,5 +35,14 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
+
+  it('loads the lazy alert, signal, wallet, and admin pages', async () => {
+    const loaders = routes.flatMap((route) => (route.loadComponent ? [route.loadComponent] : []));
+
+    const components = await Promise.all(loaders.map((load) => load()));
+
+    expect(components).toHaveLength(4);
+    expect(components.every((component) => component)).toBe(true);
+  });
 });
 

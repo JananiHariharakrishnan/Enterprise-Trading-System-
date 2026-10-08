@@ -25,6 +25,7 @@ export class AuthSessionService {
   private loadCurrentUserPromise: Promise<UserResponse | null> | null = null;
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly isAuthenticated = this.isAuthenticatedSignal.asReadonly();
+  readonly isAdmin = computed(() => Boolean(this.currentUserSignal()?.roles?.includes('ADMIN')));
   private readonly authHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
 
   // Session countdown timer state
