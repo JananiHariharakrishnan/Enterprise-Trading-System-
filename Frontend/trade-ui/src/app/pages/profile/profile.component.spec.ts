@@ -505,4 +505,54 @@ describe('ProfileComponent', () => {
     await component.onSavePreferences();
     expect(component.errorMessage()).toContain('Failed to save preferences');
   });
+
+  it('renders default trade quantity input and validates positive integer', () => {
+    renderWithoutInit();
+    component.isLoading.set(false);
+    component.currentUser.set({
+      id: '1',
+      username: 'testuser',
+      accountId: 8,
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      phoneNo: '+1234567890'
+    } as any);
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector('[data-testid="profile-defaultTradeQuantity-input"]') as HTMLInputElement;
+    expect(input).toBeTruthy();
+    expect(component.profileForm.get('defaultTradeQuantity')?.value).toBe(1);
+
+    component.profileForm.patchValue({ defaultTradeQuantity: 0 });
+    expect(component.profileForm.get('defaultTradeQuantity')?.valid).toBe(false);
+
+    component.profileForm.patchValue({ defaultTradeQuantity: 25 });
+    expect(component.profileForm.get('defaultTradeQuantity')?.valid).toBe(true);
+  });
+
+  it('persists preferred defaultTradeQuantity when saving preferences', async () => {
+    renderWithoutInit();
+    component.currentUser.set({
+      id: '1',
+      username: 'testuser',
+      accountId: 8,
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      phoneNo: '+1234567890'
+    } as any);
+    component.profileForm.patchValue({
+      accountId: 8,
+      defaultTradeQuantity: 50
+    });
+
+    await component.onSavePreferences();
+
+    expect(mockPreferencesApi.upsertPreferences).toHaveBeenCalledWith(8, expect.objectContaining({
+      trading: expect.objectContaining({
+        defaultTradeQuantity: 50
+      })
+    }));
+  });
 });

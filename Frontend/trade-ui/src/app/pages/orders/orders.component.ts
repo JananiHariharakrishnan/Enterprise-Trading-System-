@@ -38,6 +38,7 @@ export class OrdersComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly latestPrice = signal<number | null>(null);
   readonly skipOrderConfirmation = signal(false);
   readonly baseCurrency = signal<BaseCurrency>('USD');
+  readonly preferredTradeQuantity = signal<number>(1);
 
   private currentIdempotencyKey: string | null = null;
   private errorClearTimer: ReturnType<typeof setTimeout> | null = null;
@@ -209,6 +210,7 @@ export class OrdersComponent implements OnInit, AfterViewInit, OnDestroy {
         this.showTimedError('Unable to refresh. Please sign in again.');
         return;
       }
+      await this.loadAndApplyPreferences(user.accountId);
       const acct = await this.api.accounts.getAccount({ id: user.accountId });
       this.account.set(acct);
       await this.refreshQuote();
@@ -345,12 +347,12 @@ export class OrdersComponent implements OnInit, AfterViewInit, OnDestroy {
       this.successMessage.set(`Order placed. Status: ${status}`);
       this.errorMessage.set(null);
 
-      // reset form (keep side and order type so repeat orders are quick)
+      // reset form (keep side and order type so repeat orders are quick, and restore preferred quantity)
       const { side, orderType: prevOrderType } = this.form.value;
       this.form.reset({
         symbol: '',
         side: side ?? 'BUY',
-        quantity: 1,
+        quantity: this.preferredTradeQuantity(),
         price: null,
         orderType: prevOrderType ?? 'MARKET',
         confirmOrder: false
@@ -436,11 +438,13 @@ export class OrdersComponent implements OnInit, AfterViewInit, OnDestroy {
     this.baseCurrency.set(preferences.display.baseCurrency);
 
     const preferredOrderType = preferences.trading.defaultOrderType === 'LIMIT' ? 'LIMIT' : 'MARKET';
-    const preferredQuantity = Number(preferences.trading.defaultTradeQuantity);
+    const rawQty = Number(preferences.trading?.defaultTradeQuantity);
+    const preferredQuantity = Number.isFinite(rawQty) && rawQty > 0 ? Math.floor(rawQty) : 1;
+    this.preferredTradeQuantity.set(preferredQuantity);
 
     this.form.patchValue({
       orderType: preferredOrderType,
-      quantity: Number.isFinite(preferredQuantity) && preferredQuantity > 0 ? Math.floor(preferredQuantity) : 1,
+      quantity: preferredQuantity,
     });
   }
 }

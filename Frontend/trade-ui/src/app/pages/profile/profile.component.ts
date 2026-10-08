@@ -68,7 +68,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       defaultAccountId: [1, [Validators.required, Validators.min(1)]],
       defaultOrderType: ['MARKET', Validators.required],
       skipOrderConfirmation: [false],
-      defaultTradeQuantity: [1, [Validators.required, Validators.min(1)]],
+      defaultTradeQuantity: [1, [Validators.required, Validators.min(1), Validators.pattern('^[0-9]+$')]],
       tradeFills: [['IN_APP'], Validators.required],
       priceAlerts: [['IN_APP'], Validators.required],
       theme: ['SYSTEM', Validators.required],
@@ -372,7 +372,9 @@ async onSubmit(): Promise<void> {
           ? 'MARKET'
           : preferences.trading.defaultOrderType,
         skipOrderConfirmation: preferences.trading.skipOrderConfirmation,
-        defaultTradeQuantity: preferences.trading.defaultTradeQuantity,
+        defaultTradeQuantity: Number(preferences.trading.defaultTradeQuantity) > 0
+          ? Math.floor(Number(preferences.trading.defaultTradeQuantity))
+          : 1,
         tradeFills: this.normalizeChannels(preferences.notifications.tradeFills),
         priceAlerts: this.normalizeChannels(preferences.notifications.priceAlerts),
         theme: preferences.display.theme,
@@ -485,7 +487,7 @@ async onSubmit(): Promise<void> {
       trading: {
         defaultOrderType: formValue.defaultOrderType,
         skipOrderConfirmation: Boolean(formValue.skipOrderConfirmation),
-        defaultTradeQuantity: Number(formValue.defaultTradeQuantity),
+        defaultTradeQuantity: Math.max(1, Math.floor(Number(formValue.defaultTradeQuantity) || 1)),
       },
       notifications: {
         tradeFills: this.normalizeChannels(formValue.tradeFills),
