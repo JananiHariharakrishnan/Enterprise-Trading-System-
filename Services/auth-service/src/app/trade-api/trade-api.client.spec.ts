@@ -173,6 +173,11 @@ describe('TradeApiClient', () => {
     const api = new TradeApiClient();
     await expect(api.getUserById('u1')).resolves.toMatchObject({ id: 'u1', roles: ['ADMIN'] });
 
+    clientMethods.get.mockResolvedValueOnce({
+      data: { id: 'u1', username: 'a', accountId: 1, roles: ['"ADMIN"'], createdOn: '2024-01-01T00:00:00Z' },
+    });
+    await expect(api.getUserById('u1')).resolves.toMatchObject({ roles: ['ADMIN'] });
+
     clientMethods.get.mockRejectedValueOnce(new Error('timeout'));
     await expect(api.getUserById('u1')).rejects.toThrow('timeout');
   });

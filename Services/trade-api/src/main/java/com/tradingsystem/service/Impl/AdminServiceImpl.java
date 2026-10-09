@@ -30,6 +30,7 @@ public class AdminServiceImpl implements AdminService {
     private static final String ACCOUNT_PREFIX = "ETP-220";
     private static final long DEFAULT_SEQUENCE = 1; // Will start from ETP-2201
     private static volatile AtomicLong accountSequence = new AtomicLong(DEFAULT_SEQUENCE);
+    private static final AtomicLong issuedAccountSequence = new AtomicLong(0);
     private static volatile boolean sequenceInitialized = false;
 
     private final AccountDataMapper accountDataMapper;
@@ -209,12 +210,32 @@ public class AdminServiceImpl implements AdminService {
         return accountSequence.getAndIncrement();
     }
 
+    /** Test hook so a later case is not affected by references issued earlier in the same JVM. */
+    public static void resetIssuedAccountSequenceForTests() {
+        issuedAccountSequence.set(0);
+    }
+
     /**
-     * Generate the next account reference.
-     * Uses format: ETP-220 + number (starting from existing max or 1 if none)
+     * Next reference continues the seeded series ETP-2201 … ETP-22020.
+     * The number is the highest numeric suffix already stored, plus one.
+     * Text order would treat ETP-2209 as greater than ETP-22020 and reuse ETP-22010.
+     * The in-memory counter still advances when the max query is unchanged, so a batch
+     * does not mint the same reference three times.
      */
     private String generateAccountReference() {
-        long nextSequence = getAndIncrementSequence();
-        return ACCOUNT_PREFIX + String.format("%02d", nextSequence);
+        long parsedNext = 1L;
+        String maxReference = accountDataMapper.findMaxAccountReference();
+        if (maxReference != null && maxReference.startsWith(ACCOUNT_PREFIX)) {
+            String numericPart = maxReference.substring(ACCOUNT_PREFIX.length());
+            try {
+                parsedNext = Long.parseLong(numericPart) + 1L;
+            } catch (NumberFormatException e) {
+                log.warn("Failed to parse account reference {}, starting at 1", maxReference);
+            }
+        }
+        final long fromDatabase = parsedNext;
+        long nextSequence = issuedAccountSequence.updateAndGet(
+                current -> Math.max(current, fromDatabase - 1L) + 1L);
+        return ACCOUNT_PREFIX + nextSequence;
     }
 }

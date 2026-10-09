@@ -180,11 +180,11 @@
         )
     </insert>
 
-    <select id="findMaxAccountReference" resultType="string">
+    <select id="findMaxAccountReference" resultType="string" flushCache="true" useCache="false">
         SELECT account_reference
         FROM accounts
-        WHERE account_reference LIKE 'ETP-220%'
-        ORDER BY account_reference DESC
+        WHERE account_reference ~ '^ETP-220[0-9]+$'
+        ORDER BY CAST(SUBSTRING(account_reference FROM 8) AS BIGINT) DESC
         LIMIT 1
     </select>
 

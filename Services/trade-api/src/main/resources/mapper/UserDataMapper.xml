@@ -19,12 +19,13 @@
     <select id="findAvailableAccountId" resultType="java.lang.Long">
         SELECT a.id
         FROM tradingsystem.accounts a
-        WHERE NOT EXISTS (
+        WHERE a.status = 'ACTIVE'
+          AND NOT EXISTS (
             SELECT 1
             FROM tradingsystem.users u
             WHERE u.account_id = a.id
         )
-        ORDER BY RANDOM()
+        ORDER BY a.id
         LIMIT 1
     </select>
 

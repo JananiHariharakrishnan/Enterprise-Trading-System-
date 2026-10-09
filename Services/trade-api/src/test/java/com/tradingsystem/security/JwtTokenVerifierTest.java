@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -120,6 +121,25 @@ class JwtTokenVerifierTest {
         String token = token("HS256", exp, 1001L, ISSUER, "wrong-secret");
 
         assertNull(verifier.verifyAndGetAccountId(token));
+    }
+
+    @Test
+    void verify_treatsQuotedAdminRoleAsAdmin() {
+        long exp = Instant.now().getEpochSecond() + 300;
+        String header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+        String payload = "{\"sub\":\"demo\",\"accountId\":22"
+                + ",\"roles\":[\"\\\"ADMIN\\\"\"],\"iat\":" + (exp - 60)
+                + ",\"exp\":" + exp + ",\"iss\":\"" + ISSUER + "\"}";
+        String encodedHeader = base64Url(header.getBytes(StandardCharsets.UTF_8));
+        String encodedPayload = base64Url(payload.getBytes(StandardCharsets.UTF_8));
+        String signingInput = encodedHeader + "." + encodedPayload;
+        String token = signingInput + "." + hmac(signingInput, SECRET);
+
+        JwtClaims claims = verifier.verifyToken(token);
+
+        assertNotNull(claims);
+        assertTrue(claims.isAdmin());
+        assertEquals(List.of("ADMIN"), claims.roles());
     }
 
     @Test

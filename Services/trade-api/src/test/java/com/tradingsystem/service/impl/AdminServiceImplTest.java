@@ -167,4 +167,24 @@ class AdminServiceImplTest {
         verify(accountDataMapper, times(3)).insertAccount(argThat(ref -> ref.startsWith("ETP-")), 
                 eq(new BigDecimal("100000.00")), eq(new BigDecimal("100000.00")), eq("ACTIVE"));
     }
+
+    @Test
+    void createBatchAccounts_continuesAfterHighestSeededReference() {
+        AdminServiceImpl.resetIssuedAccountSequenceForTests();
+        when(accountDataMapper.findMaxAccountReference()).thenReturn("ETP-22020");
+        when(accountDataMapper.insertAccount(any(), any(), any(), eq("ACTIVE"))).thenReturn(1);
+        when(accountDataMapper.findAccountByReference(any())).thenAnswer(invocation -> {
+            Account created = new Account();
+            created.setAccountId(1L);
+            created.setAccountReference(invocation.getArgument(0));
+            created.setCashBalance(new BigDecimal("10000.00"));
+            created.setStatus(com.tradingsystem.enums.AccountStatus.ACTIVE);
+            return created;
+        });
+
+        List<Account> accounts = adminService.createBatchAccounts(3, new BigDecimal("10000.00"));
+
+        assertEquals(List.of("ETP-22021", "ETP-22022", "ETP-22023"),
+                accounts.stream().map(Account::getAccountReference).toList());
+    }
 }
