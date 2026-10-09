@@ -1,25 +1,33 @@
 package com.tradingsystem.service.Impl;
 
 import com.tradingsystem.mapper.UserDataMapper;
+import com.tradingsystem.model.Account;
 import com.tradingsystem.model.User;
+import com.tradingsystem.service.AdminService;
 import com.tradingsystem.service.UserService;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
 import java.util.UUID;
 
 @Service
 public class UserServiceImpl implements UserService {
 
     private final UserDataMapper userDataMapper;
+    private final AdminService adminService;
 
-    public UserServiceImpl(UserDataMapper userDataMapper) {
+    public UserServiceImpl(UserDataMapper userDataMapper, AdminService adminService) {
         this.userDataMapper = userDataMapper;
+        this.adminService = adminService;
     }
 
     @Override
     public Long getAvailableAccountId() {
-        return userDataMapper.findAvailableAccountId();
+        Long existing = userDataMapper.findAvailableAccountId();
+        if (existing != null) {
+            return existing;
+        }
+        Account created = adminService.createUnmappedAccount(null);
+        return created.getAccountId();
     }
 
     @Override

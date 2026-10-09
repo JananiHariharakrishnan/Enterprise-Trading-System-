@@ -9,6 +9,7 @@
     "test": "ng test",
     "test:coverage": "ng test --watch=false --coverage --coverage-exclude=src/app/generated/**",
     "e2e": "playwright test",
+    "test:e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
     "generate:contracts": "npm run generate:contracts:clean && npm run generate:contracts:auth && npm run generate:contracts:trade",
     "generate:contracts:clean": "node -e \"const fs=require('node:fs'); fs.rmSync('src/app/generated/auth',{recursive:true,force:true}); fs.rmSync('src/app/generated/trade',{recursive:true,force:true});\"",

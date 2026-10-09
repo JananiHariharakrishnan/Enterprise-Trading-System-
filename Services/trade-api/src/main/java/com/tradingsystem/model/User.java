@@ -2,7 +2,6 @@ package com.tradingsystem.model;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -74,22 +73,35 @@ public class User {
     }
 
     /**
-     * Get roles as a List<String>.
-     * Parses the rolesString which comes as PostgreSQL array format.
-     * Format examples: "{CUSTOMER}" or "{CUSTOMER,ADMIN}"
+     * Get roles as a List of role names.
+     * Parses the PostgreSQL array text. JDBC may return either {ADMIN}
+     * or {"ADMIN"}; both mean the role ADMIN.
      */
     public List<String> getRoles() {
-        if (rolesString == null || rolesString.isEmpty()) {
-            return Arrays.asList("CUSTOMER");
+        return parseRoleList(rolesString);
+    }
+
+    static List<String> parseRoleList(String rolesString) {
+        if (rolesString == null || rolesString.isBlank()) {
+            return List.of("CUSTOMER");
         }
-        
-        // Remove the PostgreSQL array braces and split by comma
+
         String cleaned = rolesString.replaceAll("[{}]", "").trim();
         if (cleaned.isEmpty()) {
-            return Arrays.asList("CUSTOMER");
+            return List.of("CUSTOMER");
         }
-        
-        return Arrays.asList(cleaned.split(","));
+
+        List<String> roles = new ArrayList<>();
+        for (String part : cleaned.split(",")) {
+            String role = part.trim();
+            if (role.length() >= 2 && role.startsWith("\"") && role.endsWith("\"")) {
+                role = role.substring(1, role.length() - 1).trim();
+            }
+            if (!role.isEmpty()) {
+                roles.add(role);
+            }
+        }
+        return roles.isEmpty() ? List.of("CUSTOMER") : List.copyOf(roles);
     }
 
     public void setRoles(List<String> roles) {

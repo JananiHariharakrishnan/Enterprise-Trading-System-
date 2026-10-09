@@ -119,7 +119,8 @@ public class JwtTokenVerifier {
             String content = matcher.group(1);
             if (content != null && !content.isBlank()) {
                 for (String part : content.split(",")) {
-                    String role = part.replace("\"", "").trim();
+                    // A role value of "ADMIN" is JSON-escaped as \"ADMIN\" in the payload.
+                    String role = part.replace("\\", "").replace("\"", "").trim();
                     if (!role.isEmpty()) {
                         roles.add(role);
                     }

@@ -179,6 +179,16 @@ export type UserRecord = {
   createdOn: string;
 };
 
+function normalizeRoles(roles: unknown): string[] {
+  if (!Array.isArray(roles) || roles.length === 0) {
+    return ['CUSTOMER'];
+  }
+  const cleaned = roles
+    .map((role) => String(role).trim().replace(/^"+|"+$/g, ''))
+    .filter((role) => role.length > 0);
+  return cleaned.length > 0 ? cleaned : ['CUSTOMER'];
+}
+
 function mapUserFromResponse(data: any): UserRecord {
   return {
     id: data.id,
@@ -188,7 +198,7 @@ function mapUserFromResponse(data: any): UserRecord {
     lastName: data.lastName,
     email: data.email,
     phoneNo: data.phoneNo,
-    roles: data.roles || ['CUSTOMER'],
+    roles: normalizeRoles(data.roles),
     createdOn: data.createdOn,
   };
 }

@@ -2,8 +2,6 @@ package com.tradingsystem.model;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -87,14 +85,7 @@ public class AdminUserRecord {
     }
 
     public List<String> getRoles() {
-        if (rolesString == null || rolesString.isBlank()) {
-            return Collections.singletonList("CUSTOMER");
-        }
-        String cleaned = rolesString.replaceAll("[{}]", "").trim();
-        if (cleaned.isEmpty()) {
-            return Collections.singletonList("CUSTOMER");
-        }
-        return Arrays.asList(cleaned.split(","));
+        return User.parseRoleList(rolesString);
     }
 
     public String getAccountReference() {
