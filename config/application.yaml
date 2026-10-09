@@ -1,0 +1,80 @@
+# =============================================================================
+# Trading platform - application configuration
+#
+# Endpoints, ports and connection settings for every component. Values reflect
+# the current .env files and the defaults in the source code. Secrets are
+# placeholders: fill them in locally or inject them as environment variables.
+# =============================================================================
+
+frontend:
+  # Angular dev server (ng serve). Also the origin the services allow via CORS.
+  url: http://localhost
+  port: 4200
+
+services:
+
+  auth-service:            # NestJS, Node.js
+    url: http://localhost
+    port: 3000
+    trade-api-url: http://localhost:8081/api/v1   # auth calls trade-api for user management
+    jwt:
+      secret: <JWT_SECRET>                        # must match the secret used by trade-api
+      issuer: auth-service
+
+  trade-api:               # Spring Boot
+    url: http://localhost
+    port: 8081
+    base-path: /api/v1
+    fauxnance-api-url: https://y4t9nq2bqf.execute-api.eu-west-2.amazonaws.com/v1
+    auth-service-url: http://localhost:3000       # used to verify passwords
+    jwt:
+      secret: <JWT_SECRET>
+      issuer: auth-service
+
+  trade-executor:          # Spring Boot
+    url: http://localhost
+    port: 8082
+    trade-api-url: http://localhost:8081          # executor calls trade-api
+    fauxnance-api-url: https://y4t9nq2bqf.execute-api.eu-west-2.amazonaws.com/v1
+    market-data-poll-interval-seconds: 3600
+
+database:
+  host: localhost
+  port: 5432
+  name: trading
+  user: postgres
+  password: <DB_PASSWORD>                         # set locally, do not commit
+  schemas:
+    trading: tradingsystem
+    auth: authentication
+
+kafka:
+  host: 10.8.73.102
+  port: 9092
+  bootstrap-servers: 10.8.73.102:9092
+  topics:
+    orders: orders
+    trade-events: trade-events
+    market-data: market-data
+  consumer-groups:
+    trade-executor: trade-executor
+    notifications: trade-notification-service
+    trade-api-llm: trade-api-llm-group
+
+external:
+  fauxnance:
+    api-key: <FAUXNANCE_API_KEY>
+    timeout-seconds: 5
+    max-retries: 3
+    retry-delay-ms: 1000
+  llm:
+    provider: gemini
+    model: gemini-3.5-flash-lite
+    api-key: <LLM_API_KEY>
+  mail:
+    enabled: true
+    host: smtp.gmail.com
+    port: 587
+    username: <MAIL_USERNAME>
+    password: <MAIL_PASSWORD>
+    from: <MAIL_FROM>
