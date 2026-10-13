@@ -20,7 +20,7 @@ import java.util.List;
 /** Contract: portfolio-api.yaml. /movers is an extension beside it. */
 @RestController
 @RequestMapping("/api/v1/portfolio")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+@CrossOrigin(originPatterns = "*", allowCredentials = "true")
 public class PortfolioController {
 
     private final PortfolioService portfolioService;
