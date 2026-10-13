@@ -1,0 +1,141 @@
+# Local orchestration for the Enterprise Trading Platform.
+#
+# Sprint 3/4 scope: only the operational database is a container. Kafka, the
+# Trade API, the executor and the auth service arrive in later sprints and slot
+# in here as siblings. The Python analytics ETL runs on the host, not in a
+# container (per the blueprint).
+#
+# Sprint 6: adds the Trade REST API and Auth Stub services under the 'platform' profile.
+#
+# Database only (default):
+#     docker compose up -d
+#
+# Full platform (database + auth + trade-api):
+#     docker compose up -d --profile platform
+#
+# Values come from the repository-root .env (see .env.example). Init runs only
+# against an empty volume; reset with `docker compose down -v`.
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: etp-postgres
+    env_file:
+      - .env
+    environment:
+      # postgres image reads these to create the initial database and superuser.
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "8095:5432"
+    networks:
+      - trading-net
+    volumes:
+      # The migrations, CSV seed and probes, mounted read-only as the init source.
+      - ./Database:/sprint-03:ro
+      # The init hook that applies them on an empty volume, filename order.
+      - ./infra/postgres/initdb:/docker-entrypoint-initdb.d:ro
+      # Persistent data. Remove with `docker compose down -v` to rebuild.
+      - etp-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Sprint 6: Auth Stub - JWT token generation service
+  auth-stub:
+    build:
+      context: .
+      dockerfile: Services/auth-stub/Dockerfile
+    container_name: auth-stub
+    networks:
+      - trading-net
+    ports:
+      - "8090:4000"
+    environment:
+      NODE_ENV: development
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:4000/login || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # Sprint 7: Auth Service - Real JWT token generation service
+  auth-service:
+    build:
+      context: .
+      dockerfile: Services/auth-service/Dockerfile
+    container_name: auth-service
+    networks:
+      - trading-net
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Database connection
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      # Authentication
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      # Server
+      PORT: 3000
+      NODE_ENV: development
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/auth/me || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Sprint 6: Trade REST API
+  trade-api:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: trade-api
+    networks:
+      - trading-net
+    ports:
+      - "8081:8888"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Database connection
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      # Authentication
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: auth-service
+      # Server
+      SERVER_PORT: 8888
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+networks:
+  trading-net:
+    driver: bridge
+
+volumes:
+  etp-postgres-data:
+

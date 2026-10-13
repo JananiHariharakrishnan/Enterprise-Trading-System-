@@ -188,7 +188,7 @@ export function createInMemoryDb() {
   };
 }
 
-const databaseUrl = process.env.DATABASE_URL ?? process.env.DB_URL;
+const databaseUrl = process.env.DATABASE_URL;
 const host = process.env.POSTGRES_HOST ?? process.env.DB_HOST ?? process.env.PGHOST ?? 'localhost';
 const port = Number(process.env.POSTGRES_PORT ?? process.env.DB_PORT ?? process.env.PGPORT ?? 5432);
 const database = process.env.POSTGRES_DB ?? process.env.DB_NAME ?? process.env.PGDATABASE ?? 'trading';
@@ -198,11 +198,31 @@ const password = process.env.POSTGRES_PASSWORD ?? process.env.DB_PASSWORD ?? pro
 let _dbImpl: any = null;
 
 function createPool() {
-  return new Pool(
-    databaseUrl
-      ? { connectionString: databaseUrl.startsWith('jdbc:') ? databaseUrl.replace(/^jdbc:/, '') : databaseUrl }
-      : { host, port, database, user, password },
-  );
+  const isSslDisabled = process.env.DB_SSL === 'false' || process.env.DB_SSL === 'disable';
+  const ssl = isSslDisabled
+    ? false
+    : process.env.DB_SSL === 'true' ||
+      process.env.PGSSLMODE === 'require' ||
+      process.env.NODE_ENV === 'production' ||
+      Boolean(host && (host.includes('rds.amazonaws.com') || host.includes('amazonaws.com')))
+    ? { rejectUnauthorized: false }
+    : undefined;
+
+  if (databaseUrl && !databaseUrl.startsWith('jdbc:') && databaseUrl.includes('@')) {
+    return new Pool({
+      connectionString: databaseUrl,
+      ...(ssl !== undefined ? { ssl } : {}),
+    });
+  }
+
+  return new Pool({
+    host,
+    port,
+    database,
+    user,
+    password,
+    ...(ssl !== undefined ? { ssl } : {}),
+  });
 }
 
 function getDbImpl() {

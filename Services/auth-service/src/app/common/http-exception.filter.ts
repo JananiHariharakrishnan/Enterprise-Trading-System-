@@ -1,5 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
+import { logger } from './logger.js';
 
 type ErrorEnvelope = {
   errorCode: 'VAL-422' | 'AUTH-409' | 'AUTH-401' | 'SRV-500';
@@ -153,6 +154,13 @@ export function databaseStatus(exception: PostgresLikeError): number {
 export class PlatformExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
+
+    if (!(exception instanceof HttpException && exception.getStatus() < 500)) {
+      logger.error('Unhandled request exception', {
+        error: exception instanceof Error ? exception.message : (isPostgresLikeError(exception) ? exception.message : String(exception)),
+        stack: exception instanceof Error ? exception.stack : undefined,
+      });
+    }
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
