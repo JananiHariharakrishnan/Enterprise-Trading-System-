@@ -10,6 +10,17 @@ import { ResponseError, type PlaceOrderRequest, type OrderHistoryEntry, type Acc
 import { mapErrorCodeToMessage } from '../../errors/error-messages';
 import { InstrumentSearchComponent, type InstrumentListItem } from '../../components/instrument-search/instrument-search.component';
 
+function generateUuid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 @Component({
   selector: 'app-orders',
   standalone: true,
@@ -318,7 +329,7 @@ export class OrdersComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Prevent duplicate submissions by generating idempotency key only once
     if (!this.currentIdempotencyKey) {
-      this.currentIdempotencyKey = crypto.randomUUID();
+      this.currentIdempotencyKey = generateUuid();
     }
 
     this.submitting.set(true);
