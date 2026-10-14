@@ -21,14 +21,15 @@ export interface WalletDepositResponse {
   message: string;
 }
 
+import { getTradeApiV1Url } from '../config/api.config';
+
 @Injectable({
   providedIn: 'root'
 })
 export class WalletService {
   private readonly http = inject(HttpClient);
   private readonly tokenStorage = inject(TokenStorageService);
-  private readonly host = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
-  private readonly baseUrl = `http://${this.host}:8081/api/v1/wallet`;
+  private readonly baseUrl = `${getTradeApiV1Url()}/wallet`;
 
   private getHeaders(): HttpHeaders {
     const token = this.tokenStorage.getAccessToken();

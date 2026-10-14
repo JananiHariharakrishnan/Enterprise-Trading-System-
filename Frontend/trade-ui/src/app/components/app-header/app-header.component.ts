@@ -11,6 +11,7 @@ import { TokenStorageService } from '../../services/token-storage.service';
 import { NotificationPanelComponent } from '../notification-panel/notification-panel.component';
 import { CustomerPreferencesService, type BaseCurrency } from '../../services/customer-preferences.service';
 import { convertAmount, currencySymbol, quoteCurrency } from '../../utils/currency.util';
+import { getTradeApiV1Url } from '../../config/api.config';
 
 @Component({
   selector: 'app-app-header',
@@ -159,8 +160,7 @@ export class AppHeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   private async refreshCachedPrices(): Promise<void> {
     const requestId = ++this.priceRequestId;
     try {
-      const baseHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
-      const url = `http://${baseHost}:8081/api/v1/market-data`;
+      const url = `${getTradeApiV1Url()}/market-data`;
       const token = this.tokenStorage.getAccessToken();
       const headers: Record<string, string | string[]> = {};
       if (token) {
@@ -258,9 +258,8 @@ export class AppHeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.instrumentSearchError.set('');
 
     try {
-      const baseHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
       const trimmedQuery = query.trim();
-      const url = new URL(`http://${baseHost}:8081/api/v1/instruments`);
+      const url = new URL(`${getTradeApiV1Url()}/instruments`);
 
       if (trimmedQuery.length > 0) {
         url.searchParams.set('query', trimmedQuery);

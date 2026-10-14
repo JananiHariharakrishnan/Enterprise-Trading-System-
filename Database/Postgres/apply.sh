@@ -18,6 +18,12 @@ TARGET_DATABASE_FROM_ENV="${TARGET_DATABASE:-}"
 # Load repository .env
 # ------------------------------------------------------------
 
+if [[ -f "${SPRINT_DIR}/../../.env" ]]; then
+    set -a
+    source "${SPRINT_DIR}/../../.env"
+    set +a
+fi
+
 if [[ -f "${ENV_FILE}" ]]; then
     set -a
     source "${ENV_FILE}"
@@ -28,13 +34,35 @@ fi
 # Determine target database
 #
 # TARGET_DATABASE takes priority.
-# Otherwise use POSTGRES_DB from .env.
+# Otherwise use POSTGRES_DB or parse DATABASE_URL from .env.
 # ------------------------------------------------------------
 
-TARGET_DATABASE="${TARGET_DATABASE_FROM_ENV:-${POSTGRES_DB:-}}"
+TARGET_DATABASE="${TARGET_DATABASE_FROM_ENV:-${POSTGRES_DB:-${DB_NAME:-}}}"
+
+# Parse DATABASE_URL if host/database is not set
+if [[ -n "${DATABASE_URL:-}" ]]; then
+    CLEAN_URL="${DATABASE_URL#jdbc:}"
+    CLEAN_URL="${CLEAN_URL#postgresql://}"
+    if [[ "$CLEAN_URL" == *"@"* ]]; then
+        USERPASS="${CLEAN_URL%%@*}"
+        HOSTPORTDB="${CLEAN_URL#*@}"
+        export PGUSER="${PGUSER:-${POSTGRES_USER:-${DB_USER:-${USERPASS%%:*}}}}"
+        export PGPASSWORD="${PGPASSWORD:-${POSTGRES_PASSWORD:-${DB_PASSWORD:-${USERPASS#*:}}}}"
+    else
+        HOSTPORTDB="$CLEAN_URL"
+    fi
+    HOSTPORT="${HOSTPORTDB%%/*}"
+    DB_NAME_FROM_URL="${HOSTPORTDB#*/}"
+    DB_NAME_FROM_URL="${DB_NAME_FROM_URL%%\?*}"
+    export PGHOST="${PGHOST:-${POSTGRES_HOST:-${DB_HOST:-${HOSTPORT%%:*}}}}"
+    if [[ "$HOSTPORT" == *":"* ]]; then
+        export PGPORT="${PGPORT:-${POSTGRES_PORT:-${DB_PORT:-${HOSTPORT#*:}}}}"
+    fi
+    TARGET_DATABASE="${TARGET_DATABASE:-$DB_NAME_FROM_URL}"
+fi
 
 if [[ -z "${TARGET_DATABASE}" ]]; then
-    echo "ERROR: TARGET_DATABASE is not set and POSTGRES_DB was not found in .env." >&2
+    echo "ERROR: TARGET_DATABASE is not set and POSTGRES_DB / DATABASE_URL was not found in .env." >&2
     exit 1
 fi
 
@@ -42,9 +70,9 @@ fi
 # PostgreSQL connection configuration
 # ------------------------------------------------------------
 
-export PGHOST="${PGHOST:-${POSTGRES_HOST:-localhost}}"
-export PGPORT="${PGPORT:-${POSTGRES_PORT:-5432}}"
-export PGUSER="${PGUSER:-${POSTGRES_USER:-postgres}}"
+export PGHOST="${PGHOST:-${POSTGRES_HOST:-${DB_HOST:-localhost}}}"
+export PGPORT="${PGPORT:-${POSTGRES_PORT:-${DB_PORT:-5432}}}"
+export PGUSER="${PGUSER:-${POSTGRES_USER:-${DB_USER:-postgres}}}"
 
 if [[ -z "${PGPASSWORD:-}" && -n "${POSTGRES_PASSWORD:-}" ]]; then
     export PGPASSWORD="${POSTGRES_PASSWORD}"

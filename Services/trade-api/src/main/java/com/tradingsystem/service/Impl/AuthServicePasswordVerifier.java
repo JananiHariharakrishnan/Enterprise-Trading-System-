@@ -27,7 +27,7 @@ public class AuthServicePasswordVerifier implements PasswordVerifier {
 
     @org.springframework.beans.factory.annotation.Autowired
     public AuthServicePasswordVerifier(
-            @Value("${auth.service.url:http://localhost:3000}") String authServiceUrl,
+            @Value("${auth.service.url:${AUTH_SERVICE_URL:${AUTH_URL:http://localhost:3000}}}") String authServiceUrl,
             @Value("${auth.service.bypass-on-unreachable:false}") boolean bypassOnUnreachable
     ) {
         this.restTemplate = new RestTemplate();

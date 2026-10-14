@@ -14,14 +14,15 @@ export type UserNotification = {
   readAt: string | null;
 };
 
+import { getTradeApiV1Url } from '../config/api.config';
+
 @Injectable({
   providedIn: 'root',
 })
 export class NotificationApiService {
   private readonly http = inject(HttpClient);
   private readonly tokenStorage = inject(TokenStorageService);
-  private readonly host = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
-  private readonly baseUrl = `http://${this.host}:8081/api/v1/notifications`;
+  private readonly baseUrl = `${getTradeApiV1Url()}/notifications`;
 
   async list(): Promise<UserNotification[]> {
     const rows = await firstValueFrom(

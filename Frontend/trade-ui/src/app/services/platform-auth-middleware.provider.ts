@@ -2,6 +2,7 @@ import { InjectionToken } from '@angular/core';
 import { Middleware } from '../generated/trade';
 import { createTokenInterceptor } from './http-token-interceptor.middleware';
 import { TokenStorageService } from './token-storage.service';
+import { getTradeApiUrl, getAuthApiUrl } from '../config/api.config';
 
 export const PLATFORM_AUTH_MIDDLEWARE = new InjectionToken<Middleware>('PLATFORM_AUTH_MIDDLEWARE');
 
@@ -12,10 +13,29 @@ export function createPlatformAuthMiddleware(
   tokenStorage: TokenStorageService,
   reloadHandler?: () => void
 ): Middleware {
-  const baseHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
-  
+  const isBrowser = typeof window !== 'undefined';
+  const allowedOrigins = new Set<string>();
+
+  if (isBrowser) {
+    allowedOrigins.add(window.location.origin);
+  }
+
+  const tradeUrl = getTradeApiUrl();
+  try {
+    allowedOrigins.add(new URL(tradeUrl).origin);
+  } catch {
+    allowedOrigins.add(tradeUrl);
+  }
+
+  const authUrl = getAuthApiUrl();
+  try {
+    allowedOrigins.add(new URL(authUrl).origin);
+  } catch {
+    allowedOrigins.add(authUrl);
+  }
+
   return createTokenInterceptor(tokenStorage, {
-    allowedOrigins: [`http://${baseHost}:8081`, `http://${baseHost}:3000`],
+    allowedOrigins: Array.from(allowedOrigins),
     unauthenticatedPaths: ['/auth/login', '/auth/register', '/auth/refresh'],
     sessionExpiryDelaySeconds: SESSION_EXPIRY_DELAY_SECONDS,
     reloadHandler

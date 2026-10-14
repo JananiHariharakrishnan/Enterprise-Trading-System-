@@ -3,6 +3,8 @@ import { AccountsApi, Configuration, OrdersApi, WatchlistsApi, MarketDataApi, Pr
 import { PLATFORM_AUTH_MIDDLEWARE } from './platform-auth-middleware.provider';
 import { Middleware } from '../generated/trade/runtime';
 
+import { getTradeApiUrl } from '../config/api.config';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -14,9 +16,8 @@ export class TradeApiClientService {
   readonly priceAlerts: PriceAlertsApi;
 
   constructor(@Inject(PLATFORM_AUTH_MIDDLEWARE) platformAuthMiddleware: Middleware) {
-    const baseHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
     const configuration = new Configuration({
-      basePath: `http://${baseHost}:8081`,
+      basePath: getTradeApiUrl(),
       middleware: [platformAuthMiddleware]
     });
 

@@ -39,7 +39,7 @@ public class ExecutionService {
             ExecutionRule executionRule,
             FauxnanceClient fauxnanceClient,
             RestTemplate restTemplate,
-            @Value("${trade.api.base-url:http://localhost:8081}")
+            @Value("${trade.api.base-url:${TRADE_API_BASE_URL:${TRADE_API_URL:http://localhost:8081}}}")
             String tradeApiBaseUrl
     ) {
         this.executionRule = executionRule;
@@ -157,8 +157,12 @@ public class ExecutionService {
             String eventId
     ) {
 
+        String cleanBase = (tradeApiBaseUrl != null ? tradeApiBaseUrl : "http://localhost:8081")
+                .replaceAll("/+$", "")
+                .replaceAll("/api/v1$", "");
+
         String url =
-                tradeApiBaseUrl
+                cleanBase
                         + "/internal/orders/"
                         + orderId
                         + "/execution";

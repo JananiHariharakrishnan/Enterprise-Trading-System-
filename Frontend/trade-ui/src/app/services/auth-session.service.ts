@@ -8,6 +8,7 @@ import { ThemePreference, ThemeService } from './theme.service';
 import { TokenStorageService, SESSION_DURATION_SECONDS } from './token-storage.service';
 import { getSafeReturnUrl } from '../guards/return-url.util';
 import { PasswordHashService } from './password-hash.service';
+import { getAuthApiUrl } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root'
@@ -219,7 +220,7 @@ export class AuthSessionService {
   private async toReadableError(error: unknown): Promise<string> {
     // Network errors / CORS / service down typically surface as TypeError or status 0
     if (error instanceof TypeError) {
-      return `Cannot reach Auth service on http://${this.authHost}:3000. Start auth-service and try again.`;
+      return `Cannot reach Auth service on ${getAuthApiUrl()}. Start auth-service and try again.`;
     }
 
     if (error instanceof ResponseError) {
@@ -232,7 +233,7 @@ export class AuthSessionService {
 
         // Handle HTTP 0 (unreachable) explicitly
         if (error.response.status === 0) {
-          return `Cannot reach Auth service on http://${this.authHost}:3000. Start auth-service and try again.`;
+          return `Cannot reach Auth service on ${getAuthApiUrl()}. Start auth-service and try again.`;
         }
 
         // Specific 401 semantics for login

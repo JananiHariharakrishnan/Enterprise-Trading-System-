@@ -80,7 +80,8 @@ public class AutomationOrderDispatcher {
             Integer quantity,
             BigDecimal limitPrice
     ) {
-        String targetUrl = tradeApiUrl + "/api/v1/orders";
+        String cleanBase = (tradeApiUrl != null ? tradeApiUrl : "http://localhost:8081").replaceAll("/+$", "");
+        String targetUrl = cleanBase.endsWith("/api/v1") ? cleanBase + "/orders" : cleanBase + "/api/v1/orders";
 
         PlaceOrderRequest request = new PlaceOrderRequest();
         request.setAccountId(accountId);

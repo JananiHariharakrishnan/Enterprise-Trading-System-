@@ -164,8 +164,8 @@ x-common-env: &common-env
   POSTGRES_USER: ${DB_USER}
   POSTGRES_PASSWORD: ${DB_PASSWORD}
   # --- kafka
-  KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_INTERNAL:-kafka:29092}
-  KAFKA_BROKERS: ${KAFKA_INTERNAL:-kafka:29092}
+  KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-${KAFKA_INTERNAL:-kafka:29092}}
+  KAFKA_BROKERS: ${KAFKA_BOOTSTRAP_SERVERS:-${KAFKA_INTERNAL:-kafka:29092}}
   # --- browser origin allowed to call the APIs (CORS)
   CORS_ORIGINS: &cors ${CORS_ORIGINS:-${PUBLIC_SCHEME:-http}://${PUBLIC_HOST:-localhost}:${FRONTEND_PORT:-4200}}
   CORS_ALLOWED_ORIGINS: *cors
@@ -173,10 +173,10 @@ x-common-env: &common-env
 
 x-java-env: &java-env
   <<: *common-env
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}${JDBC_PARAMS:-}"
+  SPRING_DATASOURCE_URL: ${DATABASE_URL:-jdbc:postgresql://${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}${JDBC_PARAMS:-}}
   SPRING_DATASOURCE_USERNAME: ${DB_USER}
   SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-  SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_INTERNAL:-kafka:29092}
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-${KAFKA_INTERNAL:-kafka:29092}}
 
 # A shared config folder of the repo (e.g. ./Config with application.yml), mounted
 # read-only into every app container. Default = the DockerFile folder (harmless).
@@ -367,6 +367,7 @@ services:
       PORT: ${AUTH_SERVICE_PORT:-3000}
       HC_PORT: ${AUTH_SERVICE_PORT:-3000}
       HC_PATH: ${AUTH_SERVICE_HEALTH_PATH:-}
+      TRADE_API_URL: ${INTERNAL_TRADE_API_URL:-http://order-service:${ORDER_SERVICE_PORT:-8081}}/api/v1
     volumes:
       - *config-volume
     ports:
@@ -403,6 +404,8 @@ services:
       PORT: ${ORDER_SERVICE_PORT:-8081}
       HC_PORT: ${ORDER_SERVICE_PORT:-8081}
       HC_PATH: ${ORDER_SERVICE_HEALTH_PATH:-}
+      AUTH_SERVICE_URL: ${INTERNAL_AUTH_URL:-http://auth-service:${AUTH_SERVICE_PORT:-3000}}
+      TRADE_API_URL: ${INTERNAL_TRADE_API_URL:-http://order-service:${ORDER_SERVICE_PORT:-8081}}
       JAVA_OPTS: "${JAVA_OPTS:--XX:MaxRAMPercentage=60 -XX:+ExitOnOutOfMemoryError}"
     volumes:
       - *config-volume
@@ -440,6 +443,7 @@ services:
       PORT: ${EXECUTOR_SERVICE_PORT:-8082}
       HC_PORT: ${EXECUTOR_SERVICE_PORT:-8082}
       HC_PATH: ${EXECUTOR_SERVICE_HEALTH_PATH:-}
+      TRADE_API_BASE_URL: ${INTERNAL_TRADE_API_URL:-http://order-service:${ORDER_SERVICE_PORT:-8081}}
       JAVA_OPTS: "${JAVA_OPTS:--XX:MaxRAMPercentage=60 -XX:+ExitOnOutOfMemoryError}"
     volumes:
       - *config-volume
@@ -471,7 +475,7 @@ services:
     <<: *restart
     environment:
       # Addresses baked into the page -> where they really are (see the header of docker-compose.yml).
-      URL_REWRITES: ${FRONTEND_URL_REWRITES:-}
+      URL_REWRITES: ${FRONTEND_URL_REWRITES:-http://localhost:3000=${AUTH_API_URL:-http://localhost:3000} http://localhost:8081=${FRONTEND_API_URL:-http://localhost:8081}}
       # What nginx forwards to the backends. `__unused__` = route switched off.
       FRONTEND_PROXY_AUTH_PREFIX: ${FRONTEND_PROXY_AUTH_PREFIX:-_auth}
       FRONTEND_PROXY_AUTH_TARGET: ${FRONTEND_PROXY_AUTH_TARGET:-http://auth-service:${AUTH_SERVICE_PORT:-3000}}

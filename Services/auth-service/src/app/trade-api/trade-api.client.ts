@@ -11,7 +11,9 @@ export class TradeApiClient {
   private baseURL: string;
 
   constructor(baseURL?: string) {
-    this.baseURL = baseURL || process.env.TRADE_API_URL || 'http://localhost:8081/api/v1';
+    const rawBaseUrl = baseURL || process.env.TRADE_API_URL || process.env.TRADE_API_BASE_URL || 'http://localhost:8081';
+    const cleanBaseUrl = rawBaseUrl.replace(/\/+$/, '');
+    this.baseURL = cleanBaseUrl.endsWith('/api/v1') ? cleanBaseUrl : `${cleanBaseUrl}/api/v1`;
     this.client = axios.create({
       baseURL: this.baseURL,
       timeout: 10000,
