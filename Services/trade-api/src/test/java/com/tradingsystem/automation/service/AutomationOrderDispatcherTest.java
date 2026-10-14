@@ -34,7 +34,7 @@ class AutomationOrderDispatcherTest {
     void placeOrder_marketAndLimit_postsSignedRequest() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         AutomationOrderDispatcher dispatcher = new AutomationOrderDispatcher(
-                restTemplate, "http://trade.local", "test-secret", "auth-service");
+                restTemplate, "http://trade.local/api/v1", "test-secret", "auth-service");
         OrderResponse created = new OrderResponse();
         created.setOrderId("ord-1");
 
@@ -67,7 +67,7 @@ class AutomationOrderDispatcherTest {
     void placeOrder_skipsBlankTokenAndRethrowsHttpAndTransportErrors() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         AutomationOrderDispatcher dispatcher = spy(new AutomationOrderDispatcher(
-                restTemplate, "http://trade.local", "test-secret", "auth-service"));
+                restTemplate, "http://trade.local/api/v1", "test-secret", "auth-service"));
         doReturn("  ").when(dispatcher).generateTokenForAccount(8L);
 
         org.mockito.ArgumentCaptor<HttpEntity<PlaceOrderRequest>> entity =

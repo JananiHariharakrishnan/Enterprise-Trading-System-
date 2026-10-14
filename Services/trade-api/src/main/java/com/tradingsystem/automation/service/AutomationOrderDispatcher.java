@@ -39,12 +39,12 @@ public class AutomationOrderDispatcher {
     private final String jwtIssuer;
 
     public AutomationOrderDispatcher() {
-        this("http://localhost:8081", "development-only-shared-secret-change-me", "auth-service");
+        this("http://localhost:8081/api/v1", "development-only-shared-secret-change-me", "auth-service");
     }
 
     @Autowired
     public AutomationOrderDispatcher(
-            @Value("${trade.api.url:${TRADE_API_URL:http://localhost:${server.port:8081}}}") String tradeApiUrl,
+            @Value("${trade.api.url:${TRADE_API_URL:http://localhost:${server.port:8081}/api/v1}}") String tradeApiUrl,
             @Value("${JWT_SECRET:${auth.jwt.secret:development-only-shared-secret-change-me}}") String jwtSecret,
             @Value("${JWT_ISSUER:auth-service}") String jwtIssuer
     ) {
