@@ -106,9 +106,9 @@
 #    starts any container: a prune started by Compose would delete the images
 #    it has just built.
 #
-# IMAGE NAMES are standard: frontend, auth-service, order-service,
-# executor-service (tag `latest`; set IMAGE_TAG in .env for another tag).
-# See them with:  docker images | grep -E "frontend|auth-service|order-service|executor-service"
+# IMAGE NAMES: etp-frontend, etp-auth-service, etp-order-service,
+# etp-executor-service (tag `latest`; set IMAGE_TAG in .env for another tag).
+# See them with:  docker images | grep -E "etp-frontend|etp-auth-service|etp-order-service|etp-executor-service"
 # Two different projects built on the SAME machine would overwrite each other's
 # images; in that case give one of them its own names in .env, e.g.
 # AUTH_SERVICE_IMAGE=teamx-auth-service.
@@ -345,7 +345,7 @@ services:
   #            every AUTH_SERVICE_ prefix, add the keys to .env.
   auth-service:
     profiles: [auth-service]
-    image: ${AUTH_SERVICE_IMAGE:-auth-service}:${IMAGE_TAG:-latest}
+    image: ${AUTH_SERVICE_IMAGE:-etp-auth-service}:${IMAGE_TAG:-latest}
     build:
       context: ${AUTH_SERVICE_DIR:-./services/auth-service}
       dockerfile: ${AUTH_SERVICE_DOCKERFILE:-Dockerfile}
@@ -380,7 +380,7 @@ services:
   #            ORDER_SERVICE_ prefix, add the keys to .env.
   order-service:
     profiles: [order-service]
-    image: ${ORDER_SERVICE_IMAGE:-order-service}:${IMAGE_TAG:-latest}
+    image: ${ORDER_SERVICE_IMAGE:-etp-order-service}:${IMAGE_TAG:-latest}
     build:
       context: ${ORDER_SERVICE_DIR:-./services/order-service}
       dockerfile: ${ORDER_SERVICE_DOCKERFILE:-Dockerfile}
@@ -419,7 +419,7 @@ services:
   # <<CHANGE>> second worker: copy this block, rename EXECUTOR_SERVICE_.
   executor-service:
     profiles: [executor-service]
-    image: ${EXECUTOR_SERVICE_IMAGE:-executor-service}:${IMAGE_TAG:-latest}
+    image: ${EXECUTOR_SERVICE_IMAGE:-etp-executor-service}:${IMAGE_TAG:-latest}
     build:
       context: ${EXECUTOR_SERVICE_DIR:-./services/executor-service}
       dockerfile: ${EXECUTOR_SERVICE_DOCKERFILE:-Dockerfile}
@@ -457,7 +457,7 @@ services:
   # ================================================================ FRONTEND
   frontend:
     profiles: [frontend]
-    image: ${FRONTEND_IMAGE:-frontend}:${IMAGE_TAG:-latest}
+    image: ${FRONTEND_IMAGE:-etp-frontend}:${IMAGE_TAG:-latest}
     build:
       context: ${FRONTEND_DIR:-./frontend}
       dockerfile: ${FRONTEND_DOCKERFILE:-Dockerfile}
