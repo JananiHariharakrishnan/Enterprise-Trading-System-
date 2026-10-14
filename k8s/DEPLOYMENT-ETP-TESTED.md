@@ -223,6 +223,8 @@ DB_HOST=database-1.c7yocqkqi585.ap-south-1.rds.amazonaws.com
 DB_PORT=5432
 DB_NAME=trading
 DB_USER=postgres
+DB_SSL=true
+PGSSLMODE=require
 POSTGRES_HOST=database-1.c7yocqkqi585.ap-south-1.rds.amazonaws.com
 POSTGRES_PORT=5432
 POSTGRES_DB=trading
@@ -430,5 +432,21 @@ To avoid exhausting PostgreSQL connection slots on the RDS instance, stop local 
 ```bash
 docker compose down
 ```
-EOF
+
+---
+
+## 11. Troubleshooting & Common Issues
+
+### 1. `error: no pg_hba.conf entry ... no encryption` (HTTP 500 on Login)
+- **Cause:** AWS RDS enforces SSL connections. In `Services/auth-service/src/app/common/database.ts`, if `DB_SSL=false`, the Node `pg` client attempts an unencrypted connection which Postgres rejects.
+- **Resolution:** Set `DB_SSL=true` and `PGSSLMODE=require` in `k8s/base/config.env`, then re-apply and rollout restart `auth-service`:
+  ```bash
+  kubectl apply -k k8s/overlays/four-lb
+  kubectl rollout restart deployment/auth-service
+  ```
+
+### 2. Browser Shows "CORS Error" on API Calls
+- **Cause:** When a Kubernetes service pod is unready (`0/1 Running` or `CrashLoopBackOff`), the AWS Classic/Network LoadBalancer returns HTTP 502 Bad Gateway without the application's CORS response headers. The browser interprets the missing CORS headers on the 502 response as a CORS violation.
+- **Resolution:** Inspect pod health (`kubectl get pods`) and logs (`kubectl logs -l app=auth-service`). Ensure probes in `k8s/base/auth-service.yaml` point to `/docs-json` (which returns HTTP 200). Once the pod is `1/1 Running`, requests reach NestJS which serves the configured `CORS_ALLOWED_ORIGINS`.
+
 

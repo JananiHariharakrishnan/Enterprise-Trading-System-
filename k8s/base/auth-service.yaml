@@ -27,14 +27,14 @@ spec:
           volumeMounts:
             - { name: shared-config, mountPath: /config, readOnly: true }
           startupProbe:
-            httpGet: { path: /docs/json, port: http }
+            httpGet: { path: /docs-json, port: http }
             periodSeconds: 5
             failureThreshold: 36
           readinessProbe:
-            httpGet: { path: /docs/json, port: http }
+            httpGet: { path: /docs-json, port: http }
             periodSeconds: 10
           livenessProbe:
-            httpGet: { path: /docs/json, port: http }
+            httpGet: { path: /docs-json, port: http }
             periodSeconds: 20
             failureThreshold: 5
           resources:
@@ -50,7 +50,7 @@ kind: Service
 metadata:
   name: auth-service
   annotations:
-    alb.ingress.kubernetes.io/healthcheck-path: /docs/json      # ALB checks "/" otherwise
+    alb.ingress.kubernetes.io/healthcheck-path: /docs-json      # ALB checks "/" otherwise
 spec:
   type: ClusterIP
   selector: { app: auth-service }
