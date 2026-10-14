@@ -449,4 +449,14 @@ docker compose down
 - **Cause:** When a Kubernetes service pod is unready (`0/1 Running` or `CrashLoopBackOff`), the AWS Classic/Network LoadBalancer returns HTTP 502 Bad Gateway without the application's CORS response headers. The browser interprets the missing CORS headers on the 502 response as a CORS violation.
 - **Resolution:** Inspect pod health (`kubectl get pods`) and logs (`kubectl logs -l app=auth-service`). Ensure probes in `k8s/base/auth-service.yaml` point to `/docs-json` (which returns HTTP 200). Once the pod is `1/1 Running`, requests reach NestJS which serves the configured `CORS_ALLOWED_ORIGINS`.
 
+### 3. Orders Hang for 15-60s or Return 409 Conflict (`Duplicate order`)
+- **Cause:** When an order is placed, `trade-api` commits the order to Postgres and publishes to Kafka `orders` (which the executor fills immediately and sends an email). Right after, `SignalEngine` attempts to publish the resulting trade signal to Kafka topic `trade-signals`. Because `KAFKA_AUTO_CREATE_TOPICS_ENABLE=false` and `trade-signals` was missing from `kafka-topics-job.yaml`, the Kafka producer blocked on metadata lookup for 60 seconds (`max.block.ms`). The AWS LoadBalancer or browser connection timed out/re-forwarded the request with the same `idempotencyKey`, which `trade-api` rejected as `409 Conflict: Duplicate order`.
+- **Resolution:** Create the missing topics:
+  ```bash
+  kubectl exec kafka-0 -- /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:29092 --create --if-not-exists --topic trade-signals --partitions 3 --replication-factor 1 --config retention.ms=604800000 --config cleanup.policy=delete
+  kubectl exec kafka-0 -- /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:29092 --create --if-not-exists --topic trade-signals.DLT --partitions 3 --replication-factor 1 --config retention.ms=604800000 --config cleanup.policy=delete
+  ```
+  And keep `trade-signals` in `k8s/base/kafka-topics-job.yaml`.
+
+
 
