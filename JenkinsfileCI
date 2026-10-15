@@ -22,11 +22,11 @@ pipeline {
     AWS_REGION = 'ap-south-1'
     AUTH_REPO = 'etp-auth-service'
     ORDER_REPO = 'etp-order-service'
-    trade-executor_REPO = 'etp-trade-executor-service'
+    TRADE_EXECUTOR_REPO = 'etp-trade-executor-service'
     FRONTEND_REPO = 'etp-frontend'
     AUTH_LOCAL_IMAGE = 'auth-service'
     ORDER_LOCAL_IMAGE = 'order-service'
-    trade-executor_LOCAL_IMAGE = 'trade-executor-service'
+    TRADE_EXECUTOR_LOCAL_IMAGE = 'trade-executor-service'
     FRONTEND_LOCAL_IMAGE = 'frontend'
   }
 
