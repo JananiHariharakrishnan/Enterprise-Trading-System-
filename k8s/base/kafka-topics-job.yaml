@@ -26,7 +26,8 @@ spec:
               # name partitions retention.ms   (same as Infrastructure/Kafka/scripts/create-topics.sh)
               for t in "orders 3 604800000" "trade-events 3 2592000000" "market-data 6 86400000" \
                        "orders.DLT 3 604800000" "trade-events.DLT 3 2592000000" "market-data.DLT 6 86400000" \
-                       "trade-signals 3 604800000" "trade-signals.DLT 3 604800000"; do
+                      "trade-signals 3 604800000" "trade-signals.DLT 3 604800000"; do
+
                 set -- $t
                 kafka-topics.sh --bootstrap-server $BS --create --if-not-exists --topic $1 \
                   --partitions $2 --replication-factor 1 --config retention.ms=$3 --config cleanup.policy=delete
