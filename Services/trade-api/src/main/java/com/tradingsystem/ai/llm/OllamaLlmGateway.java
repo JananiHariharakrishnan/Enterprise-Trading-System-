@@ -30,7 +30,7 @@ public class OllamaLlmGateway implements LlmGateway {
 
     public OllamaLlmGateway(
             @Value("${llm.model:llama3}") String model,
-            @Value("${llm.base-url:http://localhost:11434}") String baseUrl) {
+            @Value("${llm.base-url:${LLM_BASE_URL:http://localhost:11434}}") String baseUrl) {
         this.model = model;
         this.baseUrl = baseUrl;
         this.objectMapper = new ObjectMapper();

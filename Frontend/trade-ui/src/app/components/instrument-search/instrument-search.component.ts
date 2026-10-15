@@ -15,6 +15,7 @@ import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, catchError, debounce, firstValueFrom, map, of, switchMap, timer } from 'rxjs';
 import { TokenStorageService } from '../../services/token-storage.service';
+import { getTradeApiV1Url } from '../../config/api.config';
 
 export type InstrumentListItem = {
   symbol: string;
@@ -264,7 +265,6 @@ export class InstrumentSearchComponent {
   }
 
   private fetchInstruments(query: string) {
-    const baseHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
     const params: Record<string, string> = { limit: String(RESULT_LIMIT) };
     if (query) params['query'] = query;
 
@@ -272,7 +272,7 @@ export class InstrumentSearchComponent {
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     return this.http
-      .get<InstrumentLookupApiItem[]>(`http://${baseHost}:8081/api/v1/instruments`, { params, headers })
+      .get<InstrumentLookupApiItem[]>(`${getTradeApiV1Url()}/instruments`, { params, headers })
       .pipe(
         map((items): SearchOutcome => ({ query, rows: this.normalise(items ?? [], query), failed: false })),
         catchError(() => of<SearchOutcome>({ query, rows: [], failed: true }))

@@ -45,14 +45,15 @@ export interface CreateAccountPayload {
   initialBalance?: number;
 }
 
+import { getTradeApiV1Url } from '../config/api.config';
+
 @Injectable({
   providedIn: 'root'
 })
 export class AdminService {
   private readonly http = inject(HttpClient);
   private readonly tokenStorage = inject(TokenStorageService);
-  private readonly host = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
-  private readonly baseUrl = `http://${this.host}:8081/api/v1/admin`;
+  private readonly baseUrl = `${getTradeApiV1Url()}/admin`;
 
   private getHeaders(): HttpHeaders {
     const token = this.tokenStorage.getAccessToken();

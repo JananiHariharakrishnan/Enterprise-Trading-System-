@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@angular/core';
 import { BaseAPI, Configuration, HTTPQuery, Middleware } from '../generated/trade';
 import { PLATFORM_AUTH_MIDDLEWARE } from './platform-auth-middleware.provider';
+import { getTradeApiUrl } from '../config/api.config';
 import type {
   MoversBasis,
   MoversResponse,
@@ -10,9 +11,7 @@ import type {
 } from './portfolio.models';
 
 function buildConfiguration(middleware: Middleware): Configuration {
-  const host = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
-  // Same host and port as TradeApiClientService: the portfolio routes live in the Trade REST API.
-  return new Configuration({ basePath: `http://${host}:8081`, middleware: [middleware] });
+  return new Configuration({ basePath: getTradeApiUrl(), middleware: [middleware] });
 }
 
 /**

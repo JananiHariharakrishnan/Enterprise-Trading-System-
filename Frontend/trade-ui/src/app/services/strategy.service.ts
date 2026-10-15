@@ -32,6 +32,8 @@ export interface CreateStrategyRequest {
   maxConsecutiveFailures?: number;
 }
 
+import { getTradeApiV1Url } from '../config/api.config';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -40,8 +42,7 @@ export class StrategyService {
   private tokenStorage = inject(TokenStorageService);
 
   private get baseUrl(): string {
-    const baseHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
-    return `http://${baseHost}:8081/api/v1/strategies`;
+    return `${getTradeApiV1Url()}/strategies`;
   }
 
   private getHeaders(): HttpHeaders {

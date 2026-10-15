@@ -18,6 +18,8 @@ export interface TradeSignalResponse {
   candleCacheDuration?: string;
 }
 
+import { getTradeApiV1Url } from '../config/api.config';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -25,10 +27,7 @@ export class SignalsService {
   private readonly http = inject(HttpClient);
   private readonly tokenStorage = inject(TokenStorageService);
 
-  private readonly host = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
-  private readonly baseUrl = (typeof window !== 'undefined' && window.location.port !== '8081')
-    ? `http://${this.host}:8081/api/v1/signals`
-    : '/api/v1/signals';
+  private readonly baseUrl = `${getTradeApiV1Url()}/signals`;
 
   private getHeaders(): HttpHeaders {
     const token = this.tokenStorage.getAccessToken();

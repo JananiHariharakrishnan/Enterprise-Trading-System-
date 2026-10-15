@@ -13,6 +13,8 @@ export interface ChatMessageResponse {
   relatedSignals?: TradeSignalResponse[];
 }
 
+import { getTradeApiV1Url } from '../config/api.config';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -20,10 +22,7 @@ export class ChatService {
   private readonly http = inject(HttpClient);
   private readonly tokenStorage = inject(TokenStorageService);
 
-  private readonly host = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
-  private readonly baseUrl = (typeof window !== 'undefined' && window.location.port !== '8081')
-    ? `http://${this.host}:8081/api/v1/chat/message`
-    : '/api/v1/chat/message';
+  private readonly baseUrl = `${getTradeApiV1Url()}/chat/message`;
 
   private getHeaders(): HttpHeaders {
     const token = this.tokenStorage.getAccessToken();
