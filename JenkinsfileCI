@@ -22,11 +22,11 @@ pipeline {
     AWS_REGION = 'ap-south-1'
     AUTH_REPO = 'etp-auth-service'
     ORDER_REPO = 'etp-order-service'
-    TRADE_EXECUTOR_REPO = 'etp-trade-executor-service'
+    EXECUTOR_REPO = 'etp-executor-service'
     FRONTEND_REPO = 'etp-frontend'
     AUTH_LOCAL_IMAGE = 'auth-service'
     ORDER_LOCAL_IMAGE = 'order-service'
-    TRADE_EXECUTOR_LOCAL_IMAGE = 'trade-executor-service'
+    EXECUTOR_LOCAL_IMAGE = 'executor-service'
     FRONTEND_LOCAL_IMAGE = 'frontend'
   }
 
@@ -66,27 +66,27 @@ pipeline {
             set -euo pipefail
             aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY"
 
-            for repo in "$AUTH_REPO" "$ORDER_REPO" "$TRADE_EXECUTOR_REPO" "$FRONTEND_REPO"; do
+            for repo in "$AUTH_REPO" "$ORDER_REPO" "$EXECUTOR_REPO" "$FRONTEND_REPO"; do
               aws ecr describe-repositories --region "$AWS_REGION" --repository-names "$repo" >/dev/null 2>&1 || \
               aws ecr create-repository --region "$AWS_REGION" --repository-name "$repo" \
                 --image-scanning-configuration scanOnPush=true \
                 --encryption-configuration encryptionType=AES256 >/dev/null
             done
 
-            AUTH_URL=$(awk -F= '$1 == "auth-service_URL" {print $2}' "${K8S_OVERLAY}/urls.env")
+            AUTH_URL=$(awk -F= '$1 == "AUTH_SERVICE_URL" {print $2}' "${K8S_OVERLAY}/urls.env")
             ORDER_URL=$(awk -F= '$1 == "ORDER_SERVICE_URL" {print $2}' "${K8S_OVERLAY}/urls.env")
             FRONTEND_URL=$(awk -F= '$1 == "FRONTEND_URL" {print $2}' "${K8S_OVERLAY}/urls.env")
-            BUILD_ENV="auth-service_URL=$AUTH_URL auth-service_PORT=3000 ORDER_SERVICE_URL=$ORDER_URL ORDER_SERVICE_PORT=8081 FRONTEND_URL=$FRONTEND_URL FRONTEND_PORT=80"
+            BUILD_ENV="AUTH_SERVICE_URL=$AUTH_URL AUTH_SERVICE_PORT=3000 ORDER_SERVICE_URL=$ORDER_URL ORDER_SERVICE_PORT=8081 FRONTEND_URL=$FRONTEND_URL FRONTEND_PORT=80"
 
             docker build -t "$AUTH_LOCAL_IMAGE:$RELEASE_TAG" ./Services/auth-service
             docker build -t "$ORDER_LOCAL_IMAGE:$RELEASE_TAG" ./Services/trade-api
-            docker build -t "$TRADE_EXECUTOR_LOCAL_IMAGE:$RELEASE_TAG" ./Services/trade-executor
+            docker build -t "$EXECUTOR_LOCAL_IMAGE:$RELEASE_TAG" ./Services/trade-executor
             docker build --build-arg "BUILD_ENV=$BUILD_ENV" -t "$FRONTEND_LOCAL_IMAGE:$RELEASE_TAG" ./Frontend/trade-ui
 
             declare -A IMAGE_MAP=(
               ["$AUTH_REPO"]="$AUTH_LOCAL_IMAGE"
               ["$ORDER_REPO"]="$ORDER_LOCAL_IMAGE"
-              ["$TRADE_EXECUTOR_REPO"]="$TRADE_EXECUTOR_LOCAL_IMAGE"
+              ["$EXECUTOR_REPO"]="$EXECUTOR_LOCAL_IMAGE"
               ["$FRONTEND_REPO"]="$FRONTEND_LOCAL_IMAGE"
             )
             for repo in "${!IMAGE_MAP[@]}"; do
