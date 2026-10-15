@@ -36,7 +36,7 @@ services:
     port: ${EXECUTOR_SERVICE_PORT:8082}
     trade-api-url: ${TRADE_API_BASE_URL:http://localhost:8081}          # executor calls trade-api
     fauxnance-api-url: https://y4t9nq2bqf.execute-api.eu-west-2.amazonaws.com/v1
-    market-data-poll-interval-seconds: 3600
+    market-data-poll-interval-seconds: 36000
 
 database:
   host: ${DB_HOST:localhost}
