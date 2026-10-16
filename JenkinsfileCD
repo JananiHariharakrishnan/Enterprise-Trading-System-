@@ -153,7 +153,7 @@ pipeline {
 
       stage('Inject secrets and deploy selected images') {
       steps {
-        withCredentials([file(credentialsId: env.SECRETS_CREDENTIAL_ID, variable: 'SECRETS_FILE')]) {
+        withCredentials([file(credentialsId: env.SECRETS_CREDENTIALS_ID, variable: 'SECRETS_FILE')]) {
           sh '''#!/usr/bin/env bash
             set -euo pipefail
             install -m 600 "$SECRETS_FILE" k8s/base/secrets.env
